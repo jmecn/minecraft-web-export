@@ -1,0 +1,63 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev.legacyforge'
+}
+
+group = group_id
+version = mod_version
+
+base {
+    archivesName = archives_name
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+legacyForge {
+    version = "${minecraft_version}-${forge_version}"
+
+    mods {
+        minecraft_web_export {
+            sourceSet sourceSets.main
+        }
+    }
+
+    runs {
+        configureEach {
+            gameDirectory = project.file('run')
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            systemProperty 'forge.logging.console.level', 'INFO'
+        }
+        client {
+            client()
+        }
+    }
+}
+
+tasks.withType(ProcessResources).configureEach {
+    def resourceProps = [
+            minecraft_version: minecraft_version,
+            mod_authors      : mod_authors,
+            mod_description  : mod_description,
+            mod_id           : mod_id,
+            mod_license      : mod_license,
+            mod_name         : mod_name,
+            mod_version      : mod_version,
+    ]
+    inputs.properties(resourceProps)
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand(resourceProps)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xlint:deprecation'
+}
