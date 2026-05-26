@@ -20,6 +20,12 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    implementation 'com.google.code.gson:gson:2.13.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
 legacyForge {
     version = "${minecraft_version}-${forge_version}"
 
@@ -38,6 +44,11 @@ legacyForge {
         client {
             client()
         }
+        exportClient {
+            client()
+            ideName = 'Export Client'
+            systemProperty 'minecraftWebExport.export.enabled', 'true'
+        }
     }
 }
 
@@ -55,6 +66,10 @@ tasks.withType(ProcessResources).configureEach {
     filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
         expand(resourceProps)
     }
+}
+
+test {
+    useJUnitPlatform()
 }
 
 tasks.withType(JavaCompile).configureEach {
