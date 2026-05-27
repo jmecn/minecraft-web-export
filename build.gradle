@@ -33,6 +33,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.13.1'
     modCompileOnly "dev.emi:emi-forge:${emi_version}"
     modRuntimeOnly "dev.emi:emi-forge:${emi_version}"
+    testImplementation "dev.emi:emi-forge:${emi_version}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

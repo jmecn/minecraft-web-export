@@ -9,7 +9,6 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.serializer.EmiIngredientSerializer;
 import dev.emi.emi.api.widget.AnimatedTextureWidget;
 import dev.emi.emi.api.widget.Bounds;
-import dev.emi.emi.api.widget.ButtonWidget;
 import dev.emi.emi.api.widget.FillingArrowWidget;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.TankWidget;
@@ -17,6 +16,7 @@ import dev.emi.emi.api.widget.TextWidget;
 import dev.emi.emi.api.widget.TextureWidget;
 import dev.emi.emi.api.widget.TooltipWidget;
 import dev.emi.emi.api.widget.Widget;
+import dev.emi.emi.widget.RecipeButtonWidget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -68,11 +68,7 @@ final class EmiWidgetSerializer {
     }
 
     private static boolean shouldSkipWidget(Widget widget) {
-        if (widget instanceof ButtonWidget) {
-            return true;
-        }
-        String name = widget.getClass().getSimpleName();
-        return name.contains("Button") && name.contains("Recipe");
+        return widget instanceof RecipeButtonWidget;
     }
 
     private static JsonObject serialize(EmiRecipe recipe, Widget widget, Set<String> textureIds, Context ctx) {
@@ -159,7 +155,7 @@ final class EmiWidgetSerializer {
         Bounds bounds = slot.getBounds();
         JsonObject object = boundsObject(bounds);
         object.addProperty("type", type);
-        object.addProperty("role", inferSlotRole(recipe, slot));
+        object.addProperty("role", inferSlotRole(slot));
         object.addProperty("large", readBooleanField(slot, "output"));
         object.addProperty("catalyst", readBooleanField(slot, "catalyst"));
         object.addProperty("drawBack", readBooleanField(slot, "drawBack"));
@@ -303,25 +299,12 @@ final class EmiWidgetSerializer {
         }
     }
 
-    private static String inferSlotRole(EmiRecipe recipe, SlotWidget slot) {
+    private static String inferSlotRole(SlotWidget slot) {
         if (readBooleanField(slot, "catalyst")) {
             return "catalyst";
         }
-        EmiIngredient stack = slot.getStack();
-        if (stack == null || stack.isEmpty()) {
-            return "input";
-        }
-        for (EmiStack out : recipe.getOutputs()) {
-            for (EmiStack candidate : stack.getEmiStacks()) {
-                if (out.equals(candidate)) {
-                    return "output";
-                }
-            }
-        }
-        for (EmiIngredient catalyst : recipe.getCatalysts()) {
-            if (catalyst.equals(stack)) {
-                return "catalyst";
-            }
+        if (slot.getRecipe() != null) {
+            return "output";
         }
         return "input";
     }
