@@ -68,8 +68,8 @@ public final class EmiRecipeLayoutExporter {
     }
 
     public static Result export(Path outputDir, Minecraft client, Set<String> recipeIds) throws IOException {
-        Path layoutsRoot = outputDir.resolve(RecipeLayoutPaths.LAYOUTS_DIR);
-        Path chromeRoot = outputDir.resolve(RecipeLayoutPaths.CHROME_DIR);
+        Path layoutsRoot = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.LAYOUTS_DIR);
+        Path chromeRoot = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.CHROME_DIR);
         Files.createDirectories(layoutsRoot);
         Files.createDirectories(chromeRoot);
 

@@ -25,7 +25,7 @@ class RecipeLayoutIndexWriterTest {
                 2,
                 Map.of(
                         "minecraft:crafting_table", new RecipeLayoutIndexWriter.Entry(
-                                "emi/recipes/layouts/minecraft_crafting_table.json",
+                                "recipes/layouts/minecraft_crafting_table.json",
                                 "minecraft:crafting",
                                 null)));
 
@@ -37,7 +37,7 @@ class RecipeLayoutIndexWriterTest {
         assertTrue(Files.isRegularFile(indexFile));
         assertEquals(2, json.get("schema").getAsInt());
         assertEquals(2, json.get("scale").getAsInt());
-        assertEquals("emi/recipes/layouts/minecraft_crafting_table.json", recipe.get("layout").getAsString());
+        assertEquals("recipes/layouts/minecraft_crafting_table.json", recipe.get("layout").getAsString());
         assertEquals("minecraft:crafting", recipe.get("category").getAsString());
     }
 }

@@ -29,6 +29,7 @@ public final class EmiBundleManifestWriter {
         root.put("defaultLanguage", EmiBundlePaths.DEFAULT_LANGUAGE);
         root.put("languages", languages);
         root.put("recipeCount", recipeCount);
+        root.put("missingIconId", IconPlaceholderRenderer.REGISTRY_ID);
 
         Path out = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.BUNDLE_FILE);
         Files.createDirectories(out.getParent());

@@ -25,13 +25,13 @@ class EmiItemsIndexExporterTest {
                 2,
                 Map.of(
                         "minecraft:iron_pickaxe", new RecipeLayoutIndexWriter.Entry(
-                                "emi/recipes/layouts/minecraft_iron_pickaxe.json",
+                                "recipes/layouts/minecraft_iron_pickaxe.json",
                                 "minecraft:crafting",
                                 null)));
 
         Path layoutFile = EmiBundlePaths.resolve(
                 tempDir,
-                "emi/recipes/layouts/minecraft_iron_pickaxe.json");
+                "recipes/layouts/minecraft_iron_pickaxe.json");
         Files.createDirectories(layoutFile.getParent());
         Files.writeString(layoutFile, """
                 {
@@ -83,13 +83,13 @@ class EmiItemsIndexExporterTest {
                 2,
                 Map.of(
                         "tfc:glassworking_jar", new RecipeLayoutIndexWriter.Entry(
-                                "emi/recipes/layouts/tfc_glassworking_jar.json",
+                                "recipes/layouts/tfc_glassworking_jar.json",
                                 "tfc:glassworking",
                                 null)));
 
         Path layoutFile = EmiBundlePaths.resolve(
                 tempDir,
-                "emi/recipes/layouts/tfc_glassworking_jar.json");
+                "recipes/layouts/tfc_glassworking_jar.json");
         Files.createDirectories(layoutFile.getParent());
         Files.writeString(layoutFile, """
                 {

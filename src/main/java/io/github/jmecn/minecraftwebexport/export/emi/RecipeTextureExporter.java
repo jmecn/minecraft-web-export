@@ -30,7 +30,7 @@ public final class RecipeTextureExporter {
     }
 
     public static Result export(Path outputDir, Minecraft client, Set<String> textureIds) throws IOException {
-        Path texRoot = outputDir.resolve(RecipeLayoutPaths.TEXTURES_DIR);
+        Path texRoot = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.TEXTURES_DIR);
         if (Files.exists(texRoot)) {
             Files.walk(texRoot)
                     .sorted(java.util.Comparator.reverseOrder())

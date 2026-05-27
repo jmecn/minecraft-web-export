@@ -32,5 +32,6 @@ class EmiBundleManifestWriterTest {
         assertEquals("en_us", json.get("defaultLanguage").getAsString());
         assertEquals(2, json.getAsJsonArray("languages").size());
         assertEquals(42, json.get("recipeCount").getAsInt());
+        assertEquals(IconPlaceholderRenderer.REGISTRY_ID, json.get("missingIconId").getAsString());
     }
 }

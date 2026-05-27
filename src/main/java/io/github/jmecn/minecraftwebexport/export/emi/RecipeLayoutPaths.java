@@ -4,7 +4,7 @@ public final class RecipeLayoutPaths {
 
     public static final int SCHEMA_VERSION = 2;
 
-    public static final String LAYOUTS_DIR = EmiBundlePaths.RECIPES_DIR;
+    public static final String LAYOUTS_DIR = EmiBundlePaths.RECIPES_LAYOUTS_DIR;
     public static final String LAYOUT_INDEX_FILE = EmiBundlePaths.RECIPE_INDEX_FILE;
 
     public static final String CHROME_DIR = EmiBundlePaths.CHROME_DIR;
