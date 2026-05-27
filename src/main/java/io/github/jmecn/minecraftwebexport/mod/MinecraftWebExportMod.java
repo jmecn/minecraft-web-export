@@ -2,7 +2,9 @@ package io.github.jmecn.minecraftwebexport.mod;
 
 import io.github.jmecn.minecraftwebexport.export.RuntimeExportEntrypoint;
 import net.minecraft.SharedConstants;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,5 +29,16 @@ public final class MinecraftWebExportMod {
                 SharedConstants.getCurrentVersion().getName(),
                 FMLPaths.GAMEDIR.get(),
                 LOGGER);
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            ClientBootstrap.arm(FMLPaths.GAMEDIR.get(), LOGGER);
+        }
+    }
+
+    private static final class ClientBootstrap {
+        private static void arm(java.nio.file.Path gameDirectory, Logger logger) {
+            io.github.jmecn.minecraftwebexport.export.emi.RuntimeEmiExportEntrypoint entrypoint =
+                    new io.github.jmecn.minecraftwebexport.export.emi.RuntimeEmiExportEntrypoint();
+            entrypoint.armIfEnabled(gameDirectory, logger);
+        }
     }
 }
