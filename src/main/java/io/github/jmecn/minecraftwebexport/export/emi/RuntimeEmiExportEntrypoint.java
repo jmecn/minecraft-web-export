@@ -107,12 +107,7 @@ public final class RuntimeEmiExportEntrypoint {
         }
 
         private static boolean isReady(Minecraft client) {
-            var manager = EmiApi.getRecipeManager();
-            return client.player != null
-                    && client.level != null
-                    && client.getSingleplayerServer() != null
-                    && manager != null
-                    && !manager.getRecipes().isEmpty();
+            return EmiExportReadiness.isReadyForExport(client);
         }
     }
 }

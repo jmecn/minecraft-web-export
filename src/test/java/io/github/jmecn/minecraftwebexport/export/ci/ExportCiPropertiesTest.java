@@ -21,7 +21,7 @@ class ExportCiPropertiesTest {
     @Test
     void defaultsWhenUnset() {
         assertFalse(ExportCiProperties.runExportAndExit());
-        assertEquals(100, ExportCiProperties.exportWarmupTicks());
+        assertEquals(40, ExportCiProperties.exportWarmupTicks());
         assertEquals(600, ExportCiProperties.exportWorldDelayTicks());
         assertEquals(7200, ExportCiProperties.exportTimeoutSeconds());
         assertEquals("emi-export", ExportCiProperties.exportWorldName());

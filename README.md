@@ -30,7 +30,7 @@ Use with a full modpack + HeadlessMC + xvfb (see TFG-Recipe-Viewer workflow).
 | `minecraftWebExport.export.enabled` | `true` | Enable export pipeline |
 | `minecraftWebExport.runExportAndExit` | `true` | Auto world → EMI export → `System.exit` |
 | `minecraftWebExport.export.outputDir` | `/path/to/export-raw` | Output directory (absolute) |
-| `minecraftWebExport.exportWarmupTicks` | `100` | Extra ticks **after** EMI recipes are non-empty (~5 s @ 20 TPS); not the FG 2400 spawn delay |
+| `minecraftWebExport.exportWarmupTicks` | `40` | Extra ticks **after** `EmiReloadManager.isLoaded()` (~2 s @ 20 TPS); do not use FG's 2400 |
 | `minecraftWebExport.layoutLogStride` | *(adaptive)* | Layout export progress log interval; default ~30 lines for 100k+ recipes |
 | `minecraftWebExport.iconLogStride` | *(adaptive)* | Item icon export progress log interval |
 

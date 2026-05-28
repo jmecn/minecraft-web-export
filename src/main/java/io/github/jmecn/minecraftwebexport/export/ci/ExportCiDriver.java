@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.export.ci;
 
-import dev.emi.emi.api.EmiApi;
 import io.github.jmecn.minecraftwebexport.export.ExportOutputPaths;
+import io.github.jmecn.minecraftwebexport.export.emi.EmiExportReadiness;
 import io.github.jmecn.minecraftwebexport.export.RuntimeExportEntrypoint;
 import io.github.jmecn.minecraftwebexport.export.emi.EmiRuntimeExportOrchestrator;
 import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
@@ -73,12 +73,7 @@ public final class ExportCiDriver {
     }
 
     static boolean isEmiReady(Minecraft client) {
-        var manager = EmiApi.getRecipeManager();
-        return client.player != null
-                && client.level != null
-                && client.getSingleplayerServer() != null
-                && manager != null
-                && !manager.getRecipes().isEmpty();
+        return EmiExportReadiness.isReadyForExport(client);
     }
 
     private static final class StateLogger {
@@ -231,10 +226,17 @@ public final class ExportCiDriver {
                 return;
             }
 
+            if (EmiExportReadiness.isReloadFailed()) {
+                phase = Phase.DONE;
+                logger.error("EMI reload failed (status=-1); aborting export");
+                System.exit(1);
+                return;
+            }
             if (!isEmiReady(client)) {
                 if (warmupTicks % HEARTBEAT_TICKS == 0) {
-                    stateLog.tick("waiting: EMI recipes not ready yet");
+                    stateLog.tick("waiting: EMI not ready (status=" + EmiExportReadiness.reloadStatusLabel() + ")");
                 }
+                warmupTicks = 0;
                 return;
             }
 
