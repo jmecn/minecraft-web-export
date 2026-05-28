@@ -6,12 +6,27 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.material.Fluid;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -29,6 +44,10 @@ public final class EmiItemsIndexExporter {
     }
 
     public static Result export(Path outputDir) throws IOException {
+        return export(outputDir, null);
+    }
+
+    public static Result export(Path outputDir, MinecraftServer server) throws IOException {
         Path recipeIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.RECIPE_INDEX_FILE);
         Path itemsIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEMS_INDEX_FILE);
 
@@ -38,38 +57,27 @@ public final class EmiItemsIndexExporter {
         }
 
         JsonObject recipeIndex = JsonParser.parseString(Files.readString(recipeIndexFile)).getAsJsonObject();
-        JsonObject recipeEntries = recipeIndex.has("recipes") && recipeIndex.get("recipes").isJsonObject()
-                ? recipeIndex.getAsJsonObject("recipes")
-                : new JsonObject();
+        List<String> recipeIds = RecipeIndexIds.read(outputDir, recipeIndex);
         Map<String, Set<String>> tagItems = loadTagItems(outputDir);
+        ExportedTagSets exportedTagSets = loadExportedTagSets(outputDir);
 
         Map<String, Set<String>> inputs = new TreeMap<>();
         Map<String, Set<String>> outputs = new TreeMap<>();
 
-        for (var entry : recipeEntries.entrySet()) {
-            String recipeId = entry.getKey();
-            if (!entry.getValue().isJsonObject()) {
-                continue;
-            }
-            JsonObject meta = entry.getValue().getAsJsonObject();
-            Path layoutPath = resolveLayoutPath(outputDir, recipeId, meta);
+        for (String recipeId : recipeIds) {
+            Path layoutPath = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.layoutPathForRecipeId(recipeId));
             if (!Files.isRegularFile(layoutPath)) {
                 continue;
             }
             JsonObject layout = JsonParser.parseString(Files.readString(layoutPath)).getAsJsonObject();
-            JsonArray widgets = layout.has("widgets") && layout.get("widgets").isJsonArray()
-                    ? layout.getAsJsonArray("widgets")
-                    : new JsonArray();
+            JsonArray widgets = readWidgets(layout);
 
             for (JsonElement widgetElement : widgets) {
                 if (!widgetElement.isJsonObject()) {
                     continue;
                 }
                 JsonObject widget = widgetElement.getAsJsonObject();
-                String role = widget.has("role") ? widget.get("role").getAsString() : "";
-                Map<String, Set<String>> bucket = "output".equals(role)
-                        ? outputs
-                        : ("input".equals(role) || "catalyst".equals(role) ? inputs : null);
+                Map<String, Set<String>> bucket = bucketForRole(widget, inputs, outputs);
                 if (bucket == null) {
                     continue;
                 }
@@ -81,80 +89,279 @@ public final class EmiItemsIndexExporter {
                 if (widget.has("ingredient")) {
                     collectIngredientIds(widget.get("ingredient"), ids, tagItems);
                 }
-                for (String id : ids) {
-                    bucket.computeIfAbsent(id, ignored -> new TreeSet<>()).add(recipeId);
-                }
+                addRecipeRefs(bucket, ids, recipeId);
             }
+        }
+
+        Set<String> allItemIds = new TreeSet<>();
+        allItemIds.addAll(inputs.keySet());
+        allItemIds.addAll(outputs.keySet());
+        Map<String, RegistryTagSets> registryTagSetsByItem = resolveRegistryTags(allItemIds, server);
+
+        int inputRefs = 0;
+        int outputRefs = 0;
+        Map<String, Set<String>> indexBuckets = new TreeMap<>();
+        for (String itemId : allItemIds) {
+            IdParts item = IdParts.parse(itemId);
+            if (item == null) {
+                continue;
+            }
+            indexBuckets.computeIfAbsent(item.namespace(), ignored -> new TreeSet<>()).add(item.path());
+            Path itemFile = item.toItemFile(outputDir);
+            Files.createDirectories(itemFile.getParent());
+
+            Map<String, Object> detail = new LinkedHashMap<>();
+            if (inputs.containsKey(itemId)) {
+                detail.put("inputs", new TreeSet<>(inputs.get(itemId)));
+                inputRefs += inputs.get(itemId).size();
+            }
+            if (outputs.containsKey(itemId)) {
+                detail.put("outputs", new TreeSet<>(outputs.get(itemId)));
+                outputRefs += outputs.get(itemId).size();
+            }
+
+            RegistryTagSets tagSets = registryTagSetsByItem.get(itemId);
+            if (tagSets != null && tagSets.hasAny()) {
+                detail.put("tags", tagSets.asJsonMap());
+                detail.put("tagsInBundle", tagSets.intersection(exportedTagSets).asJsonMap());
+            }
+
+            Files.writeString(itemFile, GSON.toJson(detail));
         }
 
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("schema", 1);
-        root.put("itemCount", 0);
-        Map<String, Object> items = new TreeMap<>();
-        root.put("items", items);
-
-        int inputRefs = 0;
-        int outputRefs = 0;
-        Set<String> allIds = new TreeSet<>();
-        allIds.addAll(inputs.keySet());
-        allIds.addAll(outputs.keySet());
-        for (String itemId : allIds) {
-            Set<String> inputRecipes = inputs.getOrDefault(itemId, Set.of());
-            Set<String> outputRecipes = outputs.getOrDefault(itemId, Set.of());
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("inputs", inputRecipes.stream().sorted().toList());
-            item.put("outputs", outputRecipes.stream().sorted().toList());
-            items.put(itemId, item);
-            inputRefs += inputRecipes.size();
-            outputRefs += outputRecipes.size();
+        for (Map.Entry<String, Set<String>> entry : indexBuckets.entrySet()) {
+            root.put(entry.getKey(), new ArrayList<>(entry.getValue()));
         }
-        root.put("itemCount", items.size());
 
-        Files.createDirectories(itemsIndexFile.getParent());
         String json = GSON.toJson(root);
+        Files.createDirectories(itemsIndexFile.getParent());
         Files.writeString(itemsIndexFile, json);
-        LOGGER.info("[emi-items] " + items.size()
+        LOGGER.info("[emi-items] " + allItemIds.size()
                 + " items (" + inputRefs + " input refs, " + outputRefs + " output refs) -> "
                 + itemsIndexFile);
-        return new Result(items.size(), inputRefs, outputRefs, json.length());
-    }
-
-    private static Path resolveLayoutPath(Path outputDir, String recipeId, JsonObject meta) {
-        if (meta.has("layout") && meta.get("layout").isJsonPrimitive()) {
-            return EmiBundlePaths.resolve(outputDir, meta.get("layout").getAsString());
-        }
-        return EmiBundlePaths.resolve(
-                outputDir,
-                RecipeLayoutPaths.LAYOUTS_DIR + "/" + RecipeLayoutPaths.relativeLayoutJson(recipeId));
+        return new Result(allItemIds.size(), inputRefs, outputRefs, json.length());
     }
 
     private static Map<String, Set<String>> loadTagItems(Path outputDir) throws IOException {
-        Path tagMembersFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.TAG_MEMBERS_FILE);
-        if (!Files.isRegularFile(tagMembersFile)) {
+        Path tagsRoot = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.TAGS_DIR);
+        if (!Files.isDirectory(tagsRoot)) {
             return Map.of();
         }
 
-        JsonObject root = JsonParser.parseString(Files.readString(tagMembersFile)).getAsJsonObject();
-        JsonObject items = root.has("items") && root.get("items").isJsonObject()
-                ? root.getAsJsonObject("items")
-                : new JsonObject();
         Map<String, Set<String>> tagItems = new TreeMap<>();
-        for (var entry : items.entrySet()) {
-            if (!entry.getValue().isJsonArray()) {
-                continue;
-            }
-            Set<String> members = new TreeSet<>();
-            for (JsonElement member : entry.getValue().getAsJsonArray()) {
-                if (member.isJsonPrimitive()) {
-                    addCanonicalId(member.getAsString(), members);
+        try (var files = Files.walk(tagsRoot)) {
+            for (Path file : files.filter(Files::isRegularFile).toList()) {
+                if (!file.getFileName().toString().endsWith(".json")) {
+                    continue;
                 }
+                TagFileRef ref = TagFileRef.fromPath(tagsRoot, file);
+                if (ref == null || ref.kind() != TagKind.ITEMS) {
+                    continue;
+                }
+                JsonObject root = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+                if (!root.has("values") || !root.get("values").isJsonArray()) {
+                    continue;
+                }
+                Set<String> members = new TreeSet<>();
+                for (JsonElement element : root.getAsJsonArray("values")) {
+                    if (element.isJsonPrimitive()) {
+                        String id = canonicalRegistryId(element.getAsString());
+                        if (id != null && !id.isBlank()) {
+                            members.add(id);
+                        }
+                    }
+                }
+                tagItems.put(ref.tagId(), members);
             }
-            tagItems.put(entry.getKey(), members);
         }
         return tagItems;
     }
 
-    private static void collectIngredientIds(JsonElement ingredient, Set<String> out, Map<String, Set<String>> tagItems) {
+    private static ExportedTagSets loadExportedTagSets(Path outputDir) throws IOException {
+        Path tagsRoot = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.TAGS_DIR);
+        if (!Files.isDirectory(tagsRoot)) {
+            return ExportedTagSets.empty();
+        }
+        Set<String> items = new TreeSet<>();
+        Set<String> blocks = new TreeSet<>();
+        Set<String> fluids = new TreeSet<>();
+        try (var files = Files.walk(tagsRoot)) {
+            for (Path file : files.filter(Files::isRegularFile).toList()) {
+                if (!file.getFileName().toString().endsWith(".json")) {
+                    continue;
+                }
+                TagFileRef ref = TagFileRef.fromPath(tagsRoot, file);
+                if (ref == null) {
+                    continue;
+                }
+                switch (ref.kind()) {
+                    case ITEMS -> items.add(ref.tagId());
+                    case BLOCKS -> blocks.add(ref.tagId());
+                    case FLUIDS -> fluids.add(ref.tagId());
+                }
+            }
+        }
+        return new ExportedTagSets(items, blocks, fluids);
+    }
+
+    private static Map<String, RegistryTagSets> resolveRegistryTags(Set<String> itemIds, MinecraftServer server) {
+        if (server == null || itemIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Registry<Item> itemRegistry = server.registryAccess().registryOrThrow(Registries.ITEM);
+        Map<String, RegistryTagSets> out = new TreeMap<>();
+
+        for (String itemId : itemIds) {
+            ResourceLocation resourceLocation = ResourceLocation.tryParse(itemId);
+            if (resourceLocation == null) {
+                continue;
+            }
+            Optional<ResourceKey<Item>> itemKey = itemRegistry.getResourceKey(itemRegistry.get(resourceLocation));
+            if (itemKey.isEmpty()) {
+                continue;
+            }
+            Optional<? extends net.minecraft.core.Holder<Item>> holder = itemRegistry.getHolder(itemKey.get());
+            if (holder.isEmpty()) {
+                continue;
+            }
+            RegistryTagSets tags = new RegistryTagSets();
+            holder.get().tags().forEach(tag -> tags.items().add(tag.location().toString()));
+
+            Item item = holder.get().value();
+            if (item instanceof BlockItem blockItem) {
+                blockItem.getBlock().builtInRegistryHolder().tags().forEach(tag -> tags.blocks().add(tag.location().toString()));
+            }
+            if (item instanceof BucketItem bucketItem) {
+                Fluid fluid = bucketItem.getFluid();
+                fluid.builtInRegistryHolder().tags().forEach(tag -> tags.fluids().add(tag.location().toString()));
+            }
+            out.put(itemId, tags);
+        }
+        return out;
+    }
+
+    private static final class RegistryTagSets {
+        private final Set<String> items = new TreeSet<>();
+        private final Set<String> blocks = new TreeSet<>();
+        private final Set<String> fluids = new TreeSet<>();
+
+        Set<String> items() {
+            return items;
+        }
+
+        Set<String> blocks() {
+            return blocks;
+        }
+
+        Set<String> fluids() {
+            return fluids;
+        }
+
+        boolean hasAny() {
+            return !items.isEmpty() || !blocks.isEmpty() || !fluids.isEmpty();
+        }
+
+        Map<String, Object> asJsonMap() {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("items", new ArrayList<>(items));
+            map.put("blocks", new ArrayList<>(blocks));
+            map.put("fluids", new ArrayList<>(fluids));
+            return map;
+        }
+
+        RegistryTagSets intersection(ExportedTagSets exported) {
+            RegistryTagSets inBundle = new RegistryTagSets();
+            for (String tag : items) {
+                if (exported.items().contains(tag)) {
+                    inBundle.items.add(tag);
+                }
+            }
+            for (String tag : blocks) {
+                if (exported.blocks().contains(tag)) {
+                    inBundle.blocks.add(tag);
+                }
+            }
+            for (String tag : fluids) {
+                if (exported.fluids().contains(tag)) {
+                    inBundle.fluids.add(tag);
+                }
+            }
+            return inBundle;
+        }
+    }
+
+    private record ExportedTagSets(Set<String> items, Set<String> blocks, Set<String> fluids) {
+        static ExportedTagSets empty() {
+            return new ExportedTagSets(Set.of(), Set.of(), Set.of());
+        }
+    }
+
+    private enum TagKind {
+        ITEMS("items"),
+        BLOCKS("blocks"),
+        FLUIDS("fluids");
+
+        private final String dirName;
+
+        TagKind(String dirName) {
+            this.dirName = dirName;
+        }
+    }
+
+    private record TagFileRef(TagKind kind, String namespace, String path) {
+        static TagFileRef fromPath(Path tagsRoot, Path file) {
+            Path relative = tagsRoot.relativize(file);
+            if (relative.getNameCount() < 3) {
+                return null;
+            }
+            String namespace = relative.getName(0).toString();
+            String kindName = relative.getName(1).toString();
+            TagKind kind = switch (kindName) {
+                case "items" -> TagKind.ITEMS;
+                case "blocks" -> TagKind.BLOCKS;
+                case "fluids" -> TagKind.FLUIDS;
+                default -> null;
+            };
+            if (kind == null) {
+                return null;
+            }
+            Path pathPart = relative.subpath(2, relative.getNameCount());
+            String path = pathPart.toString().replace('\\', '/');
+            if (!path.endsWith(".json")) {
+                return null;
+            }
+            path = path.substring(0, path.length() - ".json".length());
+            return new TagFileRef(kind, namespace, path);
+        }
+
+        String tagId() {
+            return namespace + ":" + path;
+        }
+    }
+
+    private record IdParts(String namespace, String path) {
+        static IdParts parse(String fullId) {
+            if (fullId == null || fullId.isBlank()) {
+                return null;
+            }
+            int sep = fullId.indexOf(':');
+            if (sep <= 0 || sep >= fullId.length() - 1) {
+                return null;
+            }
+            return new IdParts(fullId.substring(0, sep), fullId.substring(sep + 1));
+        }
+
+        Path toItemFile(Path outputDir) {
+            return EmiBundlePaths.resolve(outputDir, "items/" + namespace + "/" + path + ".json");
+        }
+    }
+
+    private static void collectIngredientIds(
+            JsonElement ingredient,
+            Set<String> out,
+            Map<String, Set<String>> tagItems) {
         if (ingredient == null || ingredient.isJsonNull()) {
             return;
         }
@@ -164,7 +371,7 @@ public final class EmiItemsIndexExporter {
                 addCanonicalId(raw.substring(5), out);
             } else if (raw.startsWith("#item:")) {
                 out.addAll(tagItems.getOrDefault(raw.substring(6), Set.of()));
-            } else if (!raw.startsWith("#item:") && raw.contains(":") && !raw.startsWith("#")) {
+            } else if (raw.contains(":") && !raw.startsWith("#")) {
                 addCanonicalId(raw, out);
             }
             return;
@@ -236,5 +443,37 @@ public final class EmiItemsIndexExporter {
             value = value.substring(0, at);
         }
         return value;
+    }
+
+    private static JsonArray readWidgets(JsonObject layout) {
+        JsonElement widgetsElement = layout.get("widgets");
+        if (widgetsElement != null && widgetsElement.isJsonArray()) {
+            return widgetsElement.getAsJsonArray();
+        }
+        return new JsonArray();
+    }
+
+    private static Map<String, Set<String>> bucketForRole(
+            JsonObject widget,
+            Map<String, Set<String>> inputs,
+            Map<String, Set<String>> outputs) {
+        JsonElement roleElement = widget.get("role");
+        if (roleElement == null || !roleElement.isJsonPrimitive()) {
+            return null;
+        }
+        String role = roleElement.getAsString();
+        if ("output".equals(role)) {
+            return outputs;
+        }
+        if ("input".equals(role) || "catalyst".equals(role)) {
+            return inputs;
+        }
+        return null;
+    }
+
+    private static void addRecipeRefs(Map<String, Set<String>> bucket, Set<String> ids, String recipeId) {
+        for (String id : ids) {
+            bucket.computeIfAbsent(id, ignored -> new TreeSet<>()).add(recipeId);
+        }
     }
 }

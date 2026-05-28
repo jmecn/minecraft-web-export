@@ -30,29 +30,10 @@ public final class EmiRuntimeExportOrchestrator {
 
     public Report export(Path outputRoot, Minecraft client) throws IOException {
         Set<String> recipeIds = collectRecipeIds();
-        EmiRecipeLayoutExporter.Result layouts;
-        if (EmiRecipeLayoutExporter.isEnabled()) {
-            layouts = EmiRecipeLayoutExporter.export(outputRoot, client, recipeIds);
-        } else {
-            LOGGER.info("[emi] layout export disabled by configuration");
-            layouts = new EmiRecipeLayoutExporter.Result(
-                    recipeIds.size(),
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    Set.of(),
-                    Set.of(),
-                    Set.of(),
-                    java.util.Map.of(),
-                    new RecipeTextureExporter.Result(0, 0, 0, 0));
-        }
+        EmiRecipeLayoutExporter.Result layouts = exportLayouts(outputRoot, client, recipeIds);
 
-        TagMembersIndexExporter.Result tags = new TagMembersIndexExporter.Result(0, 0, 0, 0, 0, 0);
+        TagMembersIndexExporter.Result tags = new TagMembersIndexExporter.Result(
+                0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
         MinecraftServer server = client.getSingleplayerServer();
         if (server != null && TagMembersIndexExporter.isEnabled()) {
             tags = TagMembersIndexExporter.export(outputRoot, server, layouts.referencedTags());
@@ -62,7 +43,7 @@ public final class EmiRuntimeExportOrchestrator {
 
         LangMergerExporter.Result langs = LangMergerExporter.isEnabled()
                 ? LangMergerExporter.exportEmiLang(outputRoot, client, null)
-                : new LangMergerExporter.Result(0, 0, 0, 0, 0, 0);
+                : emptyLangResult();
 
         ItemIconRendererExporter.Result icons = ItemIconRendererExporter.isEnabled()
                 ? ItemIconRendererExporter.export(
@@ -72,10 +53,10 @@ public final class EmiRuntimeExportOrchestrator {
                 layouts.referencedFluids(),
                 null,
                 layouts.iconVariants())
-                : new ItemIconRendererExporter.Result(0, 0, 0, 0, 0, 0, 0, 0, 0);
+                : emptyIconResult();
 
         EmiItemsIndexExporter.Result items = layouts.written() > 0
-                ? EmiItemsIndexExporter.export(outputRoot)
+                ? EmiItemsIndexExporter.export(outputRoot, server)
                 : new EmiItemsIndexExporter.Result(0, 0, 0, 0);
         EmiBundleManifestWriter.write(
                 outputRoot,
@@ -95,6 +76,43 @@ public final class EmiRuntimeExportOrchestrator {
                 tags.tagsIndexed(),
                 langs.languagesWritten(),
                 icons.totalSpritesWritten());
+    }
+
+    private static EmiRecipeLayoutExporter.Result exportLayouts(
+            Path outputRoot,
+            Minecraft client,
+            Set<String> recipeIds) throws IOException {
+        if (EmiRecipeLayoutExporter.isEnabled()) {
+            return EmiRecipeLayoutExporter.export(outputRoot, client, recipeIds);
+        }
+        LOGGER.info("[emi] layout export disabled by configuration");
+        return emptyLayoutResult(recipeIds.size());
+    }
+
+    private static EmiRecipeLayoutExporter.Result emptyLayoutResult(int totalRecipes) {
+        return new EmiRecipeLayoutExporter.Result(
+                totalRecipes,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                java.util.Map.of(),
+                new RecipeTextureExporter.Result(0, 0, 0, 0));
+    }
+
+    private static LangMergerExporter.Result emptyLangResult() {
+        return new LangMergerExporter.Result(0, 0, 0, 0, 0, 0);
+    }
+
+    private static ItemIconRendererExporter.Result emptyIconResult() {
+        return new ItemIconRendererExporter.Result(0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     private static Set<String> collectRecipeIds() {

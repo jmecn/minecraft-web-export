@@ -25,4 +25,9 @@ public final class RecipeLayoutPaths {
     public static String relativeLayoutJson(String recipeId) {
         return EmiBundlePaths.relativeLayoutJson(recipeId);
     }
+
+    /** Bundle-relative path: {@code recipes/layouts/<safeFileName(recipeId)>.json}. */
+    public static String layoutPathForRecipeId(String recipeId) {
+        return LAYOUTS_DIR + "/" + relativeLayoutJson(recipeId);
+    }
 }

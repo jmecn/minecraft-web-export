@@ -8,7 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,14 +20,7 @@ class EmiItemsIndexExporterTest {
 
     @Test
     void buildsItemsIndexFromLayoutWidgets() throws IOException {
-        RecipeLayoutIndexWriter.write(
-                tempDir,
-                2,
-                Map.of(
-                        "minecraft:iron_pickaxe", new RecipeLayoutIndexWriter.Entry(
-                                "recipes/layouts/minecraft_iron_pickaxe.json",
-                                "minecraft:crafting",
-                                null)));
+        RecipeLayoutIndexWriter.write(tempDir, 2, List.of("minecraft:iron_pickaxe"));
 
         Path layoutFile = EmiBundlePaths.resolve(
                 tempDir,
@@ -68,24 +61,20 @@ class EmiItemsIndexExporterTest {
 
         Path itemsIndexFile = EmiBundlePaths.resolve(tempDir, EmiBundlePaths.ITEMS_INDEX_FILE);
         JsonObject json = JsonParser.parseString(Files.readString(itemsIndexFile)).getAsJsonObject();
-        JsonObject items = json.getAsJsonObject("items");
+        Path stickFile = EmiBundlePaths.resolve(tempDir, "items/minecraft/stick.json");
+        Path pickaxeFile = EmiBundlePaths.resolve(tempDir, "items/minecraft/iron_pickaxe.json");
+        JsonObject stick = JsonParser.parseString(Files.readString(stickFile)).getAsJsonObject();
+        JsonObject pickaxe = JsonParser.parseString(Files.readString(pickaxeFile)).getAsJsonObject();
 
         assertEquals(1, json.get("schema").getAsInt());
-        assertEquals(3, json.get("itemCount").getAsInt());
-        assertEquals(1, items.getAsJsonObject("minecraft:stick").getAsJsonArray("inputs").size());
-        assertEquals(1, items.getAsJsonObject("minecraft:iron_pickaxe").getAsJsonArray("outputs").size());
+        assertEquals(3, json.getAsJsonArray("minecraft").size());
+        assertEquals(1, stick.getAsJsonArray("inputs").size());
+        assertEquals(1, pickaxe.getAsJsonArray("outputs").size());
     }
 
     @Test
     void expandsTagInputsUsingTagMembersIndex() throws IOException {
-        RecipeLayoutIndexWriter.write(
-                tempDir,
-                2,
-                Map.of(
-                        "tfc:glassworking_jar", new RecipeLayoutIndexWriter.Entry(
-                                "recipes/layouts/tfc_glassworking_jar.json",
-                                "tfc:glassworking",
-                                null)));
+        RecipeLayoutIndexWriter.write(tempDir, 2, List.of("tfc:glassworking_jar"));
 
         Path layoutFile = EmiBundlePaths.resolve(
                 tempDir,
@@ -106,33 +95,27 @@ class EmiItemsIndexExporterTest {
                 }
                 """);
 
-        Path tagMembersFile = EmiBundlePaths.resolve(tempDir, EmiBundlePaths.TAG_MEMBERS_FILE);
-        Files.createDirectories(tagMembersFile.getParent());
-        Files.writeString(tagMembersFile, """
+        Path tagFile = EmiBundlePaths.resolve(tempDir, "tags/tfc/items/glass_batches_tier_2.json");
+        Files.createDirectories(tagFile.getParent());
+        Files.writeString(tagFile, """
                 {
-                  "schema": 1,
-                  "items": {
-                    "tfc:glass_batches_tier_2": [
-                      "tfc:silica_glass_batch",
-                      "tfc:hematitic_glass_batch"
-                    ]
-                  }
+                  "values": [
+                    "tfc:silica_glass_batch",
+                    "tfc:hematitic_glass_batch"
+                  ]
                 }
                 """);
 
         EmiItemsIndexExporter.export(tempDir);
 
-        Path itemsIndexFile = EmiBundlePaths.resolve(tempDir, EmiBundlePaths.ITEMS_INDEX_FILE);
-        JsonObject json = JsonParser.parseString(Files.readString(itemsIndexFile)).getAsJsonObject();
-        JsonObject items = json.getAsJsonObject("items");
+        Path silicaFile = EmiBundlePaths.resolve(tempDir, "items/tfc/silica_glass_batch.json");
+        Path hematiticFile = EmiBundlePaths.resolve(tempDir, "items/tfc/hematitic_glass_batch.json");
+        JsonObject hematitic = JsonParser.parseString(Files.readString(hematiticFile)).getAsJsonObject();
 
-        assertTrue(items.has("tfc:silica_glass_batch"));
-        assertTrue(items.has("tfc:hematitic_glass_batch"));
+        assertTrue(Files.exists(silicaFile));
+        assertTrue(Files.exists(hematiticFile));
         assertEquals(
                 "tfc:glassworking_jar",
-                items.getAsJsonObject("tfc:hematitic_glass_batch")
-                        .getAsJsonArray("inputs")
-                        .get(0)
-                        .getAsString());
+                hematitic.getAsJsonArray("inputs").get(0).getAsString());
     }
 }

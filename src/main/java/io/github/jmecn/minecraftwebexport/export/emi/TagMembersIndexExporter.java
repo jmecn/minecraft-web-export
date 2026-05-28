@@ -2,17 +2,14 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import net.minecraft.server.MinecraftServer;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
@@ -30,7 +27,10 @@ public final class TagMembersIndexExporter {
             int blockTagEntries,
             int fluidTagEntries,
             int totalMemberRefs,
-            long indexBytes) {
+            long indexBytes,
+            Set<String> itemTags,
+            Set<String> blockTags,
+            Set<String> fluidTags) {
     }
 
     public static boolean isEnabled() {
@@ -38,53 +38,125 @@ public final class TagMembersIndexExporter {
     }
 
     public static Result export(Path outputDir, MinecraftServer server, Set<String> tagIds) throws IOException {
-        Path outFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.TAG_MEMBERS_FILE);
-        Files.createDirectories(outFile.getParent());
-
-        Map<String, List<String>> itemsByTag = new TreeMap<>();
-        Map<String, List<String>> blocksByTag = new TreeMap<>();
-        Map<String, List<String>> fluidsByTag = new TreeMap<>();
+        Path tagsDir = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.TAGS_DIR);
+        Files.createDirectories(tagsDir);
 
         int memberRefs = 0;
-        for (String tagId : new TreeSet<>(tagIds)) {
-            TagClosureExpander.TagMembers members = TagClosureExpander.expandTagMembers(server, tagId);
-            if (!members.items().isEmpty()) {
-                List<String> list = new ArrayList<>(members.items());
-                itemsByTag.put(tagId, list);
-                memberRefs += list.size();
+        long totalBytes = 0;
+        int itemTagEntries = 0;
+        int blockTagEntries = 0;
+        int fluidTagEntries = 0;
+        Set<String> itemTags = new TreeSet<>();
+        Set<String> blockTags = new TreeSet<>();
+        Set<String> fluidTags = new TreeSet<>();
+
+        for (String tagRef : new TreeSet<>(tagIds)) {
+            String tagId = TagClosureExpander.normalizeTagRef(tagRef);
+            ParsedTagId parsed = ParsedTagId.parse(tagId);
+            if (parsed == null) continue;
+
+            TagClosureExpander.TagMembers members = TagClosureExpander.expandTagMembers(server, tagRef);
+
+            WriteOutcome itemOutcome = writeTagFile(outputDir, parsed, TagKind.ITEMS, members.items());
+            if (itemOutcome.written()) {
+                itemTagEntries++;
+                itemTags.add(parsed.tagId());
+                memberRefs += itemOutcome.memberRefs();
+                totalBytes += itemOutcome.bytes();
             }
-            if (!members.blocks().isEmpty()) {
-                List<String> list = new ArrayList<>(members.blocks());
-                blocksByTag.put(tagId, list);
-                memberRefs += list.size();
+
+            WriteOutcome blockOutcome = writeTagFile(outputDir, parsed, TagKind.BLOCKS, members.blocks());
+            if (blockOutcome.written()) {
+                blockTagEntries++;
+                blockTags.add(parsed.tagId());
+                memberRefs += blockOutcome.memberRefs();
+                totalBytes += blockOutcome.bytes();
             }
-            if (!members.fluids().isEmpty()) {
-                List<String> list = new ArrayList<>(members.fluids());
-                fluidsByTag.put(tagId, list);
-                memberRefs += list.size();
+
+            WriteOutcome fluidOutcome = writeTagFile(outputDir, parsed, TagKind.FLUIDS, members.fluids());
+            if (fluidOutcome.written()) {
+                fluidTagEntries++;
+                fluidTags.add(parsed.tagId());
+                memberRefs += fluidOutcome.memberRefs();
+                totalBytes += fluidOutcome.bytes();
             }
         }
 
-        Map<String, Object> index = new LinkedHashMap<>();
-        index.put("schema", 1);
-        index.put("description", "closure tag id -> fully expanded registry members (runtime, recursive)");
-        index.put("items", itemsByTag);
-        index.put("blocks", blocksByTag);
-        index.put("fluids", fluidsByTag);
-
-        String json = GSON.toJson(index);
-        Files.writeString(outFile, json);
-
-        LOGGER.info("[index] tag-members: " + tagIds.size() + " tags -> "
-                + itemsByTag.size() + " item, " + blocksByTag.size() + " block, "
-                + fluidsByTag.size() + " fluid entries (" + memberRefs + " member refs, " + json.length() + " bytes)");
+        LOGGER.info("[index] tags: " + tagIds.size() + " refs -> "
+                + itemTagEntries + " item, " + blockTagEntries + " block, "
+                + fluidTagEntries + " fluid files (" + memberRefs + " member refs, " + totalBytes + " bytes)");
 
         return new Result(
                 tagIds.size(),
-                itemsByTag.size(),
-                blocksByTag.size(),
-                fluidsByTag.size(),
+                itemTagEntries,
+                blockTagEntries,
+                fluidTagEntries,
                 memberRefs,
-                json.length());
+                totalBytes,
+                Set.copyOf(itemTags),
+                Set.copyOf(blockTags),
+                Set.copyOf(fluidTags));
+    }
+
+    private static WriteOutcome writeTagFile(Path outputDir, ParsedTagId parsed, TagKind kind, Set<String> values)
+            throws IOException {
+        if (values == null || values.isEmpty()) {
+            return WriteOutcome.EMPTY;
+        }
+        JsonObject root = new JsonObject();
+        JsonArray array = new JsonArray();
+        for (String value : values) {
+            array.add(value);
+        }
+        root.add("values", array);
+
+        Path outFile = parsed.toTagFilePath(outputDir, kind);
+        Files.createDirectories(outFile.getParent());
+        String json = GSON.toJson(root);
+        Files.writeString(outFile, json);
+        return new WriteOutcome(true, values.size(), json.length());
+    }
+
+    private record WriteOutcome(boolean written, int memberRefs, int bytes) {
+        static final WriteOutcome EMPTY = new WriteOutcome(false, 0, 0);
+    }
+
+    private enum TagKind {
+        ITEMS("items"),
+        BLOCKS("blocks"),
+        FLUIDS("fluids");
+
+        private final String dirName;
+
+        TagKind(String dirName) {
+            this.dirName = dirName;
+        }
+    }
+
+    private record ParsedTagId(String namespace, String path) {
+
+        static ParsedTagId parse(String raw) {
+            if (raw == null || raw.isBlank()) {
+                return null;
+            }
+            String[] parts = raw.trim().split(":", 2);
+            if (parts.length != 2) {
+                return null;
+            }
+            if (parts[0].isBlank() || parts[1].isBlank()) {
+                return null;
+            }
+            return new ParsedTagId(parts[0], parts[1]);
+        }
+
+        String tagId() {
+            return namespace + ":" + path;
+        }
+
+        Path toTagFilePath(Path outputDir, TagKind kind) {
+            return EmiBundlePaths.resolve(
+                    outputDir,
+                    EmiBundlePaths.TAGS_DIR + "/" + namespace + "/" + kind.dirName + "/" + path + ".json");
+        }
     }
 }

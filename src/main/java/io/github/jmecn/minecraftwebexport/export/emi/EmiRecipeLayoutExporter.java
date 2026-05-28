@@ -79,7 +79,7 @@ public final class EmiRecipeLayoutExporter {
         Set<String> referencedTags = new TreeSet<>();
         Map<String, ItemStack> iconVariants = new LinkedHashMap<>();
         Map<String, String> chromeHashToRelative = new ConcurrentHashMap<>();
-        Map<String, RecipeLayoutIndexWriter.Entry> indexEntries = new TreeMap<>();
+        List<String> indexRecipeIds = new ArrayList<>();
         int written = 0;
         int missing = 0;
         int failures = 0;
@@ -124,14 +124,7 @@ public final class EmiRecipeLayoutExporter {
                 Files.writeString(out, json);
                 jsonBytes += json.length();
 
-                String category = layout.has("category") ? layout.get("category").getAsString() : null;
-                indexEntries.put(
-                        recipeId,
-                        new RecipeLayoutIndexWriter.Entry(
-                                RecipeLayoutPaths.LAYOUTS_DIR + "/" + fileName,
-                                category,
-                                null));
-
+                indexRecipeIds.add(recipeId);
                 written++;
                 if (progress % LOG_EVERY == 0 || progress == total) {
                     LOGGER.info("[emi-layout] " + progress + "/" + total + " - "
@@ -143,7 +136,7 @@ public final class EmiRecipeLayoutExporter {
             }
         }
 
-        RecipeLayoutIndexWriter.write(outputDir, layoutScale(), indexEntries);
+        RecipeLayoutIndexWriter.write(outputDir, layoutScale(), indexRecipeIds);
         RecipeTextureExporter.Result textures = RecipeTextureExporter.export(outputDir, client, textureIds);
 
         long chromeBytes = dirSize(chromeRoot);

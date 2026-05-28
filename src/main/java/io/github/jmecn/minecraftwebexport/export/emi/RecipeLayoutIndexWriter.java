@@ -6,41 +6,54 @@ import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 public final class RecipeLayoutIndexWriter {
+
+    /** {@code recipes/index.json} contract schema (not per-layout JSON schema). */
+    public static final int INDEX_SCHEMA_VERSION = 1;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private RecipeLayoutIndexWriter() {
     }
 
-    public record Entry(String layout, String category, String reference) {
-    }
-
-    public static void write(Path outputDir, int scale, Map<String, Entry> entries) throws IOException {
-        Map<String, Object> recipes = new TreeMap<>();
-        for (Map.Entry<String, Entry> entry : entries.entrySet()) {
-            Map<String, Object> value = new LinkedHashMap<>();
-            value.put("layout", entry.getValue().layout());
-            if (entry.getValue().category() != null) {
-                value.put("category", entry.getValue().category());
-            }
-            if (entry.getValue().reference() != null) {
-                value.put("reference", entry.getValue().reference());
-            }
-            recipes.put(entry.getKey(), value);
-        }
+    public static void write(Path outputDir, int scale, Collection<String> recipeIds) throws IOException {
+        Map<String, TreeSet<String>> pathsByNamespace = collectPathsByNamespace(recipeIds);
 
         Map<String, Object> root = new LinkedHashMap<>();
-        root.put("schema", RecipeLayoutPaths.SCHEMA_VERSION);
+        root.put("schema", INDEX_SCHEMA_VERSION);
         root.put("scale", scale);
-        root.put("recipes", recipes);
+        root.put("namespaces", List.copyOf(pathsByNamespace.keySet()));
 
         Path out = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.LAYOUT_INDEX_FILE);
         Files.createDirectories(out.getParent());
         Files.writeString(out, GSON.toJson(root));
+
+        Path shardsDir = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.RECIPE_SHARDS_DIR);
+        Files.createDirectories(shardsDir);
+        for (Map.Entry<String, TreeSet<String>> entry : pathsByNamespace.entrySet()) {
+            Path shardFile = shardsDir.resolve(entry.getKey() + ".json");
+            Files.writeString(shardFile, GSON.toJson(List.copyOf(entry.getValue())));
+        }
+    }
+
+    private static Map<String, TreeSet<String>> collectPathsByNamespace(Collection<String> recipeIds) {
+        Map<String, TreeSet<String>> pathsByNamespace = new TreeMap<>();
+        for (String recipeId : recipeIds) {
+            RecipeIndexIds.RecipeIdParts parts = RecipeIndexIds.splitRecipeId(recipeId);
+            if (parts == null) {
+                continue;
+            }
+            pathsByNamespace
+                    .computeIfAbsent(parts.namespace(), ignored -> new TreeSet<>())
+                    .add(parts.path());
+        }
+        return pathsByNamespace;
     }
 }

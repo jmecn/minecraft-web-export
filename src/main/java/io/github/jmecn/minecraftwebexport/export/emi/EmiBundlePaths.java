@@ -15,12 +15,14 @@ public final class EmiBundlePaths {
     public static final String BUNDLE_FILE = "bundle.json";
     public static final String RECIPES_LAYOUTS_DIR = "recipes/layouts";
     public static final String RECIPE_INDEX_FILE = "recipes/index.json";
+    public static final String RECIPE_SHARDS_DIR = "recipes/shards";
     public static final String CHROME_DIR = "chrome";
     public static final String TEXTURES_DIR = "textures";
     public static final String TEXTURE_MANIFEST_FILE = "manifest.json";
     public static final String ICONS_DIR = "icons";
     public static final String ITEMS_INDEX_FILE = "items/index.json";
-    public static final String TAG_MEMBERS_FILE = "tags/members.json";
+    public static final String TAGS_DIR = "tags";
+    public static final String TAGS_INDEX_FILE = "tags/index.json";
     public static final String LANG_DIR = "lang";
 
     public static final String DEFAULT_LANGUAGE = "en_us";
