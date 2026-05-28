@@ -33,7 +33,7 @@ public final class EmiRuntimeExportOrchestrator {
         EmiRecipeLayoutExporter.Result layouts = exportLayouts(outputRoot, client, recipeIds);
 
         TagMembersIndexExporter.Result tags = new TagMembersIndexExporter.Result(
-                0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
+                0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
         MinecraftServer server = client.getSingleplayerServer();
         if (server != null && TagMembersIndexExporter.isEnabled()) {
             tags = TagMembersIndexExporter.export(outputRoot, server, layouts.referencedTags());

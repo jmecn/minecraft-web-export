@@ -9,6 +9,9 @@ import net.minecraft.server.MinecraftServer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Logger;
@@ -27,7 +30,8 @@ public final class TagMembersIndexExporter {
             int blockTagEntries,
             int fluidTagEntries,
             int totalMemberRefs,
-            long indexBytes,
+            long tagFileBytes,
+            long catalogIndexBytes,
             Set<String> itemTags,
             Set<String> blockTags,
             Set<String> fluidTags) {
@@ -82,9 +86,14 @@ public final class TagMembersIndexExporter {
             }
         }
 
+        long catalogBytes = writeTagsCatalog(outputDir, itemTags, blockTags, fluidTags);
+        totalBytes += catalogBytes;
+
         LOGGER.info("[index] tags: " + tagIds.size() + " refs -> "
                 + itemTagEntries + " item, " + blockTagEntries + " block, "
-                + fluidTagEntries + " fluid files (" + memberRefs + " member refs, " + totalBytes + " bytes)");
+                + fluidTagEntries + " fluid files (catalog "
+                + (itemTags.size() + blockTags.size() + fluidTags.size()) + " ids, "
+                + memberRefs + " member refs, " + totalBytes + " bytes)");
 
         return new Result(
                 tagIds.size(),
@@ -92,10 +101,40 @@ public final class TagMembersIndexExporter {
                 blockTagEntries,
                 fluidTagEntries,
                 memberRefs,
-                totalBytes,
+                totalBytes - catalogBytes,
+                catalogBytes,
                 Set.copyOf(itemTags),
                 Set.copyOf(blockTags),
                 Set.copyOf(fluidTags));
+    }
+
+    /**
+     * §5.7.2 catalog for tag list/search; popover still uses per-tag files only.
+     */
+    static long writeTagsCatalog(
+            Path outputDir,
+            Set<String> itemTags,
+            Set<String> blockTags,
+            Set<String> fluidTags) throws IOException {
+        if (itemTags.isEmpty() && blockTags.isEmpty() && fluidTags.isEmpty()) {
+            return 0;
+        }
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("schema", 1);
+        if (!itemTags.isEmpty()) {
+            root.put("items", new ArrayList<>(itemTags));
+        }
+        if (!blockTags.isEmpty()) {
+            root.put("blocks", new ArrayList<>(blockTags));
+        }
+        if (!fluidTags.isEmpty()) {
+            root.put("fluids", new ArrayList<>(fluidTags));
+        }
+        Path indexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.TAGS_INDEX_FILE);
+        Files.createDirectories(indexFile.getParent());
+        String json = GSON.toJson(root);
+        Files.writeString(indexFile, json);
+        return json.length();
     }
 
     private static WriteOutcome writeTagFile(Path outputDir, ParsedTagId parsed, TagKind kind, Set<String> values)
