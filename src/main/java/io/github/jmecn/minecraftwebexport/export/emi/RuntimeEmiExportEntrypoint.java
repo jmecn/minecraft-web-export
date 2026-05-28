@@ -3,6 +3,7 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 import dev.emi.emi.api.EmiApi;
 import io.github.jmecn.minecraftwebexport.export.ExportOutputPaths;
 import io.github.jmecn.minecraftwebexport.export.RuntimeExportEntrypoint;
+import io.github.jmecn.minecraftwebexport.export.ci.ExportCiProperties;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
@@ -30,6 +31,9 @@ public final class RuntimeEmiExportEntrypoint {
     public void armIfEnabled(Path gameDirectory, Logger logger) {
         Objects.requireNonNull(logger, "logger");
         if (!Boolean.getBoolean(RuntimeExportEntrypoint.ENABLE_PROPERTY)) {
+            return;
+        }
+        if (ExportCiProperties.runExportAndExit()) {
             return;
         }
         MinecraftForge.EVENT_BUS.register(new AutoExportWhenWorldReady(

@@ -61,6 +61,15 @@ legacyForge {
             ideName = 'Export Client'
             systemProperty 'minecraftWebExport.export.enabled', 'true'
         }
+        exportCiClient {
+            client()
+            ideName = 'Export CI Client'
+            systemProperty 'minecraftWebExport.export.enabled', 'true'
+            systemProperty 'minecraftWebExport.runExportAndExit', 'true'
+            systemProperty 'minecraftWebExport.exportWarmupTicks', '100'
+            systemProperty 'minecraftWebExport.exportWorldDelayTicks', '60'
+            systemProperty 'minecraftWebExport.exportTimeoutSeconds', '7200'
+        }
     }
 
     addModdingDependenciesTo(sourceSets.test)

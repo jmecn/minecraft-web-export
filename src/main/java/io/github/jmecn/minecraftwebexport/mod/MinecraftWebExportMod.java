@@ -1,6 +1,8 @@
 package io.github.jmecn.minecraftwebexport.mod;
 
 import io.github.jmecn.minecraftwebexport.export.RuntimeExportEntrypoint;
+import io.github.jmecn.minecraftwebexport.export.ci.ExportCiDriver;
+import io.github.jmecn.minecraftwebexport.export.ci.ExportCiProperties;
 import net.minecraft.SharedConstants;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
@@ -24,11 +26,16 @@ public final class MinecraftWebExportMod {
 
     public MinecraftWebExportMod() {
         LOGGER.info("Minecraft Web Export mod initialized");
-        EXPORT_ENTRYPOINT.runIfEnabled(
-                MOD_ID,
-                SharedConstants.getCurrentVersion().getName(),
-                FMLPaths.GAMEDIR.get(),
-                LOGGER);
+        boolean ciExport = ExportCiProperties.runExportAndExit();
+        if (!ciExport) {
+            EXPORT_ENTRYPOINT.runIfEnabled(
+                    MOD_ID,
+                    SharedConstants.getCurrentVersion().getName(),
+                    FMLPaths.GAMEDIR.get(),
+                    LOGGER);
+        } else {
+            LOGGER.info("skipping mod-init stub export; CI driver owns the export lifecycle");
+        }
         if (FMLEnvironment.dist == Dist.CLIENT) {
             ClientBootstrap.arm(FMLPaths.GAMEDIR.get(), LOGGER);
         }
@@ -36,6 +43,13 @@ public final class MinecraftWebExportMod {
 
     private static final class ClientBootstrap {
         private static void arm(java.nio.file.Path gameDirectory, Logger logger) {
+            if (ExportCiProperties.runExportAndExit()) {
+                new ExportCiDriver(
+                        gameDirectory,
+                        System.getProperty(RuntimeExportEntrypoint.OUTPUT_ROOT_PROPERTY))
+                        .register();
+                return;
+            }
             io.github.jmecn.minecraftwebexport.export.emi.RuntimeEmiExportEntrypoint entrypoint =
                     new io.github.jmecn.minecraftwebexport.export.emi.RuntimeEmiExportEntrypoint();
             entrypoint.armIfEnabled(gameDirectory, logger);
