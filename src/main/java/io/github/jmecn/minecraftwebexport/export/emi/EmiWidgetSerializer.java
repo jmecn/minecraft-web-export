@@ -3,6 +3,7 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
@@ -184,7 +185,7 @@ final class EmiWidgetSerializer {
 
         EmiIngredient stack = slot.getStack();
         if (stack != null && !stack.isEmpty()) {
-            JsonElement ingredient = EmiIngredientSerializer.getSerialized(stack);
+            JsonElement ingredient = normalizeIngredientJson(EmiIngredientSerializer.getSerialized(stack));
             enrichIngredientIconKeys(ingredient, stack);
             object.add("ingredient", ingredient);
             collectSerializedTagRefs(ingredient, ctx.referencedTags());
@@ -282,6 +283,33 @@ final class EmiWidgetSerializer {
         }
     }
 
+    private static JsonElement normalizeIngredientJson(JsonElement ingredient) {
+        if (ingredient == null || !ingredient.isJsonObject()) {
+            return ingredient;
+        }
+        JsonObject object = ingredient.getAsJsonObject();
+        if (!object.has("type") || !object.get("type").isJsonPrimitive()) {
+            return ingredient;
+        }
+        if (!object.has("id") || !object.get("id").isJsonPrimitive()) {
+            return ingredient;
+        }
+        if (!"tag".equals(object.get("type").getAsString())) {
+            return ingredient;
+        }
+        String id = object.get("id").getAsString();
+        String registry = object.has("registry") && object.get("registry").isJsonPrimitive()
+                ? object.get("registry").getAsString()
+                : "minecraft:item";
+        if (registry.contains("fluid")) {
+            return new JsonPrimitive("#fluid:" + id);
+        }
+        if (registry.contains("block")) {
+            return new JsonPrimitive("#block:" + id);
+        }
+        return new JsonPrimitive("#item:" + id);
+    }
+
     static void collectSerializedTagRefs(JsonElement ingredient, Set<String> tags) {
         if (ingredient == null || ingredient.isJsonNull()) {
             return;
@@ -290,6 +318,10 @@ final class EmiWidgetSerializer {
             String raw = ingredient.getAsString();
             if (raw.startsWith("#item:")) {
                 tags.add(raw.substring(6));
+            } else if (raw.startsWith("#block:")) {
+                tags.add(raw.substring(7));
+            } else if (raw.startsWith("#fluid:")) {
+                tags.add(raw.substring(7));
             }
             return;
         }
@@ -304,6 +336,13 @@ final class EmiWidgetSerializer {
         }
 
         JsonObject object = ingredient.getAsJsonObject();
+        if (object.has("type")
+                && object.get("type").isJsonPrimitive()
+                && "tag".equals(object.get("type").getAsString())
+                && object.has("id")
+                && object.get("id").isJsonPrimitive()) {
+            tags.add(object.get("id").getAsString());
+        }
         if (object.has("tag") && object.get("tag").isJsonPrimitive()) {
             tags.add(object.get("tag").getAsString());
         }
