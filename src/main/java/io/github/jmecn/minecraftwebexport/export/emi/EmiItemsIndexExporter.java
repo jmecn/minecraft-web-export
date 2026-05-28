@@ -65,6 +65,9 @@ public final class EmiItemsIndexExporter {
         Map<String, Set<String>> outputs = new TreeMap<>();
 
         for (String recipeId : recipeIds) {
+            if (isEmiTagDisplayRecipe(recipeId)) {
+                continue;
+            }
             Path layoutPath = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.layoutPathForRecipeId(recipeId));
             if (!Files.isRegularFile(layoutPath)) {
                 continue;
@@ -475,5 +478,10 @@ public final class EmiItemsIndexExporter {
         for (String id : ids) {
             bucket.computeIfAbsent(id, ignored -> new TreeSet<>()).add(recipeId);
         }
+    }
+
+    /** EMI tag pages (`emi:/tag/...`) are not crafting recipes; item reverse index lists real recipes only. */
+    static boolean isEmiTagDisplayRecipe(String recipeId) {
+        return recipeId != null && recipeId.startsWith("emi:/tag/");
     }
 }

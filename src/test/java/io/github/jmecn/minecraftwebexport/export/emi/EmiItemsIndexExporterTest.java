@@ -118,4 +118,56 @@ class EmiItemsIndexExporterTest {
                 "tfc:glassworking_jar",
                 hematitic.getAsJsonArray("inputs").get(0).getAsString());
     }
+
+    @Test
+    void skipsEmiTagDisplayRecipesInReverseIndex() throws IOException {
+        RecipeLayoutIndexWriter.write(
+                tempDir,
+                2,
+                List.of("emi:/tag/item/minecraft/rails", "minecraft:activator_rail"));
+
+        Path tagLayout = EmiBundlePaths.resolve(
+                tempDir,
+                "recipes/layouts/emi__tag_item_minecraft_rails.json");
+        Files.createDirectories(tagLayout.getParent());
+        Files.writeString(tagLayout, """
+                {
+                  "schema": 2,
+                  "id": "emi:/tag/item/minecraft/rails",
+                  "widgets": [
+                    {
+                      "type": "slot",
+                      "role": "input",
+                      "tagDisplayItem": "minecraft:activator_rail"
+                    }
+                  ]
+                }
+                """);
+
+        Path craftLayout = EmiBundlePaths.resolve(
+                tempDir,
+                "recipes/layouts/minecraft_activator_rail.json");
+        Files.writeString(craftLayout, """
+                {
+                  "schema": 2,
+                  "id": "minecraft:activator_rail",
+                  "widgets": [
+                    {
+                      "type": "slot",
+                      "role": "output",
+                      "ingredient": "item:minecraft:activator_rail"
+                    }
+                  ]
+                }
+                """);
+
+        EmiItemsIndexExporter.export(tempDir);
+
+        Path railFile = EmiBundlePaths.resolve(tempDir, "items/minecraft/activator_rail.json");
+        JsonObject rail = JsonParser.parseString(Files.readString(railFile)).getAsJsonObject();
+        assertTrue(rail.has("outputs"));
+        assertEquals(1, rail.getAsJsonArray("outputs").size());
+        assertEquals("minecraft:activator_rail", rail.getAsJsonArray("outputs").get(0).getAsString());
+        assertTrue(!rail.has("inputs") || rail.getAsJsonArray("inputs").isEmpty());
+    }
 }
