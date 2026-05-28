@@ -2,6 +2,7 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.ItemEmiStack;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -22,6 +23,12 @@ public final class IconStackKey {
     }
 
     public static String forEmiStack(EmiStack stack) {
+        String itemId = itemIdForEmiStack(stack);
+        if (itemId != null) {
+            String fingerprint = itemStackFingerprint(toItemStack(stack));
+            return forItemIdAndNbtSnbt(itemId, fingerprint);
+        }
+
         ResourceLocation id = stack.getId();
         if (id == null) {
             return null;
@@ -67,9 +74,30 @@ public final class IconStackKey {
         return nbt == null || nbt.isEmpty() ? "" : nbt.toString();
     }
 
+    public static String itemIdForEmiStack(EmiStack emiStack) {
+        ItemStack stack = toItemStack(emiStack);
+        if (!stack.isEmpty() && stack.getItem() != Items.AIR) {
+            ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            if (itemId != null) {
+                return itemId.toString();
+            }
+        }
+        ResourceLocation rawId = emiStack.getId();
+        return rawId != null ? rawId.toString() : null;
+    }
+
+    private static String itemStackFingerprint(ItemStack stack) {
+        if (stack.isEmpty() || !stack.hasTag()) {
+            return "";
+        }
+        CompoundTag exported = stack.save(new CompoundTag());
+        return exported.isEmpty() ? "" : exported.toString();
+    }
+
     public static ItemStack toItemStack(EmiStack emiStack) {
         if (emiStack instanceof ItemEmiStack itemEmi) {
-            return itemEmi.getItemStack();
+            ItemStack stack = itemEmi.getItemStack();
+            return stack.isEmpty() ? ItemStack.EMPTY : stack.copy();
         }
         if (emiStack.getKey() instanceof Item item && item != Items.AIR) {
             ItemStack stack = new ItemStack(item, Math.max(1, (int) emiStack.getAmount()));

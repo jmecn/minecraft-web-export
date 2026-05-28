@@ -237,9 +237,19 @@ final class EmiWidgetSerializer {
             return;
         }
         String key = IconStackKey.forEmiStack(stack);
-        if (key != null && IconStackKey.isVariantKey(key)) {
+        if (key != null && shouldAttachIconKey(object, key)) {
             object.addProperty("iconKey", key);
         }
+    }
+
+    private static boolean shouldAttachIconKey(JsonObject ingredientObject, String key) {
+        if (IconStackKey.isVariantKey(key)) {
+            return true;
+        }
+        if (ingredientObject == null || !ingredientObject.has("id") || !ingredientObject.get("id").isJsonPrimitive()) {
+            return false;
+        }
+        return !key.equals(ingredientObject.get("id").getAsString());
     }
 
     private static void collectReferenced(
@@ -255,7 +265,12 @@ final class EmiWidgetSerializer {
             if (emiStack.getKey() instanceof Fluid) {
                 fluids.add(id.toString());
             } else {
-                items.add(id.toString());
+                String itemId = IconStackKey.itemIdForEmiStack(emiStack);
+                if (itemId != null && !itemId.isBlank()) {
+                    items.add(itemId);
+                } else {
+                    items.add(id.toString());
+                }
                 String iconKey = IconStackKey.forEmiStack(emiStack);
                 if (iconKey != null && IconStackKey.isVariantKey(iconKey)) {
                     ItemStack stack = IconStackKey.toItemStack(emiStack);
