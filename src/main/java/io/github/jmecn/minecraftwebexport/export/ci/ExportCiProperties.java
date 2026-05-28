@@ -11,7 +11,8 @@ public final class ExportCiProperties {
     public static final String EXPORT_WORLD_DELAY_TICKS_PROPERTY = "minecraftWebExport.exportWorldDelayTicks";
     public static final String EXPORT_WARMUP_TICKS_PROPERTY = "minecraftWebExport.exportWarmupTicks";
 
-    private static final int DEFAULT_EXPORT_WARMUP_TICKS = 2400;
+    /** Post-EMI-ready stabilization only; {@link ExportCiDriver} already blocks until recipes exist. */
+    private static final int DEFAULT_EXPORT_WARMUP_TICKS = 100;
     private static final int DEFAULT_EXPORT_WORLD_DELAY_TICKS = 600;
     private static final int DEFAULT_EXPORT_TIMEOUT_SECONDS = 7200;
     private static final String DEFAULT_EXPORT_WORLD_NAME = "emi-export";

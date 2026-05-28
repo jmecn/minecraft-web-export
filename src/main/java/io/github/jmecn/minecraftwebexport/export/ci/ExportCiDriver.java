@@ -19,6 +19,9 @@ import java.nio.file.Path;
  *
  * <p>Enable with {@code -DminecraftWebExport.export.enabled=true}
  * {@code -DminecraftWebExport.runExportAndExit=true}.</p>
+ *
+ * <p>Warmup ticks count only after {@link #isEmiReady(Minecraft)} (unlike Field Guide's
+ * {@code fieldguide.exportWarmupTicks=2400}, which runs after spawn before EMI may exist).</p>
  */
 public final class ExportCiDriver {
 

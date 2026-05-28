@@ -30,9 +30,31 @@ public final class EmiRecipeLayoutExporter {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final int PANEL_MARGIN = 4;
-    private static final int LOG_EVERY = 25;
+    /** Target ~30 progress lines for large exports unless {@code minecraftWebExport.layoutLogStride} is set. */
+    private static final int TARGET_PROGRESS_LOGS = 30;
 
     private EmiRecipeLayoutExporter() {
+    }
+
+    static int progressLogStride(int total) {
+        String prop = System.getProperty("minecraftWebExport.layoutLogStride", "").trim();
+        if (!prop.isEmpty()) {
+            return Math.max(1, Integer.parseInt(prop));
+        }
+        if (total <= 0) {
+            return 1;
+        }
+        if (total <= 200) {
+            return 20;
+        }
+        if (total <= 2_000) {
+            return 200;
+        }
+        return Math.max(2_000, (total + TARGET_PROGRESS_LOGS - 1) / TARGET_PROGRESS_LOGS);
+    }
+
+    private static boolean shouldLogProgress(int progress, int total, int stride) {
+        return progress == total || progress % stride == 0;
     }
 
     public record Result(
@@ -87,6 +109,7 @@ public final class EmiRecipeLayoutExporter {
         int chromeDeduped = 0;
         long jsonBytes = 0;
         int total = recipeIds.size();
+        int logStride = progressLogStride(total);
         int progress = 0;
 
         for (String recipeId : recipeIds) {
@@ -94,7 +117,7 @@ public final class EmiRecipeLayoutExporter {
             EmiRecipe recipe = EmiRecipeResolver.resolve(recipeId);
             if (recipe == null) {
                 missing++;
-                if (progress % LOG_EVERY == 0 || progress == total) {
+                if (shouldLogProgress(progress, total, logStride)) {
                     LOGGER.warning("[emi-layout] " + progress + "/" + total + " - " + missing + " missing so far");
                 }
                 continue;
@@ -126,8 +149,9 @@ public final class EmiRecipeLayoutExporter {
 
                 indexRecipeIds.add(recipeId);
                 written++;
-                if (progress % LOG_EVERY == 0 || progress == total) {
-                    LOGGER.info("[emi-layout] " + progress + "/" + total + " - "
+                if (shouldLogProgress(progress, total, logStride)) {
+                    int pct = total > 0 ? (progress * 100 / total) : 100;
+                    LOGGER.info("[emi-layout] " + pct + "% " + progress + "/" + total + " - "
                             + written + " ok, " + missing + " missing, " + failures + " fail");
                 }
             } catch (Exception e) {
