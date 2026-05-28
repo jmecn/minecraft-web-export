@@ -32,7 +32,8 @@ import java.util.logging.Logger;
 public final class ItemIconRendererExporter {
 
     private static final Logger LOGGER = Logger.getLogger(ItemIconRendererExporter.class.getName());
-    private static final int LOG_EVERY = 500;
+    private static final String ICON_LOG_STRIDE_PROPERTY = "minecraftWebExport.iconLogStride";
+    private static final int FLUSH_RENDER_EVERY = 256;
 
     private ItemIconRendererExporter() {
     }
@@ -131,6 +132,9 @@ public final class ItemIconRendererExporter {
                     + first.heightPx(cell) + "px)");
         }
 
+        int itemLogStride = ExportProgressLog.stride(itemOrder.size(), ICON_LOG_STRIDE_PROPERTY, 50, 500);
+        int variantLogStride = ExportProgressLog.stride(variants.size(), ICON_LOG_STRIDE_PROPERTY, 20, 200);
+
         int itemsPlaced = 0;
         int itemFailures = 0;
         int fluidsPlaced = 0;
@@ -142,7 +146,8 @@ public final class ItemIconRendererExporter {
         ItemIconAtlasBuilder.AtlasResult atlasResult;
         try (var renderer = new OffScreenRenderer(cell, cell);
              var atlas = new ItemIconAtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights)) {
-            var guiGraphics = new GuiGraphics(client, client.renderBuffers().bufferSource());
+            var bufferSource = client.renderBuffers().bufferSource();
+            var guiGraphics = new GuiGraphics(client, bufferSource);
             IconPlaceholderRenderer.render(client, guiGraphics, renderer);
             atlas.place(IconPlaceholderRenderer.REGISTRY_ID, renderer);
 
@@ -161,9 +166,12 @@ public final class ItemIconRendererExporter {
                     renderItemIcon(client, guiGraphics, renderer, item);
                     atlas.place(itemId.toString(), renderer);
                     itemsPlaced++;
-                    if (index % LOG_EVERY == 0) {
-                        LOGGER.info("[icons] items: progress " + index + "/" + itemTotal + " (" + itemsPlaced
-                                + " ok, " + itemFailures + " fail)");
+                    if (index % FLUSH_RENDER_EVERY == 0) {
+                        bufferSource.endBatch();
+                    }
+                    if (ExportProgressLog.shouldLog(index, itemTotal, itemLogStride)) {
+                        LOGGER.info("[icons] items: " + ExportProgressLog.percent(index, itemTotal) + "% "
+                                + index + "/" + itemTotal + " (" + itemsPlaced + " ok, " + itemFailures + " fail)");
                     }
                 } catch (Exception e) {
                     itemFailures++;
@@ -196,6 +204,8 @@ public final class ItemIconRendererExporter {
                 }
             }
 
+            bufferSource.endBatch();
+
             if (!variants.isEmpty()) {
                 renderer.setupItemRendering();
                 int variantIndex = 0;
@@ -206,9 +216,10 @@ public final class ItemIconRendererExporter {
                         renderItemStackIcon(client, guiGraphics, renderer, entry.getValue());
                         atlas.place(entry.getKey(), renderer);
                         variantsPlaced++;
-                        if (variantIndex % LOG_EVERY == 0) {
-                            LOGGER.info("[icons] nbt variants: progress " + variantIndex + "/" + variantTotal + " ("
-                                    + variantsPlaced + " ok, " + variantFailures + " fail)");
+                        if (ExportProgressLog.shouldLog(variantIndex, variantTotal, variantLogStride)) {
+                            LOGGER.info("[icons] nbt variants: " + ExportProgressLog.percent(variantIndex, variantTotal)
+                                    + "% " + variantIndex + "/" + variantTotal + " (" + variantsPlaced + " ok, "
+                                    + variantFailures + " fail)");
                         }
                     } catch (Exception e) {
                         variantFailures++;

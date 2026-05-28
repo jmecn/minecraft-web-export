@@ -72,7 +72,7 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
             nextRow();
         }
         if (cursorY + cellSize > pageHeight) {
-            flushPageToMemory();
+            flushPageToDisk();
             startNewPage();
             if (cursorX + cellSize > pageWidth) {
                 nextRow();
@@ -92,7 +92,7 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
 
     AtlasResult finish() throws IOException {
         if (currentPage != null && (!items.isEmpty() || cursorX > 0 || cursorY > 0)) {
-            flushPageToMemory();
+            flushPageToDisk();
         } else if (currentPage != null) {
             currentPage.close();
             currentPage = null;
@@ -103,9 +103,7 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
         long pngBytes = 0;
         for (PageInfo page : pages) {
             Path out = outputDir.resolve(page.fileName());
-            page.image().writeToFile(out);
             pngBytes += Files.size(out);
-            page.image().close();
         }
 
         Map<String, Object> indexRoot = new LinkedHashMap<>();
@@ -146,9 +144,6 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
             currentPage.close();
             currentPage = null;
         }
-        for (PageInfo page : pages) {
-            page.image().close();
-        }
         pages.clear();
     }
 
@@ -177,7 +172,7 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
         extentY = 0;
     }
 
-    private void flushPageToMemory() {
+    private void flushPageToDisk() {
         if (currentPage == null) {
             return;
         }
@@ -194,10 +189,17 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
 
         String fileName = "atlas-%03d.png".formatted(pageIndex);
         NativeImage trimmed = cropToUsed(currentPage, usedWidth, usedHeight);
-        pages.add(new PageInfo(pageIndex, fileName, usedWidth, usedHeight, trimmed));
-
         currentPage.close();
         currentPage = null;
+        try {
+            Files.createDirectories(outputDir);
+            trimmed.writeToFile(outputDir.resolve(fileName));
+        } catch (IOException e) {
+            trimmed.close();
+            throw new RuntimeException("failed to write atlas page " + fileName, e);
+        }
+        trimmed.close();
+        pages.add(new PageInfo(pageIndex, fileName, usedWidth, usedHeight));
         pageIndex++;
     }
 
@@ -249,6 +251,6 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
     private record SpriteRef(int page, int x, int y, int usage) {
     }
 
-    private record PageInfo(int index, String fileName, int width, int height, NativeImage image) {
+    private record PageInfo(int index, String fileName, int width, int height) {
     }
 }

@@ -30,31 +30,13 @@ public final class EmiRecipeLayoutExporter {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final int PANEL_MARGIN = 4;
-    /** Target ~30 progress lines for large exports unless {@code minecraftWebExport.layoutLogStride} is set. */
-    private static final int TARGET_PROGRESS_LOGS = 30;
+    private static final String LAYOUT_LOG_STRIDE_PROPERTY = "minecraftWebExport.layoutLogStride";
 
     private EmiRecipeLayoutExporter() {
     }
 
     static int progressLogStride(int total) {
-        String prop = System.getProperty("minecraftWebExport.layoutLogStride", "").trim();
-        if (!prop.isEmpty()) {
-            return Math.max(1, Integer.parseInt(prop));
-        }
-        if (total <= 0) {
-            return 1;
-        }
-        if (total <= 200) {
-            return 20;
-        }
-        if (total <= 2_000) {
-            return 200;
-        }
-        return Math.max(2_000, (total + TARGET_PROGRESS_LOGS - 1) / TARGET_PROGRESS_LOGS);
-    }
-
-    private static boolean shouldLogProgress(int progress, int total, int stride) {
-        return progress == total || progress % stride == 0;
+        return ExportProgressLog.stride(total, LAYOUT_LOG_STRIDE_PROPERTY, 20, 200);
     }
 
     public record Result(
@@ -117,7 +99,7 @@ public final class EmiRecipeLayoutExporter {
             EmiRecipe recipe = EmiRecipeResolver.resolve(recipeId);
             if (recipe == null) {
                 missing++;
-                if (shouldLogProgress(progress, total, logStride)) {
+                if (ExportProgressLog.shouldLog(progress, total, logStride)) {
                     LOGGER.warning("[emi-layout] " + progress + "/" + total + " - " + missing + " missing so far");
                 }
                 continue;
@@ -149,8 +131,8 @@ public final class EmiRecipeLayoutExporter {
 
                 indexRecipeIds.add(recipeId);
                 written++;
-                if (shouldLogProgress(progress, total, logStride)) {
-                    int pct = total > 0 ? (progress * 100 / total) : 100;
+                if (ExportProgressLog.shouldLog(progress, total, logStride)) {
+                    int pct = ExportProgressLog.percent(progress, total);
                     LOGGER.info("[emi-layout] " + pct + "% " + progress + "/" + total + " - "
                             + written + " ok, " + missing + " missing, " + failures + " fail");
                 }

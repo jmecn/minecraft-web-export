@@ -32,6 +32,12 @@ Use with a full modpack + HeadlessMC + xvfb (see TFG-Recipe-Viewer workflow).
 | `minecraftWebExport.export.outputDir` | `/path/to/export-raw` | Output directory (absolute) |
 | `minecraftWebExport.exportWarmupTicks` | `100` | Extra ticks **after** EMI recipes are non-empty (~5 s @ 20 TPS); not the FG 2400 spawn delay |
 | `minecraftWebExport.layoutLogStride` | *(adaptive)* | Layout export progress log interval; default ~30 lines for 100k+ recipes |
+| `minecraftWebExport.iconLogStride` | *(adaptive)* | Item icon export progress log interval |
+
+CI / HeadlessMC: allocate a large heap (e.g. `-Xmx12G`) — layout + icon export on a full TFG pack can exceed the default ~4G client heap.
+| `minecraftWebExport.iconLogStride` | *(adaptive)* | Icon export progress log interval; default ~30 lines |
+
+CI / large modpacks: use **at least `-Xmx12G`** for the game JVM (TFG-Recipe-Viewer workflow sets this). Icon atlases are flushed to disk per page to limit heap use during export.
 | `minecraftWebExport.exportWorldDelayTicks` | `600` | Menu ticks before creating a **new** world (skipped when reusing save) |
 | `minecraftWebExport.exportTimeoutSeconds` | `7200` | Hard timeout for entire run (`<=0` disables) |
 | `minecraftWebExport.exportWorldName` | `emi-export` | Save folder under `saves/` |

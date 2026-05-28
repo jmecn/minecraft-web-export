@@ -31,6 +31,7 @@ public final class EmiRuntimeExportOrchestrator {
     public Report export(Path outputRoot, Minecraft client) throws IOException {
         Set<String> recipeIds = collectRecipeIds();
         EmiRecipeLayoutExporter.Result layouts = exportLayouts(outputRoot, client, recipeIds);
+        client.renderBuffers().bufferSource().endBatch();
 
         TagMembersIndexExporter.Result tags = new TagMembersIndexExporter.Result(
                 0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
