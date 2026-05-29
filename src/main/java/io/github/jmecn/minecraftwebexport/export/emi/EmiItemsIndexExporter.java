@@ -92,7 +92,7 @@ public final class EmiItemsIndexExporter {
                     continue;
                 }
                 JsonObject widget = widgetElement.getAsJsonObject();
-                Map<String, Set<String>> bucket = bucketForRole(widget, inputs, outputs);
+                Map<String, Map<String, Set<String>>> bucket = bucketForRole(widget, inputs, outputs);
                 if (bucket == null) {
                     continue;
                 }
