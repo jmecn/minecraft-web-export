@@ -109,12 +109,9 @@ public final class RecipeRoutePackWriter {
                 layouts.add(entry.getKey(), entry.getValue());
             }
             root.add("layouts", layouts);
-            String jsonWithoutId = GSON.toJson(root);
-            byte[] bytes = RecipeBundleDigest.utf8(jsonWithoutId);
-            String stem = RecipeBundleDigest.stem(packSequence, bytes, width);
-            root.addProperty("id", stem);
             String json = GSON.toJson(root);
-            bytes = RecipeBundleDigest.utf8(json);
+            byte[] bytes = RecipeBundleDigest.utf8(json);
+            String stem = RecipeBundleDigest.stem(packSequence, bytes, width);
 
             Path packDir = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace);
             Files.createDirectories(packDir);

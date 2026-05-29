@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RecipeRoutePackWriterTest {
@@ -51,6 +52,12 @@ class RecipeRoutePackWriterTest {
         assertEquals(0, minecraftRoutes.get("crafting_table").getAsInt());
         assertEquals(0, minecraftRoutes.get("yellow_bed").getAsInt());
         assertEquals(0, emiRoutes.get("/foo/bar").getAsInt());
+
+        Path minecraftPack = EmiBundlePaths.resolve(
+                tempDir,
+                EmiBundlePaths.RECIPES_LAYOUT_PACKS_DIR + "/minecraft/" + minecraft.packs().get(0).file() + ".json");
+        JsonObject packBody = JsonParser.parseString(Files.readString(minecraftPack)).getAsJsonObject();
+        assertFalse(packBody.has("id"), "layout pack must not contain top-level id");
 
         List<String> ids = RecipeIndexIds.allRecipeIds(tempDir, mods);
         assertEquals(3, ids.size());
