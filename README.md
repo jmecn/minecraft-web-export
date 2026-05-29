@@ -1,52 +1,98 @@
 # Minecraft Web Export
 
-Forge mod that exports EMI recipe bundles for web viewers (e.g. [emi-recipe-renderer](https://github.com/jmecn/emi-recipe-renderer), TFG Recipe Viewer).
+Forge mod that exports EMI recipe bundles for web viewers ([emi-recipe-renderer](https://www.npmjs.com/package/emi-recipe-renderer), [emi-bundle-optimize](https://www.npmjs.com/package/emi-bundle-optimize)).
 
 ## Build
 
 ```bash
 ./gradlew jar
-# output: build/libs/minecraft-web-export-<version>.jar
+# build/libs/minecraft-web-export-<version>.jar
 ```
 
-## Release
+## GitHub Release and Packages
 
-Push a semver tag (`v0.2.0`, …); [`.github/workflows/release.yml`](.github/workflows/release.yml) builds the jar and attaches it to the GitHub Release. Downstream CI (e.g. TFG-Recipe-Viewer) downloads that asset instead of compiling here.
+Each `v*` tag triggers [.github/workflows/release.yml](.github/workflows/release.yml) to:
 
-## Local dev runs
+1. **Publish** to GitHub Packages Maven: `io.github.jmecn:minecraft-web-export:<version>` (same mod jar as below).
+2. **Upload** `build/libs/minecraft-web-export-<version>.jar` to GitHub Releases (used by modpack CI such as TFG-Recipe-Viewer).
 
-| Gradle run | Purpose |
-|------------|---------|
+| Channel | Use |
+|---------|-----|
+| **GitHub Releases** (jar) | Runtime: put the jar in `mods/` |
+| **GitHub Packages** (Maven) | Compile-time: depend from Gradle in companion mods (e.g. `field-guide-export`) |
+
+Repository URL: `https://maven.pkg.github.com/jmecn/minecraft-web-export`
+
+### Consuming from GitHub Packages (Gradle)
+
+In `~/.gradle/gradle.properties` (local) or CI secrets:
+
+```properties
+gpr.user=<GitHub username>
+gpr.key=<PAT with read:packages>
+```
+
+Or set `GITHUB_ACTOR` and `GITHUB_TOKEN` in the environment.
+
+```gradle
+repositories {
+    mavenCentral()
+    maven {
+        name = 'GitHubPackagesMinecraftWebExport'
+        url = uri('https://maven.pkg.github.com/jmecn/minecraft-web-export')
+        credentials {
+            username = findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
+            password = findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')
+        }
+    }
+}
+
+dependencies {
+    def coreVersion = '0.3.1'
+    modCompileOnly fg.deobf("io.github.jmecn:minecraft-web-export:${coreVersion}")
+    modRuntimeOnly fg.deobf("io.github.jmecn:minecraft-web-export:${coreVersion}")
+}
+```
+
+LegacyForge / MDG: use `fg.deobf(...)` on the dependency. Match `coreVersion` to a tag that has been published (see [Packages](https://github.com/jmecn/minecraft-web-export/packages)).
+
+Local publish (maintainers):
+
+```bash
+export GITHUB_ACTOR=your-user
+export GITHUB_TOKEN=ghp_...   # write:packages
+./gradlew publish
+```
+
+## Gradle runs
+
+| Task | Purpose |
+|------|---------|
 | `runClient` | Normal client |
-| `runExportClient` | Export when already in a world (`export.enabled=true`) |
-| `runExportCiClient` | Headless-style CI driver (short warmup for local smoke) |
+| `runExportClient` | Export in-world (`-DminecraftWebExport.export.enabled=true`) |
+| `runExportCiClient` | Short CI-style export smoke |
 
-## CI / HeadlessMC JVM properties
+## Export output
 
-Use with a full modpack + HeadlessMC + xvfb (see TFG-Recipe-Viewer workflow).
+Writes an EMI bundle under `<outputDir>/emi/`:
 
-| Property | CI example | Description |
-|----------|------------|-------------|
-| `minecraftWebExport.export.enabled` | `true` | Enable export pipeline |
-| `minecraftWebExport.runExportAndExit` | `true` | Auto world → EMI export → `System.exit` |
-| `minecraftWebExport.export.outputDir` | `/path/to/export-raw` | Output directory (absolute) |
-| `minecraftWebExport.exportWarmupTicks` | `40` | Extra ticks **after** `EmiReloadManager.isLoaded()` (~2 s @ 20 TPS); do not use FG's 2400 |
-| `minecraftWebExport.layoutLogStride` | *(adaptive)* | Layout export progress log interval; default ~30 lines for 100k+ recipes |
-| `minecraftWebExport.iconLogStride` | *(adaptive)* | Item icon export progress log interval |
+- `bundle.json` — metadata + per-mod route/pack manifests
+- `recipes/routes/`, `recipes/layout-packs/` — recipe layouts
+- `categories/index.json` — EMI recipe categories (tabs)
+- `items/index.json`, `items/<namespace>/*.json` — item reverse index (`schema: 2`, grouped by category)
+- `icons/`, `textures/`, `lang/`, `tags/` — assets and indexes
 
-CI / HeadlessMC: allocate a large heap (e.g. `-Xmx12G`) — layout + icon export on a full TFG pack can exceed the default ~4G client heap.
-| `minecraftWebExport.iconLogStride` | *(adaptive)* | Icon export progress log interval; default ~30 lines |
+Contract details: `docs/EMI资源目录与索引协议.md` in the monorepo (or your fork).
 
-CI / large modpacks: use **at least `-Xmx12G`** for the game JVM (TFG-Recipe-Viewer workflow sets this). Icon atlases are flushed to disk per page to limit heap use during export.
-| `minecraftWebExport.exportWorldDelayTicks` | `600` | Menu ticks before creating a **new** world (skipped when reusing save) |
-| `minecraftWebExport.exportTimeoutSeconds` | `7200` | Hard timeout for entire run (`<=0` disables) |
-| `minecraftWebExport.exportWorldName` | `emi-export` | Save folder under `saves/` |
+## Headless / CI JVM properties
 
-Recommended extra JVM flags (modpack stability):
+| Property | Example | Description |
+|----------|---------|-------------|
+| `minecraftWebExport.export.enabled` | `true` | Enable export |
+| `minecraftWebExport.runExportAndExit` | `true` | World → export → exit |
+| `minecraftWebExport.export.outputDir` | absolute path | Output root |
+| `minecraftWebExport.exportWarmupTicks` | `40` | Ticks after EMI reload |
+| `minecraftWebExport.exportWorldDelayTicks` | `600` | Menu delay before new world |
+| `minecraftWebExport.exportTimeoutSeconds` | `7200` | Hard timeout (`<=0` off) |
 
-```
--Djava.awt.headless=false
--Dmodernfix.config.mixin.feature.integrated_server_watchdog=false
-```
-
-**Do not** pass `--quickPlaySingleplayer` when using `runExportAndExit`; the mod owns world loading.
+Large modpacks: use **≥12G** heap. Do not pass `--quickPlaySingleplayer` with `runExportAndExit`.

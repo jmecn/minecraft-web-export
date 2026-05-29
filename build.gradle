@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'net.neoforged.moddev.legacyforge'
+    id 'maven-publish'
 }
 
 group = group_id
@@ -98,4 +99,27 @@ test {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.compilerArgs << '-Xlint:deprecation'
+}
+
+def githubPackagesUrl = "https://maven.pkg.github.com/${github_packages_owner}/${github_packages_repository}"
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            groupId = group_id
+            artifactId = archives_name
+            version = mod_version
+            artifact(tasks.jar)
+        }
+    }
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri(githubPackagesUrl)
+            credentials {
+                username = findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
+                password = findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')
+            }
+        }
+    }
 }

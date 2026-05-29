@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   release:
@@ -19,8 +20,11 @@ jobs:
           java-version: "17"
           distribution: temurin
 
-      - name: Build mod jar
-        run: chmod +x gradlew && ./gradlew jar --no-daemon
+      - name: Build and publish to GitHub Packages
+        run: chmod +x gradlew && ./gradlew jar publish --no-daemon
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
