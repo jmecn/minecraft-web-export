@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.export;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,7 +12,7 @@ import java.util.Map;
 
 public class ExportManifestWriter {
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = ExportGson.GSON;
 
     public Path write(
             ExportOutputPaths paths,

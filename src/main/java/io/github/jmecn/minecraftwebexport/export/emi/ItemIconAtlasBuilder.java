@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import com.mojang.blaze3d.platform.NativeImage;
 
 import java.io.IOException;
@@ -18,7 +18,7 @@ import org.apache.logging.log4j.Logger;
 final class ItemIconAtlasBuilder implements AutoCloseable {
 
     private static final Logger LOGGER = LogManager.getLogger(ItemIconAtlasBuilder.class);
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = ExportGson.GSON;
 
     private final int cellSize;
     private final int maxAtlasSize;

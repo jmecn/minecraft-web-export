@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
@@ -25,7 +25,7 @@ import org.apache.logging.log4j.Logger;
 public final class LangMergerExporter {
 
     private static final Logger LOGGER = LogManager.getLogger(LangMergerExporter.class);
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = ExportGson.GSON;
 
     private LangMergerExporter() {
     }

@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.server.MinecraftServer;
@@ -20,7 +20,7 @@ import org.apache.logging.log4j.Logger;
 public final class TagMembersIndexExporter {
 
     private static final Logger LOGGER = LogManager.getLogger(TagMembersIndexExporter.class);
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = ExportGson.GSON;
 
     private TagMembersIndexExporter() {
     }

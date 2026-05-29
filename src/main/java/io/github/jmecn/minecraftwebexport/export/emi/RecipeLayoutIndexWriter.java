@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import io.github.jmecn.minecraftwebexport.export.ExportGson;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,7 +18,7 @@ public final class RecipeLayoutIndexWriter {
     /** {@code recipes/index.json} contract schema (not per-layout JSON schema). */
     public static final int INDEX_SCHEMA_VERSION = 1;
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = ExportGson.GSON;
 
     private RecipeLayoutIndexWriter() {
     }
