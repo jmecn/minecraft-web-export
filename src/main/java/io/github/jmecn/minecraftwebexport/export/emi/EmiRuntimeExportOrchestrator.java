@@ -67,6 +67,9 @@ public final class EmiRuntimeExportOrchestrator {
                 layouts.iconVariants())
                 : emptyIconResult();
 
+        EmiRecipeCategoriesExporter.Result categories = layouts.written() > 0
+                ? EmiRecipeCategoriesExporter.export(outputRoot)
+                : new EmiRecipeCategoriesExporter.Result(0, 0);
         EmiItemsIndexExporter.Result items = layouts.written() > 0
                 ? EmiItemsIndexExporter.export(outputRoot, server, layouts.mods())
                 : new EmiItemsIndexExporter.Result(0, 0, 0, 0);
@@ -79,20 +82,22 @@ public final class EmiRuntimeExportOrchestrator {
 
         if (plan.mode() == ExportMode.SCOPED) {
             LOGGER.info(
-                    "{} scoped export complete: {}/{} layouts, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    "{} scoped export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     ExportLog.EMI,
                     layouts.written(),
                     recipeIds.size(),
+                    categories.categoryCount(),
                     items.itemCount(),
                     tags.tagsIndexed(),
                     langs.languagesWritten(),
                     icons.totalSpritesWritten());
         } else {
             LOGGER.info(
-                    "{} export complete: {}/{} layouts, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    "{} export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     ExportLog.EMI,
                     layouts.written(),
                     recipeIds.size(),
+                    categories.categoryCount(),
                     items.itemCount(),
                     tags.tagsIndexed(),
                     langs.languagesWritten(),

@@ -64,8 +64,8 @@ public final class EmiItemsIndexExporter {
         Map<String, Set<String>> tagItems = loadTagItems(outputDir);
         ExportedTagSets exportedTagSets = loadExportedTagSets(outputDir);
 
-        Map<String, Set<String>> inputs = new TreeMap<>();
-        Map<String, Set<String>> outputs = new TreeMap<>();
+        Map<String, Map<String, Set<String>>> inputs = new TreeMap<>();
+        Map<String, Map<String, Set<String>>> outputs = new TreeMap<>();
 
         RecipeLayoutLookup layoutLookup = new RecipeLayoutLookup(outputDir, mods);
         int scanTotal = recipeIds.size();
@@ -84,6 +84,7 @@ public final class EmiItemsIndexExporter {
                 logScanProgress(scanProgress, scanTotal, scanStride);
                 continue;
             }
+            String categoryId = readCategoryId(layout, recipeId);
             JsonArray widgets = readWidgets(layout);
 
             for (JsonElement widgetElement : widgets) {
@@ -103,7 +104,7 @@ public final class EmiItemsIndexExporter {
                 if (widget.has("ingredient")) {
                     collectIngredientIds(widget.get("ingredient"), ids, tagItems);
                 }
-                addRecipeRefs(bucket, ids, recipeId);
+                addRecipeRefs(bucket, categoryId, ids, recipeId);
             }
             logScanProgress(scanProgress, scanTotal, scanStride);
         }
@@ -133,13 +134,16 @@ public final class EmiItemsIndexExporter {
             Files.createDirectories(itemFile.getParent());
 
             Map<String, Object> detail = new LinkedHashMap<>();
+            detail.put("schema", 2);
             if (inputs.containsKey(itemId)) {
-                detail.put("inputs", new TreeSet<>(inputs.get(itemId)));
-                inputRefs += inputs.get(itemId).size();
+                Map<String, Object> byCategory = categoryBucketsToJson(inputs.get(itemId));
+                detail.put("inputs", byCategory);
+                inputRefs += countRecipeRefs(inputs.get(itemId));
             }
             if (outputs.containsKey(itemId)) {
-                detail.put("outputs", new TreeSet<>(outputs.get(itemId)));
-                outputRefs += outputs.get(itemId).size();
+                Map<String, Object> byCategory = categoryBucketsToJson(outputs.get(itemId));
+                detail.put("outputs", byCategory);
+                outputRefs += countRecipeRefs(outputs.get(itemId));
             }
 
             RegistryTagSets tagSets = registryTagSetsByItem.get(itemId);
@@ -508,10 +512,40 @@ public final class EmiItemsIndexExporter {
         return new JsonArray();
     }
 
-    private static Map<String, Set<String>> bucketForRole(
+    private static String readCategoryId(JsonObject layout, String recipeId) {
+        if (layout != null && layout.has("category") && layout.get("category").isJsonPrimitive()) {
+            String category = layout.get("category").getAsString().trim();
+            if (!category.isEmpty()) {
+                return category;
+            }
+        }
+        int slash = recipeId.indexOf('/');
+        if (slash > 0) {
+            return recipeId.substring(0, slash);
+        }
+        return "emi:unknown";
+    }
+
+    private static Map<String, Object> categoryBucketsToJson(Map<String, Set<String>> byCategory) {
+        Map<String, Object> json = new LinkedHashMap<>();
+        for (Map.Entry<String, Set<String>> entry : byCategory.entrySet()) {
+            json.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        return json;
+    }
+
+    private static int countRecipeRefs(Map<String, Set<String>> byCategory) {
+        int total = 0;
+        for (Set<String> refs : byCategory.values()) {
+            total += refs.size();
+        }
+        return total;
+    }
+
+    private static Map<String, Map<String, Set<String>>> bucketForRole(
             JsonObject widget,
-            Map<String, Set<String>> inputs,
-            Map<String, Set<String>> outputs) {
+            Map<String, Map<String, Set<String>>> inputs,
+            Map<String, Map<String, Set<String>>> outputs) {
         JsonElement roleElement = widget.get("role");
         if (roleElement == null || !roleElement.isJsonPrimitive()) {
             return null;
@@ -526,9 +560,15 @@ public final class EmiItemsIndexExporter {
         return null;
     }
 
-    private static void addRecipeRefs(Map<String, Set<String>> bucket, Set<String> ids, String recipeId) {
+    private static void addRecipeRefs(
+            Map<String, Map<String, Set<String>>> bucket,
+            String categoryId,
+            Set<String> ids,
+            String recipeId) {
         for (String id : ids) {
-            bucket.computeIfAbsent(id, ignored -> new TreeSet<>()).add(recipeId);
+            bucket.computeIfAbsent(id, ignored -> new TreeMap<>())
+                    .computeIfAbsent(categoryId, ignored -> new TreeSet<>())
+                    .add(recipeId);
         }
     }
 

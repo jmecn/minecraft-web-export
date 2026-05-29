@@ -26,6 +26,7 @@ class EmiItemsIndexExporterTest {
                         {
                           "schema": 2,
                           "id": "minecraft:iron_pickaxe",
+                          "category": "minecraft:crafting",
                           "widgets": [
                             {
                               "type": "slot",
@@ -64,8 +65,18 @@ class EmiItemsIndexExporterTest {
 
         assertEquals(1, json.get("schema").getAsInt());
         assertEquals(3, json.getAsJsonArray("minecraft").size());
-        assertEquals(1, stick.getAsJsonArray("inputs").size());
-        assertEquals(1, pickaxe.getAsJsonArray("outputs").size());
+        assertEquals(
+                "minecraft:iron_pickaxe",
+                stick.getAsJsonObject("inputs")
+                        .getAsJsonArray("minecraft:crafting")
+                        .get(0)
+                        .getAsString());
+        assertEquals(
+                "minecraft:iron_pickaxe",
+                pickaxe.getAsJsonObject("outputs")
+                        .getAsJsonArray("minecraft:crafting")
+                        .get(0)
+                        .getAsString());
     }
 
     @Test
@@ -77,6 +88,7 @@ class EmiItemsIndexExporterTest {
                         {
                           "schema": 2,
                           "id": "tfc:glassworking_jar",
+                          "category": "tfc:glassworking",
                           "widgets": [
                             {
                               "type": "slot",
@@ -109,7 +121,10 @@ class EmiItemsIndexExporterTest {
         assertTrue(Files.exists(hematiticFile));
         assertEquals(
                 "tfc:glassworking_jar",
-                hematitic.getAsJsonArray("inputs").get(0).getAsString());
+                hematitic.getAsJsonObject("inputs")
+                        .getAsJsonArray("tfc:glassworking")
+                        .get(0)
+                        .getAsString());
     }
 
     @Test
@@ -121,6 +136,7 @@ class EmiItemsIndexExporterTest {
                         {
                           "schema": 2,
                           "id": "emi:/tag/item/minecraft/rails",
+                          "category": "emi:tag",
                           "widgets": [
                             {
                               "type": "slot",
@@ -137,6 +153,7 @@ class EmiItemsIndexExporterTest {
                         {
                           "schema": 2,
                           "id": "minecraft:activator_rail",
+                          "category": "minecraft:crafting",
                           "widgets": [
                             {
                               "type": "slot",
@@ -152,9 +169,13 @@ class EmiItemsIndexExporterTest {
         Path railFile = EmiBundlePaths.resolve(tempDir, "items/minecraft/activator_rail.json");
         JsonObject rail = JsonParser.parseString(Files.readString(railFile)).getAsJsonObject();
         assertTrue(rail.has("outputs"));
-        assertEquals(1, rail.getAsJsonArray("outputs").size());
-        assertEquals("minecraft:activator_rail", rail.getAsJsonArray("outputs").get(0).getAsString());
-        assertTrue(!rail.has("inputs") || rail.getAsJsonArray("inputs").isEmpty());
+        assertEquals(
+                1,
+                rail.getAsJsonObject("outputs").getAsJsonArray("minecraft:crafting").size());
+        assertEquals(
+                "minecraft:activator_rail",
+                rail.getAsJsonObject("outputs").getAsJsonArray("minecraft:crafting").get(0).getAsString());
+        assertTrue(!rail.has("inputs") || rail.getAsJsonObject("inputs").isEmpty());
     }
 
     private static JsonObject layout(String json) {
