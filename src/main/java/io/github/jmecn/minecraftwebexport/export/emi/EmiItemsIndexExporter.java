@@ -1,22 +1,23 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
-import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,13 +31,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public final class EmiItemsIndexExporter {
 
     private static final Logger LOGGER = LogManager.getLogger(EmiItemsIndexExporter.class);
     private static final Gson GSON = ExportGson.GSON;
+    private static final String SCAN_LOG_STRIDE_PROPERTY = "minecraftWebExport.itemsIndexScanLogStride";
+    private static final String WRITE_LOG_STRIDE_PROPERTY = "minecraftWebExport.itemsIndexWriteLogStride";
 
     private EmiItemsIndexExporter() {
     }
@@ -66,12 +67,21 @@ public final class EmiItemsIndexExporter {
         Map<String, Set<String>> inputs = new TreeMap<>();
         Map<String, Set<String>> outputs = new TreeMap<>();
 
+        RecipeLayoutLookup layoutLookup = new RecipeLayoutLookup(outputDir, mods);
+        int scanTotal = recipeIds.size();
+        int scanStride = ExportProgressLog.stride(scanTotal, SCAN_LOG_STRIDE_PROPERTY, 20, 200);
+        int scanProgress = 0;
+        LOGGER.info("{} scanning {} recipes for item refs", ExportLog.EMI_ITEMS, scanTotal);
+
         for (String recipeId : recipeIds) {
+            scanProgress++;
             if (isEmiTagDisplayRecipe(recipeId)) {
+                logScanProgress(scanProgress, scanTotal, scanStride);
                 continue;
             }
-            JsonObject layout = RecipeIndexIds.loadLayout(outputDir, recipeId, mods);
+            JsonObject layout = layoutLookup.loadLayout(recipeId);
             if (layout == null) {
+                logScanProgress(scanProgress, scanTotal, scanStride);
                 continue;
             }
             JsonArray widgets = readWidgets(layout);
@@ -95,17 +105,25 @@ public final class EmiItemsIndexExporter {
                 }
                 addRecipeRefs(bucket, ids, recipeId);
             }
+            logScanProgress(scanProgress, scanTotal, scanStride);
         }
 
         Set<String> allItemIds = new TreeSet<>();
         allItemIds.addAll(inputs.keySet());
         allItemIds.addAll(outputs.keySet());
+        LOGGER.info("{} resolving registry tags for {} items", ExportLog.EMI_ITEMS, allItemIds.size());
         Map<String, RegistryTagSets> registryTagSetsByItem = resolveRegistryTags(allItemIds, server);
 
         int inputRefs = 0;
         int outputRefs = 0;
         Map<String, Set<String>> indexBuckets = new TreeMap<>();
+        int writeTotal = allItemIds.size();
+        int writeStride = ExportProgressLog.stride(writeTotal, WRITE_LOG_STRIDE_PROPERTY, 20, 200);
+        int writeProgress = 0;
+        LOGGER.info("{} writing {} item detail files", ExportLog.EMI_ITEMS, writeTotal);
+
         for (String itemId : allItemIds) {
+            writeProgress++;
             IdParts item = IdParts.parse(itemId);
             if (item == null) {
                 continue;
@@ -131,6 +149,15 @@ public final class EmiItemsIndexExporter {
             }
 
             Files.writeString(itemFile, GSON.toJson(detail));
+            if (ExportProgressLog.shouldLog(writeProgress, writeTotal, writeStride)) {
+                int pct = ExportProgressLog.percent(writeProgress, writeTotal);
+                LOGGER.info(
+                        "{} write {}% {}/{} item files",
+                        ExportLog.EMI_ITEMS,
+                        pct,
+                        writeProgress,
+                        writeTotal);
+            }
         }
 
         Map<String, Object> root = new LinkedHashMap<>();
@@ -150,6 +177,18 @@ public final class EmiItemsIndexExporter {
                 outputRefs,
                 itemsIndexFile);
         return new Result(allItemIds.size(), inputRefs, outputRefs, json.length());
+    }
+
+    private static void logScanProgress(int progress, int total, int stride) {
+        if (ExportProgressLog.shouldLog(progress, total, stride)) {
+            int pct = ExportProgressLog.percent(progress, total);
+            LOGGER.info(
+                    "{} scan {}% {}/{} recipes",
+                    ExportLog.EMI_ITEMS,
+                    pct,
+                    progress,
+                    total);
+        }
     }
 
     private static Map<String, Set<String>> loadTagItems(Path outputDir) throws IOException {
@@ -219,6 +258,8 @@ public final class EmiItemsIndexExporter {
             return Collections.emptyMap();
         }
         Registry<Item> itemRegistry = server.registryAccess().registryOrThrow(Registries.ITEM);
+        Registry<Block> blockRegistry = server.registryAccess().registryOrThrow(Registries.BLOCK);
+        Registry<Fluid> fluidRegistry = server.registryAccess().registryOrThrow(Registries.FLUID);
         Map<String, RegistryTagSets> out = new TreeMap<>();
 
         for (String itemId : itemIds) {
@@ -239,11 +280,17 @@ public final class EmiItemsIndexExporter {
 
             Item item = holder.get().value();
             if (item instanceof BlockItem blockItem) {
-                blockItem.getBlock().builtInRegistryHolder().tags().forEach(tag -> tags.blocks().add(tag.location().toString()));
+                blockRegistry.getResourceKey(blockItem.getBlock())
+                        .flatMap(blockRegistry::getHolder)
+                        .ifPresent(blockHolder -> blockHolder.tags()
+                                .forEach(tag -> tags.blocks().add(tag.location().toString())));
             }
             if (item instanceof BucketItem bucketItem) {
                 Fluid fluid = bucketItem.getFluid();
-                fluid.builtInRegistryHolder().tags().forEach(tag -> tags.fluids().add(tag.location().toString()));
+                fluidRegistry.getResourceKey(fluid)
+                        .flatMap(fluidRegistry::getHolder)
+                        .ifPresent(fluidHolder -> fluidHolder.tags()
+                                .forEach(tag -> tags.fluids().add(tag.location().toString())));
             }
             out.put(itemId, tags);
         }

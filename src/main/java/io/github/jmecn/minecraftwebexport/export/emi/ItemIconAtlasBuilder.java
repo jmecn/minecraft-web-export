@@ -1,8 +1,10 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
-import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import com.mojang.blaze3d.platform.NativeImage;
+import io.github.jmecn.minecraftwebexport.export.ExportGson;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -12,8 +14,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 final class ItemIconAtlasBuilder implements AutoCloseable {
 

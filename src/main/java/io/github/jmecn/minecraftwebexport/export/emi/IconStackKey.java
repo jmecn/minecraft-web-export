@@ -2,12 +2,12 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.ItemEmiStack;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -77,7 +77,7 @@ public final class IconStackKey {
     public static String itemIdForEmiStack(EmiStack emiStack) {
         ItemStack stack = toItemStack(emiStack);
         if (!stack.isEmpty() && stack.getItem() != Items.AIR) {
-            ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(stack.getItem());
             if (itemId != null) {
                 return itemId.toString();
             }

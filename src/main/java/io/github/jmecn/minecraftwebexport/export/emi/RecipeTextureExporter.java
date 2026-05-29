@@ -1,11 +1,13 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
-import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import com.mojang.blaze3d.platform.NativeImage;
+import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,8 +18,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public final class RecipeTextureExporter {
 

@@ -1,0 +1,95 @@
+package io.github.jmecn.minecraftwebexport.export.emi;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Cached lookup of recipe layouts from on-disk route shards and layout packs.
+ *
+ * <p>{@link RecipeIndexIds#loadLayout} re-parsed every pack file per recipe; with 100k+ recipes
+ * that dominated export time after icons. This class reads each shard/pack at most once.</p>
+ */
+final class RecipeLayoutLookup {
+
+    private final Path outputDir;
+    private final RecipeBundleMods mods;
+    private final Map<String, JsonObject> routeShards = new HashMap<>();
+    private final Map<String, JsonObject> layoutPacks = new HashMap<>();
+
+    RecipeLayoutLookup(Path outputDir, RecipeBundleMods mods) {
+        this.outputDir = outputDir;
+        this.mods = mods;
+    }
+
+    JsonObject loadLayout(String recipeId) throws IOException {
+        RecipeIndexIds.RecipeIdParts parts = RecipeIndexIds.splitRecipeId(recipeId);
+        if (parts == null || mods == null) {
+            return null;
+        }
+        RecipeBundleMods.ModEntry mod = mods.mods().get(parts.namespace());
+        if (mod == null) {
+            return null;
+        }
+        Integer packIndex = findPackIndex(parts.namespace(), mod, parts.path());
+        if (packIndex == null || packIndex < 0 || packIndex >= mod.packs().size()) {
+            return null;
+        }
+        RecipeBundleMods.PackRef packRef = mod.packs().get(packIndex);
+        JsonObject pack = loadLayoutPack(parts.namespace(), packRef.file());
+        JsonElement layout = pack.getAsJsonObject("layouts").get(parts.path());
+        return layout != null && layout.isJsonObject() ? layout.getAsJsonObject() : null;
+    }
+
+    private Integer findPackIndex(String namespace, RecipeBundleMods.ModEntry mod, String path)
+            throws IOException {
+        for (String routeFile : mod.routes()) {
+            JsonObject routeShard = loadRouteShard(namespace, routeFile);
+            JsonObject routes = routeShard.getAsJsonObject("routes");
+            if (routes != null && routes.has(path)) {
+                return routes.get(path).getAsInt();
+            }
+        }
+        return null;
+    }
+
+    private JsonObject loadRouteShard(String namespace, String routeFile) throws IOException {
+        String cacheKey = namespace + "/" + routeFile;
+        JsonObject cached = routeShards.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        Path routePath = EmiBundlePaths.resolve(
+                outputDir,
+                EmiBundlePaths.RECIPES_ROUTES_DIR + "/" + namespace + "/" + routeFile + ".json");
+        if (!Files.isRegularFile(routePath)) {
+            throw new IOException("missing route shard file: " + routePath);
+        }
+        JsonObject routeShard = JsonParser.parseString(Files.readString(routePath)).getAsJsonObject();
+        routeShards.put(cacheKey, routeShard);
+        return routeShard;
+    }
+
+    private JsonObject loadLayoutPack(String namespace, String packFile) throws IOException {
+        String cacheKey = namespace + "/" + packFile;
+        JsonObject cached = layoutPacks.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        Path packPath = EmiBundlePaths.resolve(
+                outputDir,
+                EmiBundlePaths.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace + "/" + packFile + ".json");
+        if (!Files.isRegularFile(packPath)) {
+            throw new IOException("missing layout pack file: " + packPath);
+        }
+        JsonObject pack = JsonParser.parseString(Files.readString(packPath)).getAsJsonObject();
+        layoutPacks.put(cacheKey, pack);
+        return pack;
+    }
+}

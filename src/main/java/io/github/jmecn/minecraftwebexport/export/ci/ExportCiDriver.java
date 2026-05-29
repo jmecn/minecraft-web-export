@@ -1,9 +1,10 @@
 package io.github.jmecn.minecraftwebexport.export.ci;
 
 import io.github.jmecn.minecraftwebexport.export.ExportOutputPaths;
-import io.github.jmecn.minecraftwebexport.export.emi.EmiExportReadiness;
 import io.github.jmecn.minecraftwebexport.export.RuntimeExportEntrypoint;
-import io.github.jmecn.minecraftwebexport.export.emi.EmiRuntimeExportOrchestrator;
+import io.github.jmecn.minecraftwebexport.export.emi.EmiExportReadiness;
+import io.github.jmecn.minecraftwebexport.export.module.ExportCoordinator;
+import io.github.jmecn.minecraftwebexport.export.module.ExportResult;
 import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LoadingOverlay;
@@ -29,16 +30,16 @@ public final class ExportCiDriver {
 
     private final Path gameDirectory;
     private final String outputRootOverride;
-    private final EmiRuntimeExportOrchestrator orchestrator;
+    private final ExportCoordinator coordinator;
 
     public ExportCiDriver(Path gameDirectory, String outputRootOverride) {
-        this(gameDirectory, outputRootOverride, new EmiRuntimeExportOrchestrator());
+        this(gameDirectory, outputRootOverride, new ExportCoordinator());
     }
 
-    ExportCiDriver(Path gameDirectory, String outputRootOverride, EmiRuntimeExportOrchestrator orchestrator) {
+    ExportCiDriver(Path gameDirectory, String outputRootOverride, ExportCoordinator coordinator) {
         this.gameDirectory = gameDirectory;
         this.outputRootOverride = outputRootOverride;
-        this.orchestrator = orchestrator;
+        this.coordinator = coordinator;
     }
 
     public void register() {
@@ -48,7 +49,7 @@ public final class ExportCiDriver {
                 ExportOutputPaths.resolve(gameDirectory, outputRootOverride).rootDir(),
                 ExportCiProperties.exportWarmupTicks(),
                 ExportCiProperties.exportTimeoutSeconds());
-        MinecraftForge.EVENT_BUS.register(new AutoExportHandler(gameDirectory, outputRootOverride, orchestrator, logger));
+        MinecraftForge.EVENT_BUS.register(new AutoExportHandler(gameDirectory, outputRootOverride, coordinator, logger));
     }
 
     static boolean isFatalMenuScreen(Minecraft client) {
@@ -102,7 +103,7 @@ public final class ExportCiDriver {
 
         private final Path gameDirectory;
         private final String outputRootOverride;
-        private final EmiRuntimeExportOrchestrator orchestrator;
+        private final ExportCoordinator coordinator;
         private final Logger logger;
         private final StateLogger stateLog;
 
@@ -115,11 +116,11 @@ public final class ExportCiDriver {
         AutoExportHandler(
                 Path gameDirectory,
                 String outputRootOverride,
-                EmiRuntimeExportOrchestrator orchestrator,
+                ExportCoordinator coordinator,
                 Logger logger) {
             this.gameDirectory = gameDirectory;
             this.outputRootOverride = outputRootOverride;
-            this.orchestrator = orchestrator;
+            this.coordinator = coordinator;
             this.logger = logger;
             this.stateLog = new StateLogger(logger);
         }
@@ -252,14 +253,14 @@ public final class ExportCiDriver {
             Path outputRoot = ExportOutputPaths.resolve(gameDirectory, outputRootOverride).rootDir();
             logger.info("running EMI export to {} ...", outputRoot.toAbsolutePath());
             try {
-                EmiRuntimeExportOrchestrator.Report report = orchestrator.export(outputRoot, client);
+                ExportResult result = coordinator.run(outputRoot, gameDirectory, client);
                 logger.info("EMI export finished (recipes={}/{}, items={}, tags={}, langs={}, icons={}), exiting 0",
-                        report.recipesWritten(),
-                        report.recipesRequested(),
-                        report.itemIndexCount(),
-                        report.tagIndexCount(),
-                        report.languagesWritten(),
-                        report.iconsWritten());
+                        result.recipesWritten(),
+                        result.recipesRequested(),
+                        result.itemIndexCount(),
+                        result.tagIndexCount(),
+                        result.languagesWritten(),
+                        result.iconsWritten());
                 System.exit(0);
             } catch (Exception e) {
                 logger.error("EMI export failed for {}", outputRoot.toAbsolutePath(), e);

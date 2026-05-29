@@ -1,9 +1,12 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
-import dev.emi.emi.api.EmiApi;
-import dev.emi.emi.api.recipe.EmiRecipe;
+import io.github.jmecn.minecraftwebexport.export.module.ExportMode;
+import io.github.jmecn.minecraftwebexport.export.module.ExportPlan;
+import io.github.jmecn.minecraftwebexport.export.module.ExportPlanner;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,9 +14,6 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public final class EmiRuntimeExportOrchestrator {
 
@@ -30,29 +30,39 @@ public final class EmiRuntimeExportOrchestrator {
     }
 
     public Report export(Path outputRoot, Minecraft client) throws IOException {
-        Set<String> recipeIds = collectRecipeIds();
+        return export(outputRoot, client, ExportPlan.full(ExportPlanner.collectAllRecipeIds()));
+    }
+
+    public Report export(Path outputRoot, Minecraft client, ExportPlan plan) throws IOException {
+        Set<String> recipeIds = plan.recipeIds();
         EmiRecipeLayoutExporter.Result layouts = exportLayouts(outputRoot, client, recipeIds);
         client.renderBuffers().bufferSource().endBatch();
+
+        Set<String> tagIds = plan.tagsForExport(layouts.referencedTags());
 
         TagMembersIndexExporter.Result tags = new TagMembersIndexExporter.Result(
                 0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
         MinecraftServer server = client.getSingleplayerServer();
-        if (server != null && TagMembersIndexExporter.isEnabled()) {
-            tags = TagMembersIndexExporter.export(outputRoot, server, layouts.referencedTags());
-        } else if (!layouts.referencedTags().isEmpty()) {
+        if (server != null && TagMembersIndexExporter.isEnabled() && !tagIds.isEmpty()) {
+            tags = TagMembersIndexExporter.export(outputRoot, server, tagIds);
+        } else if (!tagIds.isEmpty() && server == null) {
             LOGGER.warn("{} tag-members skipped: no integrated server", ExportLog.EMI);
         }
 
+        Set<String> langKeys = plan.langKeysForExport();
         LangMergerExporter.Result langs = LangMergerExporter.isEnabled()
-                ? LangMergerExporter.exportEmiLang(outputRoot, client, null)
+                ? LangMergerExporter.exportEmiLang(outputRoot, client, langKeys)
                 : emptyLangResult();
+
+        Set<String> itemsForIcons = plan.itemsForIcons(layouts.referencedItems());
+        Set<String> fluidsForIcons = plan.fluidsForIcons(layouts.referencedFluids());
 
         ItemIconRendererExporter.Result icons = ItemIconRendererExporter.isEnabled()
                 ? ItemIconRendererExporter.export(
                 outputRoot,
                 client,
-                layouts.referencedItems(),
-                layouts.referencedFluids(),
+                itemsForIcons,
+                fluidsForIcons,
                 null,
                 layouts.iconVariants())
                 : emptyIconResult();
@@ -67,15 +77,27 @@ public final class EmiRuntimeExportOrchestrator {
                 layouts.written(),
                 layouts.mods());
 
-        LOGGER.info(
-                "{} export complete: {}/{} layouts, {} indexed items, {} tags, {} lang files, {} icon sprites",
-                ExportLog.EMI,
-                layouts.written(),
-                recipeIds.size(),
-                items.itemCount(),
-                tags.tagsIndexed(),
-                langs.languagesWritten(),
-                icons.totalSpritesWritten());
+        if (plan.mode() == ExportMode.SCOPED) {
+            LOGGER.info(
+                    "{} scoped export complete: {}/{} layouts, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    ExportLog.EMI,
+                    layouts.written(),
+                    recipeIds.size(),
+                    items.itemCount(),
+                    tags.tagsIndexed(),
+                    langs.languagesWritten(),
+                    icons.totalSpritesWritten());
+        } else {
+            LOGGER.info(
+                    "{} export complete: {}/{} layouts, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    ExportLog.EMI,
+                    layouts.written(),
+                    recipeIds.size(),
+                    items.itemCount(),
+                    tags.tagsIndexed(),
+                    langs.languagesWritten(),
+                    icons.totalSpritesWritten());
+        }
 
         return new Report(
                 outputRoot,
@@ -123,20 +145,6 @@ public final class EmiRuntimeExportOrchestrator {
 
     private static ItemIconRendererExporter.Result emptyIconResult() {
         return new ItemIconRendererExporter.Result(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
-
-    private static Set<String> collectRecipeIds() {
-        var manager = EmiApi.getRecipeManager();
-        if (manager == null) {
-            return Set.of();
-        }
-        Set<String> ids = new TreeSet<>();
-        for (EmiRecipe recipe : manager.getRecipes()) {
-            if (recipe.getId() != null) {
-                ids.add(recipe.getId().toString());
-            }
-        }
-        return ids;
     }
 
     private static List<String> exportedLanguages(Path outputRoot) throws IOException {

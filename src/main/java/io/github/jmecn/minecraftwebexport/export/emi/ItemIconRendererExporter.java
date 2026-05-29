@@ -6,7 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
@@ -14,6 +13,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.registries.ForgeRegistries;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public final class ItemIconRendererExporter {
 
@@ -122,7 +123,7 @@ public final class ItemIconRendererExporter {
                     iconsRoot);
         } else {
             int totalItems = 0;
-            for (Item ignored : BuiltInRegistries.ITEM) {
+            for (Item ignored : ForgeRegistries.ITEMS) {
                 totalItems++;
             }
             LOGGER.info(
@@ -176,7 +177,7 @@ public final class ItemIconRendererExporter {
             int itemTotal = itemOrder.size();
             for (ResourceLocation itemId : itemOrder) {
                 index++;
-                Item item = BuiltInRegistries.ITEM.get(itemId);
+                Item item = ForgeRegistries.ITEMS.getValue(itemId);
                 if (item == null || item == Items.AIR) {
                     continue;
                 }
@@ -214,7 +215,7 @@ public final class ItemIconRendererExporter {
 
             renderer.setupFlatGuiRendering();
             for (String fluidIdStr : fluidOrder) {
-                Fluid fluid = BuiltInRegistries.FLUID.get(ResourceLocation.parse(fluidIdStr));
+                Fluid fluid = ForgeRegistries.FLUIDS.getValue(ResourceLocation.parse(fluidIdStr));
                 if (fluid == null || fluid.isSame(Fluids.EMPTY)) {
                     continue;
                 }
@@ -317,11 +318,11 @@ public final class ItemIconRendererExporter {
             return List.of();
         }
         TreeSet<String> ids = new TreeSet<>();
-        for (Fluid fluid : BuiltInRegistries.FLUID) {
+        for (Fluid fluid : ForgeRegistries.FLUIDS) {
             if (fluid == null || fluid.isSame(Fluids.EMPTY)) {
                 continue;
             }
-            ResourceLocation fluidId = BuiltInRegistries.FLUID.getKey(fluid);
+            ResourceLocation fluidId = ForgeRegistries.FLUIDS.getKey(fluid);
             if (fluidId == null) {
                 continue;
             }
@@ -354,14 +355,14 @@ public final class ItemIconRendererExporter {
     private static void logRegistryItemCountsByNamespace() {
         Map<String, Integer> byNs = new LinkedHashMap<>();
         int blockItems = 0;
-        for (Item item : BuiltInRegistries.ITEM) {
+        for (Item item : ForgeRegistries.ITEMS) {
             if (item == null || item == Items.AIR) {
                 continue;
             }
             if (item instanceof net.minecraft.world.item.BlockItem) {
                 blockItems++;
             }
-            ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+            ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
             if (id == null) {
                 continue;
             }
@@ -427,7 +428,7 @@ public final class ItemIconRendererExporter {
         var result = Collections.newSetFromMap(new IdentityHashMap<TextureAtlasSprite, Boolean>());
         var random = RandomSource.create(0);
         for (var model : models) {
-            for (var quad : model.getQuads(null, null, random)) {
+            for (var quad : model.getQuads(null, null, random, ModelData.EMPTY, null)) {
                 result.add(quad.getSprite());
             }
         }

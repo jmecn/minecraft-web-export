@@ -1,9 +1,9 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,12 +22,12 @@ public final class IconItemOrdering {
             Predicate<Item> include,
             Map<String, Integer> usageWeights) {
         List<ResourceLocation> ids = new ArrayList<>();
-        for (Item item : BuiltInRegistries.ITEM) {
+        for (Item item : ForgeRegistries.ITEMS) {
             if (item == null || item == Items.AIR || !include.test(item)) {
                 continue;
             }
-            ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
-            if (itemId == null || !BuiltInRegistries.ITEM.containsKey(itemId)) {
+            ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(item);
+            if (itemId == null || !ForgeRegistries.ITEMS.containsKey(itemId)) {
                 continue;
             }
             if (onlyItemIds != null && !onlyItemIds.contains(itemId.toString())) {

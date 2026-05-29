@@ -1,10 +1,12 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import com.google.gson.Gson;
-import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import net.minecraft.server.MinecraftServer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,8 +16,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public final class TagMembersIndexExporter {
 

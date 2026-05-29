@@ -1,9 +1,10 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
-import dev.emi.emi.api.EmiApi;
 import io.github.jmecn.minecraftwebexport.export.ExportOutputPaths;
 import io.github.jmecn.minecraftwebexport.export.RuntimeExportEntrypoint;
 import io.github.jmecn.minecraftwebexport.export.ci.ExportCiProperties;
+import io.github.jmecn.minecraftwebexport.export.module.ExportCoordinator;
+import io.github.jmecn.minecraftwebexport.export.module.ExportResult;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
@@ -18,14 +19,14 @@ public final class RuntimeEmiExportEntrypoint {
     private static final int DEFAULT_WARMUP_TICKS = 100;
     private static final int HEARTBEAT_TICKS = 200;
 
-    private final EmiRuntimeExportOrchestrator orchestrator;
+    private final ExportCoordinator coordinator;
 
     public RuntimeEmiExportEntrypoint() {
-        this(new EmiRuntimeExportOrchestrator());
+        this(new ExportCoordinator());
     }
 
-    RuntimeEmiExportEntrypoint(EmiRuntimeExportOrchestrator orchestrator) {
-        this.orchestrator = Objects.requireNonNull(orchestrator, "orchestrator");
+    RuntimeEmiExportEntrypoint(ExportCoordinator coordinator) {
+        this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
     }
 
     public void armIfEnabled(Path gameDirectory, Logger logger) {
@@ -40,7 +41,7 @@ public final class RuntimeEmiExportEntrypoint {
                 gameDirectory,
                 System.getProperty(RuntimeExportEntrypoint.OUTPUT_ROOT_PROPERTY),
                 logger,
-                orchestrator));
+                coordinator));
     }
 
     private static int warmupTicks() {
@@ -52,7 +53,7 @@ public final class RuntimeEmiExportEntrypoint {
         private final Path gameDirectory;
         private final String outputRootOverride;
         private final Logger logger;
-        private final EmiRuntimeExportOrchestrator orchestrator;
+        private final ExportCoordinator coordinator;
 
         private boolean finished;
         private int readyTicks;
@@ -62,11 +63,11 @@ public final class RuntimeEmiExportEntrypoint {
                 Path gameDirectory,
                 String outputRootOverride,
                 Logger logger,
-                EmiRuntimeExportOrchestrator orchestrator) {
+                ExportCoordinator coordinator) {
             this.gameDirectory = gameDirectory;
             this.outputRootOverride = outputRootOverride;
             this.logger = logger;
-            this.orchestrator = orchestrator;
+            this.coordinator = coordinator;
         }
 
         @SubscribeEvent
@@ -90,16 +91,16 @@ public final class RuntimeEmiExportEntrypoint {
 
             Path outputRoot = ExportOutputPaths.resolve(gameDirectory, outputRootOverride).rootDir();
             try {
-                EmiRuntimeExportOrchestrator.Report report = orchestrator.export(outputRoot, client);
+                ExportResult result = coordinator.run(outputRoot, gameDirectory, client);
                 finished = true;
                 logger.info("{} wrote {} (recipes={}, items={}, tags={}, langs={}, icons={})",
                         ExportLog.EMI,
-                        report.outputRoot().toAbsolutePath(),
-                        report.recipesWritten(),
-                        report.itemIndexCount(),
-                        report.tagIndexCount(),
-                        report.languagesWritten(),
-                        report.iconsWritten());
+                        result.outputRoot().toAbsolutePath(),
+                        result.recipesWritten(),
+                        result.itemIndexCount(),
+                        result.tagIndexCount(),
+                        result.languagesWritten(),
+                        result.iconsWritten());
             } catch (Exception e) {
                 failureCount++;
                 readyTicks = 0;
