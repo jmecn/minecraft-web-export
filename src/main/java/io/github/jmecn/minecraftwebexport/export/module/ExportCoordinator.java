@@ -36,6 +36,10 @@ public final class ExportCoordinator {
         ExportScope scope = new ExportScope(outputRoot, gameDirectory, mode);
         List<ExportModule> modules = ExportModuleRegistry.modules();
 
+        for (ExportModule module : modules) {
+            module.beforeEmiExport(scope, client);
+        }
+
         ExportPlan plan = ExportPlanner.plan(client, mode, modules, scope);
         ExportSeeds mergedSeeds = plan.mode() == ExportMode.FULL ? ExportSeeds.empty() : plan.sourceSeeds();
 

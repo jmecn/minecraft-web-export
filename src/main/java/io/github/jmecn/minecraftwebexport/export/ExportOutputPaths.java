@@ -1,5 +1,7 @@
 package io.github.jmecn.minecraftwebexport.export;
 
+import io.github.jmecn.minecraftwebexport.export.module.ExportModuleRegistry;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -22,6 +24,25 @@ public record ExportOutputPaths(Path rootDir, Path manifestFile, Path bundleFile
                 ? gameDirectory.resolve(EXPORT_DIR).resolve(EXPORT_NAME)
                 : Path.of(explicitOutputRoot);
 
+        return pathsForRoot(root);
+    }
+
+    /**
+     * CI / combined export root. When {@link ExportModuleRegistry} has modules and no explicit
+     * output dir, uses {@code <gameDir>/export/} so siblings like {@code guide-export/} and
+     * {@code emi/} share one parent.
+     */
+    public static ExportOutputPaths resolveForRun(Path gameDirectory, String explicitOutputRoot) {
+        if (!isBlank(explicitOutputRoot)) {
+            return resolve(gameDirectory, explicitOutputRoot);
+        }
+        if (!ExportModuleRegistry.modules().isEmpty()) {
+            return pathsForRoot(gameDirectory.resolve(EXPORT_DIR));
+        }
+        return resolve(gameDirectory, null);
+    }
+
+    private static ExportOutputPaths pathsForRoot(Path root) {
         root = root.toAbsolutePath().normalize();
         return new ExportOutputPaths(
                 root,

@@ -46,7 +46,7 @@ public final class ExportCiDriver {
         Logger logger = MinecraftWebExportMod.LOGGER;
         logger.info("mode=runExportAndExit, world={}, output={}, warmupTicks={}, timeoutSeconds={}",
                 ExportWorldCreator.saveName(),
-                ExportOutputPaths.resolve(gameDirectory, outputRootOverride).rootDir(),
+                ExportOutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir(),
                 ExportCiProperties.exportWarmupTicks(),
                 ExportCiProperties.exportTimeoutSeconds());
         MinecraftForge.EVENT_BUS.register(new AutoExportHandler(gameDirectory, outputRootOverride, coordinator, logger));
@@ -250,7 +250,7 @@ public final class ExportCiDriver {
             }
 
             phase = Phase.DONE;
-            Path outputRoot = ExportOutputPaths.resolve(gameDirectory, outputRootOverride).rootDir();
+            Path outputRoot = ExportOutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir();
             logger.info("running EMI export to {} ...", outputRoot.toAbsolutePath());
             try {
                 ExportResult result = coordinator.run(outputRoot, gameDirectory, client);
