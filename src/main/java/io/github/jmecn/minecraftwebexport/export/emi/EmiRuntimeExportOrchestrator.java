@@ -54,8 +54,14 @@ public final class EmiRuntimeExportOrchestrator {
                 ? LangMergerExporter.exportEmiLang(outputRoot, client, langKeys)
                 : emptyLangResult();
 
-        Set<String> itemsForIcons = plan.itemsForIcons(layouts.referencedItems());
-        Set<String> fluidsForIcons = plan.fluidsForIcons(layouts.referencedFluids());
+        Set<String> itemsForLang = plan.itemsForIcons(layouts.referencedItems());
+        Set<String> fluidsForLang = plan.fluidsForIcons(layouts.referencedFluids());
+        if (RegistryLangFillExporter.isEnabled() && (!itemsForLang.isEmpty() || !fluidsForLang.isEmpty())) {
+            RegistryLangFillExporter.fillMissing(outputRoot, client, itemsForLang, fluidsForLang);
+        }
+
+        Set<String> itemsForIcons = itemsForLang;
+        Set<String> fluidsForIcons = fluidsForLang;
 
         ItemIconRendererExporter.Result icons = ItemIconRendererExporter.isEnabled()
                 ? ItemIconRendererExporter.export(
