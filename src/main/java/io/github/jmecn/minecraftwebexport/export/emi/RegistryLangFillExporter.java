@@ -29,8 +29,9 @@ import java.util.TreeSet;
 /**
  * Fills missing {@code item.*}/{@code block.*}/{@code fluid.*} lang entries from in-game hover names.
  *
- * <p>Needed for mods (e.g. AE2) where kubejs lang overrides omit most item keys, and for GregTech-style
- * composed names that are resolved only at runtime.</p>
+ * <p>Needed for mods (e.g. AE2) where kubejs lang overrides omit most item keys. GregTech CEu
+ * ({@code gtceu:*}) is skipped — it uses {@code material.*}/{@code tagprefix.*} in lang files, and
+ * hover-name fill would write English into {@code zh_cn.json} during headless export.</p>
  */
 public final class RegistryLangFillExporter {
 
@@ -118,6 +119,9 @@ public final class RegistryLangFillExporter {
         }
         int resolved = 0;
         for (String itemId : itemIds) {
+            if (RegistryLangKeys.skipRegistryLangFill(itemId)) {
+                continue;
+            }
             ItemStack stack = stackForItemId(itemId);
             if (stack.isEmpty()) {
                 continue;
@@ -143,6 +147,9 @@ public final class RegistryLangFillExporter {
         }
         int resolved = 0;
         for (String fluidId : fluidIds) {
+            if (RegistryLangKeys.skipRegistryLangFill(fluidId)) {
+                continue;
+            }
             String label = fluidLabel(fluidId);
             if (label == null || label.isBlank()) {
                 continue;
