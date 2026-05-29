@@ -12,11 +12,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class EmiRuntimeExportOrchestrator {
 
-    private static final Logger LOGGER = Logger.getLogger(EmiRuntimeExportOrchestrator.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(EmiRuntimeExportOrchestrator.class);
 
     public record Report(
             Path outputRoot,
@@ -39,7 +40,7 @@ public final class EmiRuntimeExportOrchestrator {
         if (server != null && TagMembersIndexExporter.isEnabled()) {
             tags = TagMembersIndexExporter.export(outputRoot, server, layouts.referencedTags());
         } else if (!layouts.referencedTags().isEmpty()) {
-            LOGGER.warning("[emi] tag-members skipped because no integrated server is available");
+            LOGGER.warn("{} tag-members skipped: no integrated server", ExportLog.EMI);
         }
 
         LangMergerExporter.Result langs = LangMergerExporter.isEnabled()
@@ -65,9 +66,15 @@ public final class EmiRuntimeExportOrchestrator {
                 EmiRecipeLayoutExporter.layoutScale(),
                 layouts.written());
 
-        LOGGER.info("[emi] export complete: " + layouts.written() + "/" + recipeIds.size() + " layouts, "
-                + items.itemCount() + " indexed items, " + tags.tagsIndexed() + " tags, "
-                + langs.languagesWritten() + " lang files, " + icons.totalSpritesWritten() + " icon sprites");
+        LOGGER.info(
+                "{} export complete: {}/{} layouts, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                ExportLog.EMI,
+                layouts.written(),
+                recipeIds.size(),
+                items.itemCount(),
+                tags.tagsIndexed(),
+                langs.languagesWritten(),
+                icons.totalSpritesWritten());
 
         return new Report(
                 outputRoot,
@@ -86,7 +93,7 @@ public final class EmiRuntimeExportOrchestrator {
         if (EmiRecipeLayoutExporter.isEnabled()) {
             return EmiRecipeLayoutExporter.export(outputRoot, client, recipeIds);
         }
-        LOGGER.info("[emi] layout export disabled by configuration");
+        LOGGER.info("{} layout export disabled by configuration", ExportLog.EMI);
         return emptyLayoutResult(recipeIds.size());
     }
 

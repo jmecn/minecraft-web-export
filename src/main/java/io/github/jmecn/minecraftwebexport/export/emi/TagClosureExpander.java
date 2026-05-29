@@ -16,11 +16,12 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class TagClosureExpander {
 
-    private static final Logger LOGGER = Logger.getLogger(TagClosureExpander.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(TagClosureExpander.class);
 
     private TagClosureExpander() {
     }
@@ -78,9 +79,14 @@ public final class TagClosureExpander {
             expandFluidTag(fluids, tagId, visitedFluidTags, outFluids, outTags);
         }
 
-        LOGGER.info("[tags] closure expand: " + seedTagRefs.size() + " seed tags -> "
-                + outItems.size() + " items, " + outBlocks.size() + " blocks, "
-                + outFluids.size() + " fluids (" + outTags.size() + " tag keys)");
+        LOGGER.info(
+                "{} closure expand: {} seed tags -> {} items, {} blocks, {} fluids ({} tag keys)",
+                ExportLog.TAGS,
+                seedTagRefs.size(),
+                outItems.size(),
+                outBlocks.size(),
+                outFluids.size(),
+                outTags.size());
 
         return new Expansion(outItems, outBlocks, outFluids, outTags);
     }

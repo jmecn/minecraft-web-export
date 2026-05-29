@@ -30,11 +30,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class EmiItemsIndexExporter {
 
-    private static final Logger LOGGER = Logger.getLogger(EmiItemsIndexExporter.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(EmiItemsIndexExporter.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private EmiItemsIndexExporter() {
@@ -52,7 +53,7 @@ public final class EmiItemsIndexExporter {
         Path itemsIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEMS_INDEX_FILE);
 
         if (!Files.isRegularFile(recipeIndexFile)) {
-            LOGGER.warning("[emi-items] missing " + recipeIndexFile + " - skipping items index");
+            LOGGER.warn("{} missing {} - skipping items index", ExportLog.EMI_ITEMS, recipeIndexFile);
             return new Result(0, 0, 0, 0);
         }
 
@@ -141,9 +142,13 @@ public final class EmiItemsIndexExporter {
         String json = GSON.toJson(root);
         Files.createDirectories(itemsIndexFile.getParent());
         Files.writeString(itemsIndexFile, json);
-        LOGGER.info("[emi-items] " + allItemIds.size()
-                + " items (" + inputRefs + " input refs, " + outputRefs + " output refs) -> "
-                + itemsIndexFile);
+        LOGGER.info(
+                "{} {} items ({} input refs, {} output refs) -> {}",
+                ExportLog.EMI_ITEMS,
+                allItemIds.size(),
+                inputRefs,
+                outputRefs,
+                itemsIndexFile);
         return new Result(allItemIds.size(), inputRefs, outputRefs, json.length());
     }
 

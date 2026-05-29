@@ -22,11 +22,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class EmiRecipeLayoutExporter {
 
-    private static final Logger LOGGER = Logger.getLogger(EmiRecipeLayoutExporter.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(EmiRecipeLayoutExporter.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final int PANEL_MARGIN = 4;
@@ -100,7 +101,12 @@ public final class EmiRecipeLayoutExporter {
             if (recipe == null) {
                 missing++;
                 if (ExportProgressLog.shouldLog(progress, total, logStride)) {
-                    LOGGER.warning("[emi-layout] " + progress + "/" + total + " - " + missing + " missing so far");
+                    LOGGER.info(
+                            "{} {}/{} progress: {} missing so far",
+                            ExportLog.EMI_LAYOUT,
+                            progress,
+                            total,
+                            missing);
                 }
                 continue;
             }
@@ -133,12 +139,25 @@ public final class EmiRecipeLayoutExporter {
                 written++;
                 if (ExportProgressLog.shouldLog(progress, total, logStride)) {
                     int pct = ExportProgressLog.percent(progress, total);
-                    LOGGER.info("[emi-layout] " + pct + "% " + progress + "/" + total + " - "
-                            + written + " ok, " + missing + " missing, " + failures + " fail");
+                    LOGGER.info(
+                            "{} {}% {}/{} - {} ok, {} missing, {} fail",
+                            ExportLog.EMI_LAYOUT,
+                            pct,
+                            progress,
+                            total,
+                            written,
+                            missing,
+                            failures);
                 }
             } catch (Exception e) {
                 failures++;
-                LOGGER.warning("[emi-layout] failed for " + recipeId + ": " + e);
+                ExportLog.detailFailure(
+                        LOGGER,
+                        failures,
+                        "{} failed for {}: {}",
+                        ExportLog.EMI_LAYOUT,
+                        recipeId,
+                        e);
             }
         }
 
@@ -146,10 +165,26 @@ public final class EmiRecipeLayoutExporter {
         RecipeTextureExporter.Result textures = RecipeTextureExporter.export(outputDir, client, textureIds);
 
         long chromeBytes = dirSize(chromeRoot);
-        LOGGER.info("[emi-layout] done: " + written + "/" + total + " layouts (" + jsonBytes + " json bytes), "
-                + missing + " missing, " + failures + " failed, chrome layers " + chromeLayers
-                + " (" + chromeDeduped + " deduped), " + chromeHashToRelative.size()
-                + " unique files, " + chromeBytes + " chrome bytes");
+        LOGGER.info(
+                "{} done: {}/{} layouts ({} json bytes), {} missing, {} failed, chrome layers {} ({} deduped), {} unique files, {} chrome bytes",
+                ExportLog.EMI_LAYOUT,
+                written,
+                total,
+                jsonBytes,
+                missing,
+                failures,
+                chromeLayers,
+                chromeDeduped,
+                chromeHashToRelative.size(),
+                chromeBytes);
+        if (failures > ExportLog.DETAIL_FAILURE_LIMIT) {
+            LOGGER.warn(
+                    "{} {} layout failures (first {} at DEBUG; -D{}=true or enable DEBUG on export.emi)",
+                    ExportLog.EMI_LAYOUT,
+                    failures,
+                    ExportLog.DETAIL_FAILURE_LIMIT,
+                    "minecraftWebExport.export.logDetailFailures");
+        }
         return new Result(
                 total,
                 written,

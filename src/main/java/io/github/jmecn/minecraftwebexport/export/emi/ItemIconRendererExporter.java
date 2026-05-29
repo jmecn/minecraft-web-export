@@ -27,11 +27,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class ItemIconRendererExporter {
 
-    private static final Logger LOGGER = Logger.getLogger(ItemIconRendererExporter.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(ItemIconRendererExporter.class);
     private static final String ICON_LOG_STRIDE_PROPERTY = "minecraftWebExport.iconLogStride";
     private static final int FLUSH_RENDER_EVERY = 256;
 
@@ -111,15 +112,27 @@ public final class ItemIconRendererExporter {
         Map<String, ItemStack> variants = iconVariants != null ? iconVariants : Map.of();
 
         if (onlyItemIds != null) {
-            LOGGER.info("[icons] closure: " + onlyItemIds.size() + " items, " + fluidOrder.size() + " fluids, "
-                    + variants.size() + " nbt variants at " + cell + "px -> " + iconsRoot);
+            LOGGER.info(
+                    "{} closure: {} items, {} fluids, {} nbt variants at {}px -> {}",
+                    ExportLog.ICONS,
+                    onlyItemIds.size(),
+                    fluidOrder.size(),
+                    variants.size(),
+                    cell,
+                    iconsRoot);
         } else {
             int totalItems = 0;
             for (Item ignored : BuiltInRegistries.ITEM) {
                 totalItems++;
             }
-            LOGGER.info("[icons] full export: " + totalItems + " registry items, " + fluidOrder.size()
-                    + " fluids at " + cell + "px (max atlas " + atlasMax + "px) -> " + iconsRoot);
+            LOGGER.info(
+                    "{} full export: {} registry items, {} fluids at {}px (max atlas {}px) -> {}",
+                    ExportLog.ICONS,
+                    totalItems,
+                    fluidOrder.size(),
+                    cell,
+                    atlasMax,
+                    iconsRoot);
             logRegistryItemCountsByNamespace();
         }
 
@@ -127,9 +140,15 @@ public final class ItemIconRendererExporter {
         List<IconAtlasLayout.PagePlan> layout = IconAtlasLayout.plan(totalSprites, cell, atlasMax);
         if (!layout.isEmpty()) {
             IconAtlasLayout.PagePlan first = layout.get(0);
-            LOGGER.info("[icons] " + totalSprites + " sprites, planned " + layout.size() + " page(s), first page "
-                    + first.cols() + "x" + first.rows() + " cells (" + first.widthPx(cell) + "x"
-                    + first.heightPx(cell) + "px)");
+            LOGGER.info(
+                    "{} {} sprites, planned {} page(s), first page {}x{} cells ({}x{}px)",
+                    ExportLog.ICONS,
+                    totalSprites,
+                    layout.size(),
+                    first.cols(),
+                    first.rows(),
+                    first.widthPx(cell),
+                    first.heightPx(cell));
         }
 
         int itemLogStride = ExportProgressLog.stride(itemOrder.size(), ICON_LOG_STRIDE_PROPERTY, 50, 500);
@@ -170,15 +189,26 @@ public final class ItemIconRendererExporter {
                         bufferSource.endBatch();
                     }
                     if (ExportProgressLog.shouldLog(index, itemTotal, itemLogStride)) {
-                        LOGGER.info("[icons] items: " + ExportProgressLog.percent(index, itemTotal) + "% "
-                                + index + "/" + itemTotal + " (" + itemsPlaced + " ok, " + itemFailures + " fail)");
+                        LOGGER.info(
+                                "{} items: {}% {}/{} ({} ok, {} fail)",
+                                ExportLog.ICONS,
+                                ExportProgressLog.percent(index, itemTotal),
+                                index,
+                                itemTotal,
+                                itemsPlaced,
+                                itemFailures);
                     }
                 } catch (Exception e) {
                     itemFailures++;
-                    if (itemFailures <= 20) {
-                        LOGGER.warning("[icons] item failed " + itemId + " (" + index + "/" + itemTotal + "): "
-                                + failureSummary(e));
-                    }
+                    ExportLog.detailFailure(
+                            LOGGER,
+                            itemFailures,
+                            "{} item failed {} ({}/{}): {}",
+                            ExportLog.ICONS,
+                            itemId,
+                            index,
+                            itemTotal,
+                            failureSummary(e));
                 }
             }
 
@@ -198,9 +228,13 @@ public final class ItemIconRendererExporter {
                     fluidsPlaced++;
                 } catch (Exception e) {
                     fluidFailures++;
-                    if (fluidFailures <= 20) {
-                        LOGGER.warning("[icons] fluid failed " + fluidIdStr + ": " + failureSummary(e));
-                    }
+                    ExportLog.detailFailure(
+                            LOGGER,
+                            fluidFailures,
+                            "{} fluid failed {}: {}",
+                            ExportLog.ICONS,
+                            fluidIdStr,
+                            failureSummary(e));
                 }
             }
 
@@ -217,16 +251,26 @@ public final class ItemIconRendererExporter {
                         atlas.place(entry.getKey(), renderer);
                         variantsPlaced++;
                         if (ExportProgressLog.shouldLog(variantIndex, variantTotal, variantLogStride)) {
-                            LOGGER.info("[icons] nbt variants: " + ExportProgressLog.percent(variantIndex, variantTotal)
-                                    + "% " + variantIndex + "/" + variantTotal + " (" + variantsPlaced + " ok, "
-                                    + variantFailures + " fail)");
+                            LOGGER.info(
+                                    "{} nbt variants: {}% {}/{} ({} ok, {} fail)",
+                                    ExportLog.ICONS,
+                                    ExportProgressLog.percent(variantIndex, variantTotal),
+                                    variantIndex,
+                                    variantTotal,
+                                    variantsPlaced,
+                                    variantFailures);
                         }
                     } catch (Exception e) {
                         variantFailures++;
-                        if (variantFailures <= 20) {
-                            LOGGER.warning("[icons] nbt variant failed " + entry.getKey() + " (" + variantIndex + "/"
-                                    + variantTotal + "): " + failureSummary(e));
-                        }
+                        ExportLog.detailFailure(
+                                LOGGER,
+                                variantFailures,
+                                "{} nbt variant failed {} ({}/{}): {}",
+                                ExportLog.ICONS,
+                                entry.getKey(),
+                                variantIndex,
+                                variantTotal,
+                                failureSummary(e));
                     }
                 }
             }
@@ -236,9 +280,25 @@ public final class ItemIconRendererExporter {
             throw new RuntimeException("icon atlas export failed", e);
         }
 
-        LOGGER.info("[icons] done: " + itemsPlaced + " items, " + variantsPlaced + " nbt variants, " + fluidsPlaced
-                + " fluids (" + fluidsSkipped + " skipped no still), " + atlasResult.pageCount() + " pages, "
-                + (itemFailures + fluidFailures + variantFailures) + " failures at " + iconsRoot);
+        int totalFailures = itemFailures + fluidFailures + variantFailures;
+        LOGGER.info(
+                "{} done: {} items, {} nbt variants, {} fluids ({} skipped no still), {} pages, {} failures at {}",
+                ExportLog.ICONS,
+                itemsPlaced,
+                variantsPlaced,
+                fluidsPlaced,
+                fluidsSkipped,
+                atlasResult.pageCount(),
+                totalFailures,
+                iconsRoot);
+        if (totalFailures > ExportLog.DETAIL_FAILURE_LIMIT) {
+            LOGGER.warn(
+                    "{} {} icon failures (first {} at DEBUG; -D{}=true or enable DEBUG on export.emi)",
+                    ExportLog.ICONS,
+                    totalFailures,
+                    ExportLog.DETAIL_FAILURE_LIMIT,
+                    "minecraftWebExport.export.logDetailFailures");
+        }
 
         return new Result(
                 itemsPlaced + variantsPlaced,
@@ -287,7 +347,7 @@ public final class ItemIconRendererExporter {
         try {
             MoreFiles.deleteRecursively(dir, RecursiveDeleteOption.ALLOW_INSECURE);
         } catch (IOException e) {
-            LOGGER.warning("[icons] could not clear " + dir + ": " + e.getMessage());
+            LOGGER.warn("{} could not clear {}: {}", ExportLog.ICONS, dir, e.getMessage());
         }
     }
 
@@ -307,9 +367,9 @@ public final class ItemIconRendererExporter {
             }
             byNs.merge(id.getNamespace(), 1, Integer::sum);
         }
-        LOGGER.info("[icons]   block-items in registry: " + blockItems);
+        LOGGER.debug("{} block-items in registry: {}", ExportLog.ICONS, blockItems);
         for (String ns : new String[]{"minecraft_web_export", "minecraft"}) {
-            LOGGER.info("[icons]   " + ns + ": " + byNs.getOrDefault(ns, 0) + " items in registry");
+            LOGGER.debug("{} {}: {} items in registry", ExportLog.ICONS, ns, byNs.getOrDefault(ns, 0));
         }
     }
 

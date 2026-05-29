@@ -14,11 +14,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class TagMembersIndexExporter {
 
-    private static final Logger LOGGER = Logger.getLogger(TagMembersIndexExporter.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(TagMembersIndexExporter.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private TagMembersIndexExporter() {
@@ -89,11 +90,16 @@ public final class TagMembersIndexExporter {
         long catalogBytes = writeTagsCatalog(outputDir, itemTags, blockTags, fluidTags);
         totalBytes += catalogBytes;
 
-        LOGGER.info("[index] tags: " + tagIds.size() + " refs -> "
-                + itemTagEntries + " item, " + blockTagEntries + " block, "
-                + fluidTagEntries + " fluid files (catalog "
-                + (itemTags.size() + blockTags.size() + fluidTags.size()) + " ids, "
-                + memberRefs + " member refs, " + totalBytes + " bytes)");
+        LOGGER.info(
+                "{} tags: {} refs -> {} item, {} block, {} fluid files (catalog {} ids, {} member refs, {} bytes)",
+                ExportLog.INDEX_TAGS,
+                tagIds.size(),
+                itemTagEntries,
+                blockTagEntries,
+                fluidTagEntries,
+                itemTags.size() + blockTags.size() + fluidTags.size(),
+                memberRefs,
+                totalBytes);
 
         return new Result(
                 tagIds.size(),

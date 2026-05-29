@@ -30,11 +30,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 final class EmiWidgetSerializer {
 
-    private static final Logger LOGGER = Logger.getLogger(EmiWidgetSerializer.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(EmiWidgetSerializer.class);
 
     record Context(
             Minecraft client,
@@ -103,7 +104,13 @@ final class EmiWidgetSerializer {
             }
             return rasterChrome(widget, ctx, "raster");
         } catch (Exception e) {
-            LOGGER.warning("[emi-layout] widget " + widget.getClass().getName() + " failed: " + e);
+            ExportLog.detailFailure(
+                    LOGGER,
+                    1,
+                    "{} widget {} failed: {}",
+                    ExportLog.EMI_LAYOUT,
+                    widget.getClass().getName(),
+                    e);
             throw new RuntimeException("widget export failed: " + widget.getClass().getName(), e);
         }
     }

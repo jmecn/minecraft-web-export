@@ -16,11 +16,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class RecipeTextureExporter {
 
-    private static final Logger LOGGER = Logger.getLogger(RecipeTextureExporter.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(RecipeTextureExporter.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private RecipeTextureExporter() {
@@ -62,7 +63,7 @@ public final class RecipeTextureExporter {
             var resourceOpt = resourceManager.getResource(id);
             if (resourceOpt.isEmpty()) {
                 missing++;
-                LOGGER.warning("[recipe-textures] missing " + idString);
+                LOGGER.debug("{} missing {}", ExportLog.RECIPE_TEXTURES, idString);
                 continue;
             }
             try {
@@ -80,7 +81,7 @@ public final class RecipeTextureExporter {
                 }
             } catch (Exception e) {
                 missing++;
-                LOGGER.warning("[recipe-textures] failed " + idString + ": " + e);
+                LOGGER.debug("{} failed {}: {}", ExportLog.RECIPE_TEXTURES, idString, e);
             }
         }
 
@@ -89,7 +90,13 @@ public final class RecipeTextureExporter {
         root.put("textures", manifest);
         Files.writeString(texRoot.resolve(RecipeLayoutPaths.TEXTURE_MANIFEST_FILE), GSON.toJson(root));
 
-        LOGGER.info("[recipe-textures] " + written + "/" + all.size() + " written (" + bytes + " bytes), " + missing + " missing");
+        LOGGER.info(
+                "{} {}/{} written ({} bytes), {} missing",
+                ExportLog.RECIPE_TEXTURES,
+                written,
+                all.size(),
+                bytes,
+                missing);
         return new Result(all.size(), written, missing, bytes);
     }
 

@@ -82,7 +82,7 @@ public final class RuntimeEmiExportEntrypoint {
 
             readyTicks++;
             if (readyTicks == 1 || readyTicks % HEARTBEAT_TICKS == 0) {
-                logger.info("[emi] world ready, warmup {}/{}", readyTicks, warmupTicks());
+                logger.info("{} world ready, warmup {}/{}", ExportLog.EMI, readyTicks, warmupTicks());
             }
             if (readyTicks < warmupTicks()) {
                 return;
@@ -92,7 +92,8 @@ public final class RuntimeEmiExportEntrypoint {
             try {
                 EmiRuntimeExportOrchestrator.Report report = orchestrator.export(outputRoot, client);
                 finished = true;
-                logger.info("[emi] wrote {} (recipes={}, items={}, tags={}, langs={}, icons={})",
+                logger.info("{} wrote {} (recipes={}, items={}, tags={}, langs={}, icons={})",
+                        ExportLog.EMI,
                         report.outputRoot().toAbsolutePath(),
                         report.recipesWritten(),
                         report.itemIndexCount(),
@@ -102,7 +103,7 @@ public final class RuntimeEmiExportEntrypoint {
             } catch (Exception e) {
                 failureCount++;
                 readyTicks = 0;
-                logger.error("[emi] export attempt #{} failed for {}", failureCount, outputRoot.toAbsolutePath(), e);
+                logger.error("{} export attempt #{} failed for {}", ExportLog.EMI, failureCount, outputRoot.toAbsolutePath(), e);
             }
         }
 

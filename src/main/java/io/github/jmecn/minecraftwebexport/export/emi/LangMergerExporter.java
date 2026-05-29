@@ -19,11 +19,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class LangMergerExporter {
 
-    private static final Logger LOGGER = Logger.getLogger(LangMergerExporter.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(LangMergerExporter.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private LangMergerExporter() {
@@ -68,8 +69,11 @@ public final class LangMergerExporter {
             Map<ResourceLocation, Resource> hits = collectLangHits(client, langFile, onlyNamespaces);
 
             if (hits.isEmpty()) {
-                LOGGER.warning("[lang] " + langCode + " - no mod lang files matched (namespaces="
-                        + (onlyNamespaces == null ? "all" : onlyNamespaces) + ")");
+                LOGGER.warn(
+                        "{} {} - no mod lang files matched (namespaces={})",
+                        ExportLog.LANG,
+                        langCode,
+                        onlyNamespaces == null ? "all" : onlyNamespaces);
                 logLangPathProbe(client, langFile);
             }
 
@@ -85,19 +89,28 @@ public final class LangMergerExporter {
                         String value = entry.getValue().getAsString();
                         if (merged.containsKey(key)) {
                             duplicateWarnings++;
-                            if (duplicateWarnings <= 20) {
-                                LOGGER.warning("[lang] duplicate key '" + key + "' from " + hit.getKey());
-                            }
+                            ExportLog.detailFailure(
+                                    LOGGER,
+                                    duplicateWarnings,
+                                    "{} duplicate key '{}' from {}",
+                                    ExportLog.LANG,
+                                    key,
+                                    hit.getKey());
                         }
                         merged.put(key, value);
                     }
                 } catch (Exception e) {
-                    LOGGER.warning("[lang] failed to read " + hit.getKey() + ": " + e.getMessage());
+                    LOGGER.warn("{} failed to read {}: {}", ExportLog.LANG, hit.getKey(), e.getMessage());
                 }
             }
 
             if (merged.isEmpty()) {
-                LOGGER.warning("[lang] " + langCode + " - 0 keys after merge (" + mode + ", " + hits.size() + " mod files read)");
+                LOGGER.warn(
+                        "{} {} - 0 keys after merge ({}, {} mod files read)",
+                        ExportLog.LANG,
+                        langCode,
+                        mode,
+                        hits.size());
                 continue;
             }
 
@@ -107,13 +120,29 @@ public final class LangMergerExporter {
             languagesWritten++;
             totalBytes += json.length();
             keysPerLanguage = merged.size();
-            LOGGER.info("[lang] " + langCode + " - " + merged.size() + " keys from " + hits.size() + " mod files (" + mode + ")");
+            LOGGER.info(
+                    "{} {} - {} keys from {} mod files ({})",
+                    ExportLog.LANG,
+                    langCode,
+                    merged.size(),
+                    hits.size(),
+                    mode);
         }
 
         if (onlyKeys != null) {
-            LOGGER.info("[lang] closure key filter: " + onlyKeys.size()
-                    + " requested, ~" + keysPerLanguage + " keys per language file, "
-                    + keysSkipped + " entries skipped while scanning");
+            LOGGER.info(
+                    "{} closure key filter: {} requested, ~{} keys per language file, {} entries skipped while scanning",
+                    ExportLog.LANG,
+                    onlyKeys.size(),
+                    keysPerLanguage,
+                    keysSkipped);
+        }
+        if (duplicateWarnings > ExportLog.DETAIL_FAILURE_LIMIT) {
+            LOGGER.warn(
+                    "{} {} duplicate-key warnings while merging (first {} at DEBUG)",
+                    ExportLog.LANG,
+                    duplicateWarnings,
+                    ExportLog.DETAIL_FAILURE_LIMIT);
         }
 
         return new Result(
@@ -169,11 +198,17 @@ public final class LangMergerExporter {
             sample.append(location);
         }
         if (shown > 0) {
-            LOGGER.warning("[lang] client has " + shown + " lang file(s) for " + langFile
-                    + " but none passed namespace filter; sample: " + sample);
+            LOGGER.warn(
+                    "{} client has {} lang file(s) for {} but none passed namespace filter; sample: {}",
+                    ExportLog.LANG,
+                    shown,
+                    langFile,
+                    sample);
         } else {
-            LOGGER.warning("[lang] client ResourceManager has no resources under lang/ for "
-                    + langFile + " (assets not loaded?)");
+            LOGGER.warn(
+                    "{} client ResourceManager has no resources under lang/ for {} (assets not loaded?)",
+                    ExportLog.LANG,
+                    langFile);
         }
     }
 }

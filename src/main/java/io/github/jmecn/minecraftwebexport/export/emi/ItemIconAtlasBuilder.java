@@ -12,11 +12,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 final class ItemIconAtlasBuilder implements AutoCloseable {
 
-    private static final Logger LOGGER = Logger.getLogger(ItemIconAtlasBuilder.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(ItemIconAtlasBuilder.class);
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private final int cellSize;
@@ -131,9 +132,14 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
         String css = buildCss();
         Files.writeString(cssPath, css, StandardCharsets.UTF_8);
 
-        LOGGER.info("[item-icons] atlas: " + items.size() + " items, " + pages.size()
-                + " pages, index " + indexJson.length() + " bytes, png " + pngBytes + " bytes, css "
-                + css.length() + " bytes");
+        LOGGER.info(
+                "{} atlas: {} items, {} pages, index {} bytes, png {} bytes, css {} bytes",
+                ExportLog.ICONS,
+                items.size(),
+                pages.size(),
+                indexJson.length(),
+                pngBytes,
+                css.length());
 
         return new AtlasResult(items.size(), pages.size(), indexJson.length(), pngBytes, css.length());
     }
