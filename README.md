@@ -82,8 +82,6 @@ Writes an EMI bundle under `<outputDir>/emi/`:
 - `items/index.json`, `items/<namespace>/*.json` — item reverse index (`schema: 2`, grouped by category)
 - `icons/`, `textures/`, `lang/`, `tags/` — assets and indexes
 
-Contract details: `docs/EMI资源目录与索引协议.md` in the monorepo (or your fork).
-
 ## Headless / CI JVM properties
 
 | Property | Example | Description |
