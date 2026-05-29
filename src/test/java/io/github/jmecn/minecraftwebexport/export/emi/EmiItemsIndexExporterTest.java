@@ -8,7 +8,6 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,40 +19,37 @@ class EmiItemsIndexExporterTest {
 
     @Test
     void buildsItemsIndexFromLayoutWidgets() throws IOException {
-        RecipeLayoutIndexWriter.write(tempDir, 2, List.of("minecraft:iron_pickaxe"));
-
-        Path layoutFile = EmiBundlePaths.resolve(
+        RecipeBundleMods mods = RecipeIndexIds.writeFixtureLayout(
                 tempDir,
-                "recipes/layouts/minecraft_iron_pickaxe.json");
-        Files.createDirectories(layoutFile.getParent());
-        Files.writeString(layoutFile, """
-                {
-                  "schema": 2,
-                  "id": "minecraft:iron_pickaxe",
-                  "widgets": [
-                    {
-                      "type": "slot",
-                      "role": "input",
-                      "ingredient": "item:minecraft:stick"
-                    },
-                    {
-                      "type": "slot",
-                      "role": "input",
-                      "ingredient": {
-                        "type": "item",
-                        "id": "minecraft:iron_ingot"
-                      }
-                    },
-                    {
-                      "type": "slot",
-                      "role": "output",
-                      "ingredient": "item:minecraft:iron_pickaxe"
-                    }
-                  ]
-                }
-                """);
+                "minecraft:iron_pickaxe",
+                layout("""
+                        {
+                          "schema": 2,
+                          "id": "minecraft:iron_pickaxe",
+                          "widgets": [
+                            {
+                              "type": "slot",
+                              "role": "input",
+                              "ingredient": "item:minecraft:stick"
+                            },
+                            {
+                              "type": "slot",
+                              "role": "input",
+                              "ingredient": {
+                                "type": "item",
+                                "id": "minecraft:iron_ingot"
+                              }
+                            },
+                            {
+                              "type": "slot",
+                              "role": "output",
+                              "ingredient": "item:minecraft:iron_pickaxe"
+                            }
+                          ]
+                        }
+                        """));
 
-        EmiItemsIndexExporter.Result result = EmiItemsIndexExporter.export(tempDir);
+        EmiItemsIndexExporter.Result result = EmiItemsIndexExporter.export(tempDir, null, mods);
 
         assertEquals(3, result.itemCount());
         assertEquals(2, result.inputsIndexed());
@@ -74,26 +70,23 @@ class EmiItemsIndexExporterTest {
 
     @Test
     void expandsTagInputsUsingTagMembersIndex() throws IOException {
-        RecipeLayoutIndexWriter.write(tempDir, 2, List.of("tfc:glassworking_jar"));
-
-        Path layoutFile = EmiBundlePaths.resolve(
+        RecipeBundleMods mods = RecipeIndexIds.writeFixtureLayout(
                 tempDir,
-                "recipes/layouts/tfc_glassworking_jar.json");
-        Files.createDirectories(layoutFile.getParent());
-        Files.writeString(layoutFile, """
-                {
-                  "schema": 2,
-                  "id": "tfc:glassworking_jar",
-                  "widgets": [
-                    {
-                      "type": "slot",
-                      "role": "input",
-                      "ingredient": "#item:tfc:glass_batches_tier_2",
-                      "tagDisplayItem": "tfc:silica_glass_batch"
-                    }
-                  ]
-                }
-                """);
+                "tfc:glassworking_jar",
+                layout("""
+                        {
+                          "schema": 2,
+                          "id": "tfc:glassworking_jar",
+                          "widgets": [
+                            {
+                              "type": "slot",
+                              "role": "input",
+                              "ingredient": "#item:tfc:glass_batches_tier_2",
+                              "tagDisplayItem": "tfc:silica_glass_batch"
+                            }
+                          ]
+                        }
+                        """));
 
         Path tagFile = EmiBundlePaths.resolve(tempDir, "tags/tfc/items/glass_batches_tier_2.json");
         Files.createDirectories(tagFile.getParent());
@@ -106,7 +99,7 @@ class EmiItemsIndexExporterTest {
                 }
                 """);
 
-        EmiItemsIndexExporter.export(tempDir);
+        EmiItemsIndexExporter.export(tempDir, null, mods);
 
         Path silicaFile = EmiBundlePaths.resolve(tempDir, "items/tfc/silica_glass_batch.json");
         Path hematiticFile = EmiBundlePaths.resolve(tempDir, "items/tfc/hematitic_glass_batch.json");
@@ -121,47 +114,40 @@ class EmiItemsIndexExporterTest {
 
     @Test
     void skipsEmiTagDisplayRecipesInReverseIndex() throws IOException {
-        RecipeLayoutIndexWriter.write(
+        RecipeBundleMods mods = RecipeIndexIds.writeFixtureLayout(
                 tempDir,
-                2,
-                List.of("emi:/tag/item/minecraft/rails", "minecraft:activator_rail"));
-
-        Path tagLayout = EmiBundlePaths.resolve(
+                "emi:/tag/item/minecraft/rails",
+                layout("""
+                        {
+                          "schema": 2,
+                          "id": "emi:/tag/item/minecraft/rails",
+                          "widgets": [
+                            {
+                              "type": "slot",
+                              "role": "input",
+                              "tagDisplayItem": "minecraft:activator_rail"
+                            }
+                          ]
+                        }
+                        """));
+        mods = mergeMods(mods, RecipeIndexIds.writeFixtureLayout(
                 tempDir,
-                "recipes/layouts/emi__tag_item_minecraft_rails.json");
-        Files.createDirectories(tagLayout.getParent());
-        Files.writeString(tagLayout, """
-                {
-                  "schema": 2,
-                  "id": "emi:/tag/item/minecraft/rails",
-                  "widgets": [
-                    {
-                      "type": "slot",
-                      "role": "input",
-                      "tagDisplayItem": "minecraft:activator_rail"
-                    }
-                  ]
-                }
-                """);
+                "minecraft:activator_rail",
+                layout("""
+                        {
+                          "schema": 2,
+                          "id": "minecraft:activator_rail",
+                          "widgets": [
+                            {
+                              "type": "slot",
+                              "role": "output",
+                              "ingredient": "item:minecraft:activator_rail"
+                            }
+                          ]
+                        }
+                        """)));
 
-        Path craftLayout = EmiBundlePaths.resolve(
-                tempDir,
-                "recipes/layouts/minecraft_activator_rail.json");
-        Files.writeString(craftLayout, """
-                {
-                  "schema": 2,
-                  "id": "minecraft:activator_rail",
-                  "widgets": [
-                    {
-                      "type": "slot",
-                      "role": "output",
-                      "ingredient": "item:minecraft:activator_rail"
-                    }
-                  ]
-                }
-                """);
-
-        EmiItemsIndexExporter.export(tempDir);
+        EmiItemsIndexExporter.export(tempDir, null, mods);
 
         Path railFile = EmiBundlePaths.resolve(tempDir, "items/minecraft/activator_rail.json");
         JsonObject rail = JsonParser.parseString(Files.readString(railFile)).getAsJsonObject();
@@ -169,5 +155,16 @@ class EmiItemsIndexExporterTest {
         assertEquals(1, rail.getAsJsonArray("outputs").size());
         assertEquals("minecraft:activator_rail", rail.getAsJsonArray("outputs").get(0).getAsString());
         assertTrue(!rail.has("inputs") || rail.getAsJsonArray("inputs").isEmpty());
+    }
+
+    private static JsonObject layout(String json) {
+        return JsonParser.parseString(json).getAsJsonObject();
+    }
+
+    private static RecipeBundleMods mergeMods(RecipeBundleMods first, RecipeBundleMods second) {
+        RecipeBundleMods.Builder builder = RecipeBundleMods.builder();
+        first.mods().forEach(builder::put);
+        second.mods().forEach(builder::put);
+        return builder.build();
     }
 }

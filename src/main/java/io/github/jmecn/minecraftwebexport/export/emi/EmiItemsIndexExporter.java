@@ -45,20 +45,21 @@ public final class EmiItemsIndexExporter {
     }
 
     public static Result export(Path outputDir) throws IOException {
-        return export(outputDir, null);
+        return export(outputDir, null, RecipeBundleMods.empty());
     }
 
     public static Result export(Path outputDir, MinecraftServer server) throws IOException {
-        Path recipeIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.RECIPE_INDEX_FILE);
-        Path itemsIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEMS_INDEX_FILE);
+        return export(outputDir, server, RecipeBundleMods.empty());
+    }
 
-        if (!Files.isRegularFile(recipeIndexFile)) {
-            LOGGER.warn("{} missing {} - skipping items index", ExportLog.EMI_ITEMS, recipeIndexFile);
+    public static Result export(Path outputDir, MinecraftServer server, RecipeBundleMods mods) throws IOException {
+        if (mods == null || mods.isEmpty()) {
+            LOGGER.warn("{} no recipe mods in bundle - skipping items index", ExportLog.EMI_ITEMS);
             return new Result(0, 0, 0, 0);
         }
 
-        JsonObject recipeIndex = JsonParser.parseString(Files.readString(recipeIndexFile)).getAsJsonObject();
-        List<String> recipeIds = RecipeIndexIds.read(outputDir, recipeIndex);
+        Path itemsIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEMS_INDEX_FILE);
+        List<String> recipeIds = RecipeIndexIds.allRecipeIds(outputDir, mods);
         Map<String, Set<String>> tagItems = loadTagItems(outputDir);
         ExportedTagSets exportedTagSets = loadExportedTagSets(outputDir);
 
@@ -69,11 +70,10 @@ public final class EmiItemsIndexExporter {
             if (isEmiTagDisplayRecipe(recipeId)) {
                 continue;
             }
-            Path layoutPath = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.layoutPathForRecipeId(recipeId));
-            if (!Files.isRegularFile(layoutPath)) {
+            JsonObject layout = RecipeIndexIds.loadLayout(outputDir, recipeId, mods);
+            if (layout == null) {
                 continue;
             }
-            JsonObject layout = JsonParser.parseString(Files.readString(layoutPath)).getAsJsonObject();
             JsonArray widgets = readWidgets(layout);
 
             for (JsonElement widgetElement : widgets) {

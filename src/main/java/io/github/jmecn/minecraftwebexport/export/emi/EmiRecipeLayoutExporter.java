@@ -54,7 +54,8 @@ public final class EmiRecipeLayoutExporter {
             Set<String> referencedFluids,
             Set<String> referencedTags,
             Map<String, ItemStack> iconVariants,
-            RecipeTextureExporter.Result textures) {
+            RecipeTextureExporter.Result textures,
+            RecipeBundleMods mods) {
     }
 
     public static boolean isEnabled() {
@@ -73,10 +74,12 @@ public final class EmiRecipeLayoutExporter {
     }
 
     public static Result export(Path outputDir, Minecraft client, Set<String> recipeIds) throws IOException {
-        Path layoutsRoot = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.LAYOUTS_DIR);
         Path chromeRoot = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.CHROME_DIR);
-        Files.createDirectories(layoutsRoot);
         Files.createDirectories(chromeRoot);
+
+        RecipeRoutePackWriter routePackWriter = new RecipeRoutePackWriter(
+                outputDir,
+                RecipeRoutePackWriter.defaultPackMaxBytes());
 
         Set<String> textureIds = new TreeSet<>();
         Set<String> referencedItems = new TreeSet<>();
@@ -129,11 +132,9 @@ public final class EmiRecipeLayoutExporter {
                 chromeLayers += chromeWritten[0];
                 chromeDeduped += chromeDedupedCount[0];
 
-                String fileName = RecipeLayoutPaths.relativeLayoutJson(recipeId);
-                Path out = layoutsRoot.resolve(fileName);
                 String json = GSON.toJson(layout);
-                Files.writeString(out, json);
                 jsonBytes += json.length();
+                routePackWriter.addLayout(recipeId, layout);
 
                 indexRecipeIds.add(recipeId);
                 written++;
@@ -161,7 +162,7 @@ public final class EmiRecipeLayoutExporter {
             }
         }
 
-        RecipeLayoutIndexWriter.write(outputDir, layoutScale(), indexRecipeIds);
+        RecipeBundleMods mods = routePackWriter.finish();
         RecipeTextureExporter.Result textures = RecipeTextureExporter.export(outputDir, client, textureIds);
 
         long chromeBytes = dirSize(chromeRoot);
@@ -199,7 +200,8 @@ public final class EmiRecipeLayoutExporter {
                 referencedFluids,
                 referencedTags,
                 iconVariants,
-                textures);
+                textures,
+                mods);
     }
 
     private static JsonObject buildLayout(

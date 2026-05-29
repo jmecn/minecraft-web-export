@@ -13,9 +13,8 @@ public final class EmiBundlePaths {
 
     /** Paths relative to the EMI bundle root (renderer {@code baseUrl}). */
     public static final String BUNDLE_FILE = "bundle.json";
-    public static final String RECIPES_LAYOUTS_DIR = "recipes/layouts";
-    public static final String RECIPE_INDEX_FILE = "recipes/index.json";
-    public static final String RECIPE_SHARDS_DIR = "recipes/shards";
+    public static final String RECIPES_ROUTES_DIR = "recipes/routes";
+    public static final String RECIPES_LAYOUT_PACKS_DIR = "recipes/layout-packs";
     public static final String CHROME_DIR = "chrome";
     public static final String TEXTURES_DIR = "textures";
     public static final String TEXTURE_MANIFEST_FILE = "manifest.json";
@@ -37,9 +36,5 @@ public final class EmiBundlePaths {
 
     public static Path langFile(Path exportRoot, String locale) {
         return resolve(exportRoot, LANG_DIR + "/" + locale + ".json");
-    }
-
-    public static String relativeLayoutJson(String recipeId) {
-        return RecipeLayoutPaths.safeFileName(recipeId) + ".json";
     }
 }

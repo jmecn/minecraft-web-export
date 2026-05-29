@@ -58,13 +58,14 @@ public final class EmiRuntimeExportOrchestrator {
                 : emptyIconResult();
 
         EmiItemsIndexExporter.Result items = layouts.written() > 0
-                ? EmiItemsIndexExporter.export(outputRoot, server)
+                ? EmiItemsIndexExporter.export(outputRoot, server, layouts.mods())
                 : new EmiItemsIndexExporter.Result(0, 0, 0, 0);
         EmiBundleManifestWriter.write(
                 outputRoot,
                 exportedLanguages(outputRoot),
                 EmiRecipeLayoutExporter.layoutScale(),
-                layouts.written());
+                layouts.written(),
+                layouts.mods());
 
         LOGGER.info(
                 "{} export complete: {}/{} layouts, {} indexed items, {} tags, {} lang files, {} icon sprites",
@@ -112,7 +113,8 @@ public final class EmiRuntimeExportOrchestrator {
                 Set.of(),
                 Set.of(),
                 java.util.Map.of(),
-                new RecipeTextureExporter.Result(0, 0, 0, 0));
+                new RecipeTextureExporter.Result(0, 0, 0, 0),
+                RecipeBundleMods.empty());
     }
 
     private static LangMergerExporter.Result emptyLangResult() {
