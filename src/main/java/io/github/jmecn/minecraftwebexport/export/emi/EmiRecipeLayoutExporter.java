@@ -78,7 +78,7 @@ public final class EmiRecipeLayoutExporter {
     }
 
     public static Result export(Path outputDir, Minecraft client, Set<String> recipeIds) throws IOException {
-        EmiRecipeCardExporter.Result cards = EmiRecipeCardExporter.export(outputDir, client, recipeIds);
+        EmiRecipeCardExporter.Result cards = EmiRecipeCardExporter.export(outputDir, client, recipeIds, null);
         return new Result(
                 cards.requested(),
                 cards.written(),

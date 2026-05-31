@@ -35,7 +35,10 @@ public final class EmiRuntimeExportOrchestrator {
 
     public Report export(Path outputRoot, Minecraft client, ExportPlan plan) throws IOException {
         Set<String> recipeIds = plan.recipeIds();
-        EmiRecipeCardExporter.Result cards = exportRecipeCards(outputRoot, client, recipeIds);
+        boolean langPrune = plan.mode() == ExportMode.FULL && LangMergerExporter.isLangPruneEnabled();
+        LangUsedKeysCollector langCollector = langPrune ? new LangUsedKeysCollector() : null;
+
+        EmiRecipeCardExporter.Result cards = exportRecipeCards(outputRoot, client, recipeIds, langCollector);
         client.renderBuffers().bufferSource().endBatch();
 
         Set<String> tagIds = plan.tagsForExport(cards.referencedTags());
@@ -49,7 +52,21 @@ public final class EmiRuntimeExportOrchestrator {
             LOGGER.warn("{} tag-members skipped: no integrated server", ExportLog.EMI);
         }
 
-        Set<String> langKeys = plan.langKeysForExport();
+        EmiRecipeCategoriesExporter.Result categories = cards.written() > 0
+                ? EmiRecipeCategoriesExporter.export(outputRoot)
+                : new EmiRecipeCategoriesExporter.Result(0, 0);
+        EmiItemsIndexExporter.Result items = cards.written() > 0
+                ? EmiItemsIndexExporter.export(outputRoot, server, cards.layoutsByRecipeId())
+                : new EmiItemsIndexExporter.Result(0, 0, 0, 0);
+
+        if (langCollector != null && cards.written() > 0) {
+            langCollector.collectFromCategoriesIndex(outputRoot);
+            langCollector.collectFromItemsIndex(outputRoot);
+            langCollector.collectFromTagsIndex(outputRoot);
+            LOGGER.info("{} lang prune: {} used keys collected", ExportLog.LANG, langCollector.size());
+        }
+
+        Set<String> langKeys = resolveLangMergeKeys(plan, langCollector);
         LangMergerExporter.Result langs = LangMergerExporter.isEnabled()
                 ? LangMergerExporter.exportEmiLang(outputRoot, client, langKeys)
                 : emptyLangResult();
@@ -67,17 +84,18 @@ public final class EmiRuntimeExportOrchestrator {
                 cards.iconVariants())
                 : emptyIconResult();
 
-        EmiRecipeCategoriesExporter.Result categories = cards.written() > 0
-                ? EmiRecipeCategoriesExporter.export(outputRoot)
-                : new EmiRecipeCategoriesExporter.Result(0, 0);
-        EmiItemsIndexExporter.Result items = cards.written() > 0
-                ? EmiItemsIndexExporter.export(outputRoot, server, cards.layoutsByRecipeId())
-                : new EmiItemsIndexExporter.Result(0, 0, 0, 0);
+        List<String> languages = exportedLanguages(outputRoot);
+        ItemsSearchIndexExporter.Result itemsSearch = ItemsSearchIndexExporter.Result.EMPTY;
+        if (items.itemCount() > 0 && ItemsSearchIndexExporter.isEnabled()) {
+            itemsSearch = ItemsSearchIndexExporter.export(outputRoot, languages);
+        }
+
         EmiBundleManifestWriter.write(
                 outputRoot,
-                exportedLanguages(outputRoot),
+                languages,
                 cards.imageScale(),
-                cards.written());
+                cards.written(),
+                itemsSearch.locales());
 
         // Tag/list popovers in emi-recipe-renderer need EMI GUI nine-patch + widget sprites.
         RecipeTextureExporter.export(outputRoot, client, java.util.Set.of());
@@ -116,12 +134,23 @@ public final class EmiRuntimeExportOrchestrator {
                 icons.totalSpritesWritten());
     }
 
+    private static Set<String> resolveLangMergeKeys(ExportPlan plan, LangUsedKeysCollector langCollector) {
+        if (plan.mode() == ExportMode.SCOPED) {
+            return plan.langKeysForExport();
+        }
+        if (langCollector != null && langCollector.size() > 0) {
+            return langCollector.snapshot();
+        }
+        return null;
+    }
+
     private static EmiRecipeCardExporter.Result exportRecipeCards(
             Path outputRoot,
             Minecraft client,
-            Set<String> recipeIds) throws IOException {
+            Set<String> recipeIds,
+            LangUsedKeysCollector langCollector) throws IOException {
         if (EmiRecipeCardExporter.isEnabled()) {
-            return EmiRecipeCardExporter.export(outputRoot, client, recipeIds);
+            return EmiRecipeCardExporter.export(outputRoot, client, recipeIds, langCollector);
         }
         LOGGER.info("{} recipe card export disabled by configuration", ExportLog.EMI);
         return new EmiRecipeCardExporter.Result(

@@ -43,6 +43,32 @@ public final class LangMergerExporter {
         return !Boolean.getBoolean("minecraftWebExport.skipLangExport");
     }
 
+    /** FULL export: merge only closure keys (+ GTCEu / emi.category templates). */
+    public static boolean isLangPruneEnabled() {
+        return isEnabled() && !Boolean.getBoolean("minecraftWebExport.skipLangPruneExport");
+    }
+
+    static boolean shouldMergeLangKey(String key, Set<String> onlyKeys) {
+        if (onlyKeys == null) {
+            return true;
+        }
+        if (onlyKeys.contains(key)) {
+            return true;
+        }
+        return isGtceuTranslationKey(key) || isEmiCategoryLangKey(key);
+    }
+
+    private static boolean isGtceuTranslationKey(String key) {
+        return key.startsWith("material.gtceu.")
+                || key.startsWith("tagprefix.")
+                || key.startsWith("gtceu.fluid.")
+                || key.equals("item.gtceu.bucket");
+    }
+
+    private static boolean isEmiCategoryLangKey(String key) {
+        return key.startsWith("emi.category.");
+    }
+
     public static Result exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys) throws IOException {
         return exportTo(EmiBundlePaths.resolve(outputDir, EmiBundlePaths.LANG_DIR), client, null, onlyKeys);
     }
@@ -82,7 +108,7 @@ public final class LangMergerExporter {
                     JsonObject object = JsonParser.parseReader(reader).getAsJsonObject();
                     for (var entry : object.entrySet()) {
                         String key = entry.getKey();
-                        if (onlyKeys != null && !onlyKeys.contains(key)) {
+                        if (!shouldMergeLangKey(key, onlyKeys)) {
                             keysSkipped++;
                             continue;
                         }

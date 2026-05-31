@@ -52,7 +52,11 @@ public final class EmiRecipeCardExporter {
         return EmiRecipeLayoutExporter.layoutScale();
     }
 
-    public static Result export(Path outputDir, Minecraft client, Set<String> recipeIds) throws IOException {
+    public static Result export(
+            Path outputDir,
+            Minecraft client,
+            Set<String> recipeIds,
+            LangUsedKeysCollector langKeys) throws IOException {
         Set<String> textureIds = new TreeSet<>();
         Set<String> referencedItems = new TreeSet<>();
         Set<String> referencedFluids = new TreeSet<>();
@@ -91,6 +95,9 @@ public final class EmiRecipeCardExporter {
                 layoutsByRecipeId.put(recipeId, layout);
 
                 JsonObject meta = RecipeMetaBaker.bake(layout);
+                if (langKeys != null) {
+                    langKeys.collectMeta(meta);
+                }
                 String metaJson = GSON.toJson(meta);
                 metaBytes += metaJson.length();
 

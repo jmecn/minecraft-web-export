@@ -24,6 +24,7 @@ public final class EmiBundlePaths {
     public static final String TAGS_DIR = "tags";
     public static final String TAGS_INDEX_FILE = "tags/index.json";
     public static final String LANG_DIR = "lang";
+    public static final String ITEMS_SEARCH_DIR = "items-search";
 
     public static final String DEFAULT_LANGUAGE = "en_us";
 

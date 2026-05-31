@@ -22,6 +22,15 @@ public final class EmiBundleManifestWriter {
             List<String> languages,
             int imageScale,
             int recipeCount) throws IOException {
+        write(outputDir, languages, imageScale, recipeCount, null);
+    }
+
+    public static void write(
+            Path outputDir,
+            List<String> languages,
+            int imageScale,
+            int recipeCount,
+            List<String> itemsSearchLocales) throws IOException {
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("schema", RecipeCardPaths.BUNDLE_SCHEMA);
         root.put("imageScale", imageScale);
@@ -29,6 +38,11 @@ public final class EmiBundleManifestWriter {
         root.put("recipeCount", recipeCount);
         root.put("recipeImageFormat", "png");
         root.put("missingIconId", IconPlaceholderRenderer.REGISTRY_ID);
+        if (itemsSearchLocales != null && !itemsSearchLocales.isEmpty()) {
+            root.put("itemsSearch", Map.of(
+                    "dir", EmiBundlePaths.ITEMS_SEARCH_DIR,
+                    "locales", List.copyOf(itemsSearchLocales)));
+        }
 
         Path out = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.BUNDLE_FILE);
         Files.createDirectories(out.getParent());
