@@ -44,6 +44,7 @@ class RecipeMetaBakerTest {
         JsonObject meta = RecipeMetaBaker.bake(layout);
         assertEquals(1, meta.get("schema").getAsInt());
         assertEquals(126, meta.get("width").getAsInt());
+        assertEquals(4, meta.get("margin").getAsInt());
         assertEquals(2, meta.getAsJsonArray("widgets").size());
         JsonObject tag = meta.getAsJsonArray("widgets").get(0).getAsJsonObject();
         assertEquals("tag", tag.getAsJsonObject("interaction").get("kind").getAsString());

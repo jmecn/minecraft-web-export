@@ -35,6 +35,11 @@ public final class EmiRecipeLayoutExporter {
     private EmiRecipeLayoutExporter() {
     }
 
+    /** Per-side inset around EMI recipe display (PNG + meta frame = width + 2×margin). */
+    static int panelMargin() {
+        return PANEL_MARGIN;
+    }
+
     static int progressLogStride(int total) {
         return ExportProgressLog.stride(total, LAYOUT_LOG_STRIDE_PROPERTY, 20, 200);
     }

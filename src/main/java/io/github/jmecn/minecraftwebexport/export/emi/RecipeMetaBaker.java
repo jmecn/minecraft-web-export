@@ -20,8 +20,11 @@ final class RecipeMetaBaker {
         JsonObject panel = layout.getAsJsonObject("panel");
         int width = panel != null && panel.has("width") ? panel.get("width").getAsInt() : 1;
         int height = panel != null && panel.has("height") ? panel.get("height").getAsInt() : 1;
+        int margin = panel != null && panel.has("margin") ? panel.get("margin").getAsInt()
+                : EmiRecipeLayoutExporter.panelMargin();
         meta.addProperty("width", width);
         meta.addProperty("height", height);
+        meta.addProperty("margin", margin);
 
         if (layout.has("id") && layout.get("id").isJsonPrimitive()) {
             meta.addProperty("id", layout.get("id").getAsString());

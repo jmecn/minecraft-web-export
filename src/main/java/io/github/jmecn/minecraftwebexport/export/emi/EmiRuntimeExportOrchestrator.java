@@ -79,6 +79,9 @@ public final class EmiRuntimeExportOrchestrator {
                 cards.imageScale(),
                 cards.written());
 
+        // Tag/list popovers in emi-recipe-renderer need EMI GUI nine-patch + widget sprites.
+        RecipeTextureExporter.export(outputRoot, client, java.util.Set.of());
+
         if (plan.mode() == ExportMode.SCOPED) {
             LOGGER.info(
                     "{} scoped export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
