@@ -22,25 +22,19 @@ class EmiBundleManifestWriterTest {
 
     @Test
     void writesCurrentBundleContract() throws IOException {
-        RecipeBundleMods mods = new RecipeBundleMods(Map.of(
-                "minecraft",
-                new RecipeBundleMods.ModEntry(
-                        List.of("000-abc123"),
-                        List.of(new RecipeBundleMods.PackRef("000-def456", 100)))));
-        EmiBundleManifestWriter.write(tempDir, List.of("en_us", "zh_cn"), 2, 42, mods);
+        EmiBundleManifestWriter.write(tempDir, List.of("en_us", "zh_cn"), 2, 42);
 
         Path bundleFile = EmiBundlePaths.resolve(tempDir, EmiBundlePaths.BUNDLE_FILE);
         JsonObject json = JsonParser.parseString(Files.readString(bundleFile)).getAsJsonObject();
 
         assertTrue(Files.isRegularFile(bundleFile));
-        assertEquals(1, json.get("schema").getAsInt());
-        assertEquals(2, json.get("layoutSchema").getAsInt());
-        assertEquals(2, json.get("scale").getAsInt());
-        assertEquals(262144, json.get("packMaxBytes").getAsInt());
-        assertFalse(json.has("defaultLanguage"));
+        assertEquals(2, json.get("schema").getAsInt());
+        assertEquals(2, json.get("imageScale").getAsInt());
+        assertFalse(json.has("mods"));
+        assertFalse(json.has("layoutSchema"));
         assertEquals(2, json.getAsJsonArray("languages").size());
         assertEquals(42, json.get("recipeCount").getAsInt());
+        assertEquals("png", json.get("recipeImageFormat").getAsString());
         assertEquals(IconPlaceholderRenderer.REGISTRY_ID, json.get("missingIconId").getAsString());
-        assertTrue(json.getAsJsonObject("mods").has("minecraft"));
     }
 }

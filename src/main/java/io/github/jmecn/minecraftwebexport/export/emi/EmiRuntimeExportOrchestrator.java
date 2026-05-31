@@ -35,10 +35,10 @@ public final class EmiRuntimeExportOrchestrator {
 
     public Report export(Path outputRoot, Minecraft client, ExportPlan plan) throws IOException {
         Set<String> recipeIds = plan.recipeIds();
-        EmiRecipeLayoutExporter.Result layouts = exportLayouts(outputRoot, client, recipeIds);
+        EmiRecipeCardExporter.Result cards = exportRecipeCards(outputRoot, client, recipeIds);
         client.renderBuffers().bufferSource().endBatch();
 
-        Set<String> tagIds = plan.tagsForExport(layouts.referencedTags());
+        Set<String> tagIds = plan.tagsForExport(cards.referencedTags());
 
         TagMembersIndexExporter.Result tags = new TagMembersIndexExporter.Result(
                 0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
@@ -54,8 +54,8 @@ public final class EmiRuntimeExportOrchestrator {
                 ? LangMergerExporter.exportEmiLang(outputRoot, client, langKeys)
                 : emptyLangResult();
 
-        Set<String> itemsForLang = plan.itemsForIcons(layouts.referencedItems());
-        Set<String> fluidsForLang = plan.fluidsForIcons(layouts.referencedFluids());
+        Set<String> itemsForLang = plan.itemsForIcons(cards.referencedItems());
+        Set<String> fluidsForLang = plan.fluidsForIcons(cards.referencedFluids());
         if (RegistryLangFillExporter.isEnabled() && (!itemsForLang.isEmpty() || !fluidsForLang.isEmpty())) {
             RegistryLangFillExporter.fillMissing(outputRoot, client, itemsForLang, fluidsForLang);
         }
@@ -70,27 +70,26 @@ public final class EmiRuntimeExportOrchestrator {
                 itemsForIcons,
                 fluidsForIcons,
                 null,
-                layouts.iconVariants())
+                cards.iconVariants())
                 : emptyIconResult();
 
-        EmiRecipeCategoriesExporter.Result categories = layouts.written() > 0
+        EmiRecipeCategoriesExporter.Result categories = cards.written() > 0
                 ? EmiRecipeCategoriesExporter.export(outputRoot)
                 : new EmiRecipeCategoriesExporter.Result(0, 0);
-        EmiItemsIndexExporter.Result items = layouts.written() > 0
-                ? EmiItemsIndexExporter.export(outputRoot, server, layouts.mods())
+        EmiItemsIndexExporter.Result items = cards.written() > 0
+                ? EmiItemsIndexExporter.export(outputRoot, server, cards.layoutsByRecipeId())
                 : new EmiItemsIndexExporter.Result(0, 0, 0, 0);
         EmiBundleManifestWriter.write(
                 outputRoot,
                 exportedLanguages(outputRoot),
-                EmiRecipeLayoutExporter.layoutScale(),
-                layouts.written(),
-                layouts.mods());
+                cards.imageScale(),
+                cards.written());
 
         if (plan.mode() == ExportMode.SCOPED) {
             LOGGER.info(
                     "{} scoped export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     ExportLog.EMI,
-                    layouts.written(),
+                    cards.written(),
                     recipeIds.size(),
                     categories.categoryCount(),
                     items.itemCount(),
@@ -99,9 +98,9 @@ public final class EmiRuntimeExportOrchestrator {
                     icons.totalSpritesWritten());
         } else {
             LOGGER.info(
-                    "{} export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    "{} export complete: {}/{} recipe cards, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     ExportLog.EMI,
-                    layouts.written(),
+                    cards.written(),
                     recipeIds.size(),
                     categories.categoryCount(),
                     items.itemCount(),
@@ -113,41 +112,34 @@ public final class EmiRuntimeExportOrchestrator {
         return new Report(
                 outputRoot,
                 recipeIds.size(),
-                layouts.written(),
+                cards.written(),
                 items.itemCount(),
                 tags.tagsIndexed(),
                 langs.languagesWritten(),
                 icons.totalSpritesWritten());
     }
 
-    private static EmiRecipeLayoutExporter.Result exportLayouts(
+    private static EmiRecipeCardExporter.Result exportRecipeCards(
             Path outputRoot,
             Minecraft client,
             Set<String> recipeIds) throws IOException {
-        if (EmiRecipeLayoutExporter.isEnabled()) {
-            return EmiRecipeLayoutExporter.export(outputRoot, client, recipeIds);
+        if (EmiRecipeCardExporter.isEnabled()) {
+            return EmiRecipeCardExporter.export(outputRoot, client, recipeIds);
         }
-        LOGGER.info("{} layout export disabled by configuration", ExportLog.EMI);
-        return emptyLayoutResult(recipeIds.size());
-    }
-
-    private static EmiRecipeLayoutExporter.Result emptyLayoutResult(int totalRecipes) {
-        return new EmiRecipeLayoutExporter.Result(
-                totalRecipes,
+        LOGGER.info("{} recipe card export disabled by configuration", ExportLog.EMI);
+        return new EmiRecipeCardExporter.Result(
+                recipeIds.size(),
                 0,
                 0,
                 0,
                 0,
                 0,
-                0,
-                0,
-                0,
+                EmiRecipeCardExporter.imageScale(),
                 Set.of(),
                 Set.of(),
                 Set.of(),
                 java.util.Map.of(),
-                new RecipeTextureExporter.Result(0, 0, 0, 0),
-                RecipeBundleMods.empty());
+                java.util.Map.of());
     }
 
     private static LangMergerExporter.Result emptyLangResult() {

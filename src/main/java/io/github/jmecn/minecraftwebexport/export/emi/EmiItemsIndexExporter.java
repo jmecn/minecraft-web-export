@@ -58,16 +58,45 @@ public final class EmiItemsIndexExporter {
             LOGGER.warn("{} no recipe mods in bundle - skipping items index", ExportLog.EMI_ITEMS);
             return new Result(0, 0, 0, 0);
         }
-
-        Path itemsIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEMS_INDEX_FILE);
         List<String> recipeIds = RecipeIndexIds.allRecipeIds(outputDir, mods);
+        return exportWithLayouts(outputDir, server, recipeIds, recipeId -> {
+            try {
+                return RecipeIndexIds.loadLayout(outputDir, recipeId, mods);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    public static Result export(
+            Path outputDir,
+            MinecraftServer server,
+            Map<String, JsonObject> layoutsByRecipeId) throws IOException {
+        if (layoutsByRecipeId == null || layoutsByRecipeId.isEmpty()) {
+            LOGGER.warn("{} no in-memory layouts - skipping items index", ExportLog.EMI_ITEMS);
+            return new Result(0, 0, 0, 0);
+        }
+        List<String> recipeIds = new ArrayList<>(layoutsByRecipeId.keySet());
+        Collections.sort(recipeIds);
+        return exportWithLayouts(outputDir, server, recipeIds, layoutsByRecipeId::get);
+    }
+
+    @FunctionalInterface
+    private interface LayoutLoader {
+        JsonObject load(String recipeId);
+    }
+
+    private static Result exportWithLayouts(
+            Path outputDir,
+            MinecraftServer server,
+            List<String> recipeIds,
+            LayoutLoader layoutLookup) throws IOException {
+        Path itemsIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEMS_INDEX_FILE);
         Map<String, Set<String>> tagItems = loadTagItems(outputDir);
         ExportedTagSets exportedTagSets = loadExportedTagSets(outputDir);
 
         Map<String, Map<String, Set<String>>> inputs = new TreeMap<>();
         Map<String, Map<String, Set<String>>> outputs = new TreeMap<>();
-
-        RecipeLayoutLookup layoutLookup = new RecipeLayoutLookup(outputDir, mods);
         int scanTotal = recipeIds.size();
         int scanStride = ExportProgressLog.stride(scanTotal, SCAN_LOG_STRIDE_PROPERTY, 20, 200);
         int scanProgress = 0;
@@ -79,7 +108,7 @@ public final class EmiItemsIndexExporter {
                 logScanProgress(scanProgress, scanTotal, scanStride);
                 continue;
             }
-            JsonObject layout = layoutLookup.loadLayout(recipeId);
+            JsonObject layout = layoutLookup.load(recipeId);
             if (layout == null) {
                 logScanProgress(scanProgress, scanTotal, scanStride);
                 continue;

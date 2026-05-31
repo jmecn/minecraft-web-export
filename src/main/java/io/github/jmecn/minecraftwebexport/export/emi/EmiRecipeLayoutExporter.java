@@ -73,134 +73,50 @@ public final class EmiRecipeLayoutExporter {
     }
 
     public static Result export(Path outputDir, Minecraft client, Set<String> recipeIds) throws IOException {
-        Path chromeRoot = EmiBundlePaths.resolve(outputDir, RecipeLayoutPaths.CHROME_DIR);
-        Files.createDirectories(chromeRoot);
-
-        RecipeRoutePackWriter routePackWriter = new RecipeRoutePackWriter(
-                outputDir,
-                RecipeRoutePackWriter.defaultPackMaxBytes());
-
-        Set<String> textureIds = new TreeSet<>();
-        Set<String> referencedItems = new TreeSet<>();
-        Set<String> referencedFluids = new TreeSet<>();
-        Set<String> referencedTags = new TreeSet<>();
-        Map<String, ItemStack> iconVariants = new LinkedHashMap<>();
-        Map<String, String> chromeHashToRelative = new ConcurrentHashMap<>();
-        List<String> indexRecipeIds = new ArrayList<>();
-        int written = 0;
-        int missing = 0;
-        int failures = 0;
-        int chromeLayers = 0;
-        int chromeDeduped = 0;
-        long jsonBytes = 0;
-        int total = recipeIds.size();
-        int logStride = progressLogStride(total);
-        int progress = 0;
-
-        for (String recipeId : recipeIds) {
-            progress++;
-            EmiRecipe recipe = EmiRecipeResolver.resolve(recipeId);
-            if (recipe == null) {
-                missing++;
-                if (ExportProgressLog.shouldLog(progress, total, logStride)) {
-                    LOGGER.info(
-                            "{} {}/{} progress: {} missing so far",
-                            ExportLog.EMI_LAYOUT,
-                            progress,
-                            total,
-                            missing);
-                }
-                continue;
-            }
-            try {
-                int[] chromeWritten = {0};
-                int[] chromeDedupedCount = {0};
-                JsonObject layout = buildLayout(
-                        client,
-                        recipe,
-                        recipeId,
-                        textureIds,
-                        referencedItems,
-                        referencedFluids,
-                        referencedTags,
-                        iconVariants,
-                        chromeRoot,
-                        chromeHashToRelative,
-                        chromeWritten,
-                        chromeDedupedCount);
-                chromeLayers += chromeWritten[0];
-                chromeDeduped += chromeDedupedCount[0];
-
-                String json = GSON.toJson(layout);
-                jsonBytes += json.length();
-                routePackWriter.addLayout(recipeId, layout);
-
-                indexRecipeIds.add(recipeId);
-                written++;
-                if (ExportProgressLog.shouldLog(progress, total, logStride)) {
-                    int pct = ExportProgressLog.percent(progress, total);
-                    LOGGER.info(
-                            "{} {}% {}/{} - {} ok, {} missing, {} fail",
-                            ExportLog.EMI_LAYOUT,
-                            pct,
-                            progress,
-                            total,
-                            written,
-                            missing,
-                            failures);
-                }
-            } catch (Exception e) {
-                failures++;
-                ExportLog.detailFailure(
-                        LOGGER,
-                        failures,
-                        "{} failed for {}: {}",
-                        ExportLog.EMI_LAYOUT,
-                        recipeId,
-                        e);
-            }
-        }
-
-        RecipeBundleMods mods = routePackWriter.finish();
-        RecipeTextureExporter.Result textures = RecipeTextureExporter.export(outputDir, client, textureIds);
-
-        long chromeBytes = dirSize(chromeRoot);
-        LOGGER.info(
-                "{} done: {}/{} layouts ({} json bytes), {} missing, {} failed, chrome layers {} ({} deduped), {} unique files, {} chrome bytes",
-                ExportLog.EMI_LAYOUT,
-                written,
-                total,
-                jsonBytes,
-                missing,
-                failures,
-                chromeLayers,
-                chromeDeduped,
-                chromeHashToRelative.size(),
-                chromeBytes);
-        if (failures > ExportLog.DETAIL_FAILURE_LIMIT) {
-            LOGGER.warn(
-                    "{} {} layout failures (first {} at DEBUG; -D{}=true or enable DEBUG on export.emi)",
-                    ExportLog.EMI_LAYOUT,
-                    failures,
-                    ExportLog.DETAIL_FAILURE_LIMIT,
-                    "minecraftWebExport.export.logDetailFailures");
-        }
+        EmiRecipeCardExporter.Result cards = EmiRecipeCardExporter.export(outputDir, client, recipeIds);
         return new Result(
-                total,
-                written,
-                missing,
-                failures,
-                chromeLayers,
-                chromeDeduped,
-                chromeHashToRelative.size(),
-                jsonBytes,
-                chromeBytes,
+                cards.requested(),
+                cards.written(),
+                cards.missing(),
+                cards.failures(),
+                0,
+                0,
+                0,
+                cards.metaBytes(),
+                0,
+                cards.referencedItems(),
+                cards.referencedFluids(),
+                cards.referencedTags(),
+                cards.iconVariants(),
+                new RecipeTextureExporter.Result(0, 0, 0, 0),
+                RecipeBundleMods.empty());
+    }
+
+    /** In-memory layout for meta baking (no chrome / route packs). */
+    static JsonObject buildLayoutInMemory(
+            Minecraft client,
+            EmiRecipe recipe,
+            String recipeId,
+            Set<String> textureIds,
+            Set<String> referencedItems,
+            Set<String> referencedFluids,
+            Set<String> referencedTags,
+            Map<String, ItemStack> iconVariants) {
+        int[] chromeWritten = {0};
+        int[] chromeDedupedCount = {0};
+        return buildLayout(
+                client,
+                recipe,
+                recipeId,
+                textureIds,
                 referencedItems,
                 referencedFluids,
                 referencedTags,
                 iconVariants,
-                textures,
-                mods);
+                null,
+                java.util.Map.of(),
+                chromeWritten,
+                chromeDedupedCount);
     }
 
     private static JsonObject buildLayout(

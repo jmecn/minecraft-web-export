@@ -20,20 +20,15 @@ public final class EmiBundleManifestWriter {
     public static void write(
             Path outputDir,
             List<String> languages,
-            int layoutScale,
-            int recipeCount,
-            RecipeBundleMods mods) throws IOException {
+            int imageScale,
+            int recipeCount) throws IOException {
         Map<String, Object> root = new LinkedHashMap<>();
-        root.put("schema", 1);
-        root.put("layoutSchema", RecipeLayoutPaths.SCHEMA_VERSION);
-        root.put("scale", layoutScale);
-        root.put("packMaxBytes", RecipeRoutePackWriter.defaultPackMaxBytes());
+        root.put("schema", RecipeCardPaths.BUNDLE_SCHEMA);
+        root.put("imageScale", imageScale);
         root.put("languages", languages);
         root.put("recipeCount", recipeCount);
+        root.put("recipeImageFormat", "png");
         root.put("missingIconId", IconPlaceholderRenderer.REGISTRY_ID);
-        if (mods != null && !mods.isEmpty()) {
-            root.put("mods", mods.toBundleJsonMap());
-        }
 
         Path out = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.BUNDLE_FILE);
         Files.createDirectories(out.getParent());

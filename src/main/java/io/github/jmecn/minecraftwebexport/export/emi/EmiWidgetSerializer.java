@@ -75,6 +75,17 @@ final class EmiWidgetSerializer {
 
     private static JsonObject serialize(EmiRecipe recipe, Widget widget, Set<String> textureIds, Context ctx) {
         try {
+            if (ctx.chromeRoot() == null) {
+                if (WidgetChromeRasterizer.isRootWidget(widget)
+                        || WidgetChromeRasterizer.isDrawableWidget(widget)) {
+                    return null;
+                }
+                if (!(widget instanceof SlotWidget)
+                        && !(widget instanceof TankWidget)
+                        && !(widget instanceof TooltipWidget)) {
+                    return null;
+                }
+            }
             if (WidgetChromeRasterizer.isRootWidget(widget)) {
                 return rootChrome(widget, ctx);
             }
@@ -88,19 +99,22 @@ final class EmiWidgetSerializer {
                 return slotLike(recipe, slot, "slot", textureIds, false, ctx);
             }
             if (widget instanceof FillingArrowWidget arrow) {
-                return fillingArrow(arrow, textureIds);
+                return ctx.chromeRoot() == null ? null : fillingArrow(arrow, textureIds);
             }
             if (widget instanceof AnimatedTextureWidget animated) {
-                return animatedTexture(animated, textureIds);
+                return ctx.chromeRoot() == null ? null : animatedTexture(animated, textureIds);
             }
             if (widget instanceof TextureWidget texture) {
-                return texture(texture, textureIds);
+                return ctx.chromeRoot() == null ? null : texture(texture, textureIds);
             }
             if (widget instanceof TextWidget text) {
-                return textWidget(text);
+                return ctx.chromeRoot() == null ? null : textWidget(text);
             }
             if (widget instanceof TooltipWidget tooltip) {
                 return tooltip(tooltip);
+            }
+            if (ctx.chromeRoot() == null) {
+                return null;
             }
             return rasterChrome(widget, ctx, "raster");
         } catch (Exception e) {
@@ -144,6 +158,9 @@ final class EmiWidgetSerializer {
     }
 
     private static void attachChrome(JsonObject object, Widget widget, Context ctx) throws Exception {
+        if (ctx.chromeRoot() == null) {
+            return;
+        }
         WidgetChromeRasterizer.ChromeAsset asset = WidgetChromeRasterizer.rasterizeWidget(
                 ctx.client(), widget, ctx.chromeRoot(), ctx.chromeHashToRelative());
         object.addProperty("chrome", asset.exportPath());
