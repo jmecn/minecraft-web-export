@@ -6,6 +6,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExportPlanTest {
 
@@ -38,6 +39,9 @@ class ExportPlanTest {
         assertEquals(
                 Set.of("layout:fluid", "minecraft:water"),
                 plan.fluidsForIcons(Set.of("layout:fluid")));
-        assertEquals(Set.of("item.minecraft.stick"), plan.langKeysForExport());
+        Set<String> langKeys = plan.langKeysForExport();
+        assertTrue(langKeys.contains("item.minecraft.stick"));
+        assertTrue(langKeys.contains("item.minecraft.oak_log"));
+        assertTrue(langKeys.contains("fluid.minecraft.water"));
     }
 }

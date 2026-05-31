@@ -3,7 +3,6 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RegistryLangKeysTest {
@@ -16,12 +15,8 @@ class RegistryLangKeysTest {
     }
 
     @Test
-    void skipRegistryLangFillForGtceu() {
-        assertTrue(RegistryLangKeys.skipRegistryLangFill("gtceu:black_steel_axe"));
-        assertTrue(RegistryLangKeys.skipRegistryLangFill("item:gtceu:liquid_air_bucket"));
-        assertTrue(RegistryLangKeys.skipRegistryLangFill("gtceu:liquid_air"));
+    void namespaceStripsNbt() {
         assertEquals("gtceu", RegistryLangKeys.namespace("gtceu:ev_distillery{Configuration:1}"));
-        assertFalse(RegistryLangKeys.skipRegistryLangFill("ae2:calculation_processor"));
     }
 
     @Test

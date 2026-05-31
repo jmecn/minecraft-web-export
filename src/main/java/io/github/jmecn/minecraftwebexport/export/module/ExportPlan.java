@@ -1,5 +1,7 @@
 package io.github.jmecn.minecraftwebexport.export.module;
 
+import io.github.jmecn.minecraftwebexport.export.emi.LangClosureKeys;
+
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -56,10 +58,11 @@ public record ExportPlan(
     }
 
     public Set<String> langKeysForExport() {
-        if (mode == ExportMode.FULL || closureLangKeys.isEmpty()) {
+        if (mode == ExportMode.FULL) {
             return null;
         }
-        return closureLangKeys;
+        Set<String> merged = LangClosureKeys.mergeClosureLangKeys(closureLangKeys, closureItemIds, closureFluidIds);
+        return merged.isEmpty() ? null : merged;
     }
 
     private static Set<String> copy(Set<String> values) {

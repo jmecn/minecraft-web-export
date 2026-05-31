@@ -16,14 +16,6 @@ public final class RegistryLangKeys {
         return colon > 0 ? bare.substring(0, colon) : "";
     }
 
-    /**
-     * GregTech CEu items use {@code material.*} + {@code tagprefix.*} in lang files.
-     * Filling {@code item.gtceu.*} from hover names pollutes non-English locales with English.
-     */
-    public static boolean skipRegistryLangFill(String registryId) {
-        return "gtceu".equals(namespace(registryId));
-    }
-
     public static String normalizeRegistryId(String registryId) {
         if (registryId == null) {
             return "";
