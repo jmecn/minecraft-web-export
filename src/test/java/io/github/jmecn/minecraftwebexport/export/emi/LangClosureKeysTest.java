@@ -19,6 +19,23 @@ class LangClosureKeysTest {
     }
 
     @Test
+    void addForItemIncludesWireGtSingleComposedKeys() {
+        Set<String> keys = new TreeSet<>();
+        LangClosureKeys.addForItem(keys, "gtceu:copper_single_wire");
+        assertTrue(keys.contains("tagprefix.wire_gt_single"));
+        assertTrue(keys.contains("material.gtceu.copper"));
+    }
+
+    @Test
+    void addForItemIncludesTfgComposedKeys() {
+        Set<String> keys = new TreeSet<>();
+        LangClosureKeys.addForItem(keys, "tfg:latex_ingot");
+        assertTrue(keys.contains("item.tfg.latex_ingot"));
+        assertTrue(keys.contains("tagprefix.ingot"));
+        assertTrue(keys.contains("material.tfg.latex"));
+    }
+
+    @Test
     void addForItemIncludesAe2LookupKeys() {
         Set<String> keys = new TreeSet<>();
         LangClosureKeys.addForItem(keys, "ae2:calculation_processor");

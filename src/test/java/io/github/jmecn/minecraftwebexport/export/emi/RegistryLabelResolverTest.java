@@ -26,4 +26,24 @@ class RegistryLabelResolverTest {
                 Map.of());
         assertEquals("Aluminium Ingot", resolver.translateRegistry("gtceu:aluminium_ingot"));
     }
+
+    @Test
+    void translateRegistryResolvesGtceuSingleWire() {
+        var resolver = new RegistryLabelResolver(
+                Map.of(
+                        "tagprefix.wire_gt_single", "1x%s导线",
+                        "material.gtceu.copper", "铜"),
+                Map.of());
+        assertEquals("1x铜导线", resolver.translateRegistry("gtceu:copper_single_wire"));
+    }
+
+    @Test
+    void translateRegistryResolvesTfgIngot() {
+        var resolver = new RegistryLabelResolver(
+                Map.of(
+                        "tagprefix.ingot", "%s Ingot",
+                        "material.tfg.latex", "Latex"),
+                Map.of());
+        assertEquals("Latex Ingot", resolver.translateRegistry("tfg:latex_ingot"));
+    }
 }

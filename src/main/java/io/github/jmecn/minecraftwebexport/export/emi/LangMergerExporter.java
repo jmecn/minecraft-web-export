@@ -60,9 +60,11 @@ public final class LangMergerExporter {
 
     private static boolean isGtceuTranslationKey(String key) {
         return key.startsWith("material.gtceu.")
+                || key.startsWith("material.tfg.")
                 || key.startsWith("tagprefix.")
                 || key.startsWith("gtceu.fluid.")
-                || key.equals("item.gtceu.bucket");
+                || key.equals("item.gtceu.bucket")
+                || key.equals("item.tfg.bucket");
     }
 
     private static boolean isEmiCategoryLangKey(String key) {
@@ -130,6 +132,10 @@ public final class LangMergerExporter {
                 }
             }
 
+            if (onlyKeys != null) {
+                VanillaMinecraftLangSupplement.supplement(merged, client, langCode, onlyKeys);
+            }
+
             if (merged.isEmpty()) {
                 LOGGER.warn(
                         "{} {} - 0 keys after merge ({}, {} mod files read)",
@@ -183,6 +189,11 @@ public final class LangMergerExporter {
     static boolean matchesLangPath(ResourceLocation location, String langFile) {
         String path = location.getPath();
         return path.equals(langFile) || path.equals("lang/" + langFile) || path.endsWith("/" + langFile);
+    }
+
+    static Map<ResourceLocation, Resource> collectLangHitsForNamespaces(
+            Minecraft client, String langFile, Set<String> onlyNamespaces) {
+        return collectLangHits(client, langFile, onlyNamespaces);
     }
 
     private static Map<ResourceLocation, Resource> collectLangHits(

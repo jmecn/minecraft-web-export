@@ -14,6 +14,7 @@ import java.util.function.Function;
 public final class GtceuRegistryLabels {
 
     static final String GTCEU = "gtceu";
+    private static final java.util.Set<String> COMPOSED_NAMESPACES = java.util.Set.of(GTCEU, "tfg");
 
     private static final Map<String, String> TAG_PREFIX_PATTERN_OVERRIDES = Map.ofEntries(
             Map.entry("raw", "raw_%s"),
@@ -35,13 +36,23 @@ public final class GtceuRegistryLabels {
             Map.entry("long_rod", "long_%s_rod"),
             Map.entry("small_spring", "small_%s_spring"),
             Map.entry("fine_wire", "fine_%s_wire"),
+            Map.entry("wire_gt_single", "%s_single_wire"),
+            Map.entry("wire_gt_double", "%s_double_wire"),
+            Map.entry("wire_gt_quadruple", "%s_quadruple_wire"),
+            Map.entry("wire_gt_octal", "%s_octal_wire"),
+            Map.entry("wire_gt_hex", "%s_hex_wire"),
+            Map.entry("cable_gt_single", "%s_single_cable"),
+            Map.entry("cable_gt_double", "%s_double_cable"),
+            Map.entry("cable_gt_quadruple", "%s_quadruple_cable"),
+            Map.entry("cable_gt_octal", "%s_octal_cable"),
+            Map.entry("cable_gt_hex", "%s_hex_cable"),
             Map.entry("small_gear", "small_%s_gear"));
 
     private GtceuRegistryLabels() {
     }
 
     static boolean isComposedNamespace(String namespace) {
-        return GTCEU.equals(namespace);
+        return COMPOSED_NAMESPACES.contains(namespace);
     }
 
     static String formatTemplate(String template, String... args) {

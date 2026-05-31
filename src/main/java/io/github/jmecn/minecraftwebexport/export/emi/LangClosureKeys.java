@@ -12,6 +12,7 @@ import java.util.TreeSet;
 public final class LangClosureKeys {
 
     private static final String GTCEU = "gtceu";
+    private static final java.util.Set<String> COMPOSED_MATERIAL_NAMESPACES = java.util.Set.of(GTCEU, "tfg");
 
     private static final Map<String, String> GTCEU_TAG_PREFIX_PATTERNS = Map.ofEntries(
             Map.entry("raw", "raw_%s"),
@@ -33,6 +34,16 @@ public final class LangClosureKeys {
             Map.entry("long_rod", "long_%s_rod"),
             Map.entry("small_spring", "small_%s_spring"),
             Map.entry("fine_wire", "fine_%s_wire"),
+            Map.entry("wire_gt_single", "%s_single_wire"),
+            Map.entry("wire_gt_double", "%s_double_wire"),
+            Map.entry("wire_gt_quadruple", "%s_quadruple_wire"),
+            Map.entry("wire_gt_octal", "%s_octal_wire"),
+            Map.entry("wire_gt_hex", "%s_hex_wire"),
+            Map.entry("cable_gt_single", "%s_single_cable"),
+            Map.entry("cable_gt_double", "%s_double_cable"),
+            Map.entry("cable_gt_quadruple", "%s_quadruple_cable"),
+            Map.entry("cable_gt_octal", "%s_octal_cable"),
+            Map.entry("cable_gt_hex", "%s_hex_cable"),
             Map.entry("small_gear", "small_%s_gear"));
 
     private LangClosureKeys() {
@@ -40,12 +51,12 @@ public final class LangClosureKeys {
 
     public static void addForItem(Set<String> into, String registryId) {
         addLookupKeys(into, RegistryLangKeys.itemLookupKeys(registryId));
-        addGtceuItemKeys(into, registryId);
+        addComposedMaterialItemKeys(into, registryId);
     }
 
     public static void addForFluid(Set<String> into, String registryId) {
         addLookupKeys(into, RegistryLangKeys.fluidLookupKeys(registryId));
-        addGtceuFluidKeys(into, registryId);
+        addComposedMaterialFluidKeys(into, registryId);
     }
 
     private static void addLookupKeys(Set<String> into, java.util.List<String> keys) {
@@ -56,9 +67,9 @@ public final class LangClosureKeys {
         }
     }
 
-    private static void addGtceuItemKeys(Set<String> into, String registryId) {
+    private static void addComposedMaterialItemKeys(Set<String> into, String registryId) {
         String namespace = RegistryLangKeys.namespace(registryId);
-        if (!GTCEU.equals(namespace)) {
+        if (!COMPOSED_MATERIAL_NAMESPACES.contains(namespace)) {
             return;
         }
         String path = path(registryId);
@@ -66,8 +77,8 @@ public final class LangClosureKeys {
             return;
         }
         if (path.endsWith("_bucket")) {
-            into.add("item." + GTCEU + ".bucket");
-            into.add("material." + GTCEU + "." + path.substring(0, path.length() - "_bucket".length()));
+            into.add("item." + namespace + ".bucket");
+            into.add("material." + namespace + "." + path.substring(0, path.length() - "_bucket".length()));
             return;
         }
         for (var entry : GTCEU_TAG_PREFIX_PATTERNS.entrySet()) {
@@ -77,7 +88,7 @@ public final class LangClosureKeys {
             }
             into.add("tagprefix." + entry.getKey());
             into.add("tagprefix.polymer." + entry.getKey());
-            into.add("material." + GTCEU + "." + material);
+            into.add("material." + namespace + "." + material);
             return;
         }
         int lastUnderscore = path.lastIndexOf('_');
@@ -87,13 +98,14 @@ public final class LangClosureKeys {
             if (material != null && !material.isEmpty()) {
                 into.add("tagprefix." + suffix);
                 into.add("tagprefix.polymer." + suffix);
-                into.add("material." + GTCEU + "." + material);
+                into.add("material." + namespace + "." + material);
             }
         }
     }
 
-    private static void addGtceuFluidKeys(Set<String> into, String registryId) {
-        if (!GTCEU.equals(RegistryLangKeys.namespace(registryId))) {
+    private static void addComposedMaterialFluidKeys(Set<String> into, String registryId) {
+        String namespace = RegistryLangKeys.namespace(registryId);
+        if (!COMPOSED_MATERIAL_NAMESPACES.contains(namespace)) {
             return;
         }
         String path = path(registryId);
@@ -107,15 +119,15 @@ public final class LangClosureKeys {
         into.add("gtceu.fluid.gas_vapor");
         into.add("gtceu.fluid.gas_generic");
         if (path.startsWith("molten_")) {
-            into.add("material." + GTCEU + "." + path.substring("molten_".length()));
+            into.add("material." + namespace + "." + path.substring("molten_".length()));
         } else if (path.endsWith("_plasma")) {
-            into.add("material." + GTCEU + "." + path.substring(0, path.length() - "_plasma".length()));
+            into.add("material." + namespace + "." + path.substring(0, path.length() - "_plasma".length()));
         } else if (path.startsWith("liquid_")) {
-            into.add("material." + GTCEU + "." + path.substring("liquid_".length()));
+            into.add("material." + namespace + "." + path.substring("liquid_".length()));
         } else if (path.endsWith("_gas")) {
-            into.add("material." + GTCEU + "." + path.substring(0, path.length() - "_gas".length()));
+            into.add("material." + namespace + "." + path.substring(0, path.length() - "_gas".length()));
         } else {
-            into.add("material." + GTCEU + "." + path);
+            into.add("material." + namespace + "." + path);
         }
     }
 
