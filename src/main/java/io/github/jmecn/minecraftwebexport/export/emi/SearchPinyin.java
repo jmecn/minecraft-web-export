@@ -30,6 +30,14 @@ public final class SearchPinyin {
     }
 
     static List<String> tokensForLabel(String label) {
+        try {
+            return tokensForLabelInner(label);
+        } catch (Throwable ignored) {
+            return List.of();
+        }
+    }
+
+    private static List<String> tokensForLabelInner(String label) throws BadHanyuPinyinOutputFormatCombination {
         if (!containsHan(label)) {
             return List.of();
         }
@@ -38,13 +46,9 @@ public final class SearchPinyin {
             int cp = label.codePointAt(offset);
             if (Character.UnicodeScript.of(cp) == Character.UnicodeScript.HAN) {
                 String ch = new String(Character.toChars(cp));
-                try {
-                    String[] py = PinyinHelper.toHanyuPinyinStringArray(ch.charAt(0), FORMAT);
-                    if (py != null && py.length > 0 && !py[0].isBlank()) {
-                        syllables.add(py[0]);
-                    }
-                } catch (BadHanyuPinyinOutputFormatCombination ignored) {
-                    // skip character
+                String[] py = PinyinHelper.toHanyuPinyinStringArray(ch.charAt(0), FORMAT);
+                if (py != null && py.length > 0 && !py[0].isBlank()) {
+                    syllables.add(py[0]);
                 }
             }
             offset += Character.charCount(cp);
