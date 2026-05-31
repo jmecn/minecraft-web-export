@@ -7,6 +7,7 @@ import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.runtime.EmiDrawContext;
 import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import net.minecraft.client.Minecraft;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.client.gui.GuiGraphics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -66,7 +67,9 @@ public final class EmiRecipeCardExporter {
 
         int written = 0;
         int missing = 0;
+        int skippedVisibility = 0;
         int failures = 0;
+        MinecraftServer server = client.getSingleplayerServer();
         long pngBytes = 0;
         long metaBytes = 0;
         int scale = imageScale();
@@ -79,6 +82,11 @@ public final class EmiRecipeCardExporter {
             EmiRecipe recipe = EmiRecipeResolver.resolve(recipeId);
             if (recipe == null) {
                 missing++;
+                logProgress(progress, total, written, missing, failures, logStride);
+                continue;
+            }
+            if (!EmiExportVisibility.shouldExportRecipe(recipe, server)) {
+                skippedVisibility++;
                 logProgress(progress, total, written, missing, failures, logStride);
                 continue;
             }
@@ -122,13 +130,14 @@ public final class EmiRecipeCardExporter {
         }
 
         LOGGER.info(
-                "{} cards done: {}/{} written ({} png bytes, {} meta bytes), {} missing, {} failed",
+                "{} cards done: {}/{} written ({} png bytes, {} meta bytes), {} missing, {} skipped (visibility), {} failed",
                 ExportLog.EMI,
                 written,
                 total,
                 pngBytes,
                 metaBytes,
                 missing,
+                skippedVisibility,
                 failures);
 
         return new Result(

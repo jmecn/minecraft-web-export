@@ -30,7 +30,7 @@ public final class EmiRuntimeExportOrchestrator {
     }
 
     public Report export(Path outputRoot, Minecraft client) throws IOException {
-        return export(outputRoot, client, ExportPlan.full(ExportPlanner.collectAllRecipeIds()));
+        return export(outputRoot, client, ExportPlan.full(ExportPlanner.collectExportableRecipeIds(client)));
     }
 
     public Report export(Path outputRoot, Minecraft client, ExportPlan plan) throws IOException {

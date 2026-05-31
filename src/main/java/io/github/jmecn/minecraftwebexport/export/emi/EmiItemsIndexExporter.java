@@ -150,10 +150,15 @@ public final class EmiItemsIndexExporter {
         int writeTotal = allItemIds.size();
         int writeStride = ExportProgressLog.stride(writeTotal, WRITE_LOG_STRIDE_PROPERTY, 20, 200);
         int writeProgress = 0;
+        int skippedHiddenItems = 0;
         LOGGER.info("{} writing {} item detail files", ExportLog.EMI_ITEMS, writeTotal);
 
         for (String itemId : allItemIds) {
             writeProgress++;
+            if (!EmiExportVisibility.shouldExportRegistryId(server, itemId)) {
+                skippedHiddenItems++;
+                continue;
+            }
             IdParts item = IdParts.parse(itemId);
             if (item == null) {
                 continue;
@@ -202,14 +207,22 @@ public final class EmiItemsIndexExporter {
         String json = GSON.toJson(root);
         Files.createDirectories(itemsIndexFile.getParent());
         Files.writeString(itemsIndexFile, json);
+        if (skippedHiddenItems > 0) {
+            LOGGER.info(
+                    "{} item visibility: {} indexed, {} skipped (hidden_from_recipe_viewers)",
+                    ExportLog.EMI_ITEMS,
+                    indexBuckets.values().stream().mapToInt(Set::size).sum(),
+                    skippedHiddenItems);
+        }
         LOGGER.info(
                 "{} {} items ({} input refs, {} output refs) -> {}",
                 ExportLog.EMI_ITEMS,
-                allItemIds.size(),
+                allItemIds.size() - skippedHiddenItems,
                 inputRefs,
                 outputRefs,
                 itemsIndexFile);
-        return new Result(allItemIds.size(), inputRefs, outputRefs, json.length());
+        int indexedCount = indexBuckets.values().stream().mapToInt(Set::size).sum();
+        return new Result(indexedCount, inputRefs, outputRefs, json.length());
     }
 
     private static void logScanProgress(int progress, int total, int stride) {

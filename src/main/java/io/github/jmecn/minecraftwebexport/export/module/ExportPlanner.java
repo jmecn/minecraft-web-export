@@ -2,6 +2,7 @@ package io.github.jmecn.minecraftwebexport.export.module;
 
 import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.recipe.EmiRecipe;
+import io.github.jmecn.minecraftwebexport.export.emi.EmiExportVisibility;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 import org.apache.logging.log4j.LogManager;
@@ -26,7 +27,7 @@ public final class ExportPlanner {
         Objects.requireNonNull(scope, "scope");
 
         if (mode == ExportMode.FULL) {
-            Set<String> allRecipes = collectAllRecipeIds();
+            Set<String> allRecipes = collectExportableRecipeIds(client);
             LOGGER.info("[export] mode=full, recipes={}", allRecipes.size());
             return ExportPlan.full(allRecipes);
         }
@@ -44,7 +45,7 @@ public final class ExportPlanner {
             hints = hints.merge(module.buildHints(scope, merged));
         }
 
-        Set<String> availableRecipes = collectAllRecipeIds();
+        Set<String> availableRecipes = collectExportableRecipeIds(client);
         Set<String> recipeIds = filterRecipeIds(merged.recipeIds(), availableRecipes);
 
         MinecraftServer server = client.getSingleplayerServer();
@@ -87,6 +88,8 @@ public final class ExportPlanner {
         return Set.copyOf(filtered);
     }
 
+    /** @deprecated use {@link #collectExportableRecipeIds(Minecraft)} */
+    @Deprecated
     public static Set<String> collectAllRecipeIds() {
         var manager = EmiApi.getRecipeManager();
         if (manager == null) {
@@ -99,5 +102,14 @@ public final class ExportPlanner {
             }
         }
         return Set.copyOf(ids);
+    }
+
+    public static Set<String> collectExportableRecipeIds(Minecraft client) {
+        var manager = EmiApi.getRecipeManager();
+        if (manager == null) {
+            return Set.of();
+        }
+        MinecraftServer server = client == null ? null : client.getSingleplayerServer();
+        return EmiExportVisibility.filterExportableRecipeIds(server, manager.getRecipes());
     }
 }
