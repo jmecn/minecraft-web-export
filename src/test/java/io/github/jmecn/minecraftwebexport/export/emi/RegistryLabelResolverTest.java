@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RegistryLabelResolverTest {
 
     @Test
-    void translateRegistryPrefersExportedNameKey() {
+    void translateRegistryPrefersExportedNameKeyForDefaultNamespace() {
         var resolver = new RegistryLabelResolver(
                 Map.of("block.afc.wood.planks.hanging_sign.copper.baobab", "Copper Baobab Hanging Sign"),
                 Map.of(),
@@ -18,6 +18,18 @@ class RegistryLabelResolverTest {
         assertEquals(
                 "Copper Baobab Hanging Sign",
                 resolver.translateRegistry("afc:wood/hanging_sign/copper/baobab"));
+    }
+
+    @Test
+    void translateRegistryGtceuComposedBeforeExportedNameKey() {
+        var resolver = new RegistryLabelResolver(
+                Map.of(
+                        "tagprefix.ingot", "%s Ingot",
+                        "material.gtceu.aluminium", "Aluminium",
+                        "item.gtceu.aluminium_ingot", "Flat Ingot"),
+                Map.of(),
+                Map.of("gtceu:aluminium_ingot", "item.gtceu.aluminium_ingot"));
+        assertEquals("Aluminium Ingot", resolver.translateRegistry("gtceu:aluminium_ingot"));
     }
 
     @Test

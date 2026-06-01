@@ -428,10 +428,6 @@ public final class GtceuRegistryLabels {
         if (!isComposedNamespace(namespace) || path.isEmpty()) {
             return null;
         }
-        String itemOverride = tryItemSpecificLang(namespace, path, translateKey, langTable);
-        if (itemOverride != null) {
-            return itemOverride;
-        }
         String budLabel = translateBudIndicator(namespace, path, translateKey);
         if (budLabel != null) {
             return budLabel;
@@ -458,6 +454,10 @@ public final class GtceuRegistryLabels {
             if (label != null) {
                 return label;
             }
+        }
+        String itemOverride = tryItemSpecificLang(namespace, path, translateKey, langTable);
+        if (itemOverride != null) {
+            return itemOverride;
         }
         return null;
     }
