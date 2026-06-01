@@ -5,26 +5,23 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MinecraftWebExportLanguagesTest {
 
     @Test
-    void returnsSupportedSetByDefault() {
+    void returnsEnUsByDefault() {
         System.clearProperty("minecraftWebExport.exportLanguages");
 
         Set<String> languages = MinecraftWebExportLanguages.resolve();
 
-        assertTrue(languages.contains("en_us"));
-        assertTrue(languages.contains("zh_cn"));
+        assertEquals(Set.of("en_us"), languages);
     }
 
     @Test
-    void returnsNullForWildcard() {
+    void wildcardTokenIsIgnoredAndStillIncludesEnUs() {
         System.setProperty("minecraftWebExport.exportLanguages", "*");
         try {
-            assertNull(MinecraftWebExportLanguages.resolve());
+            assertEquals(Set.of("en_us"), MinecraftWebExportLanguages.resolve());
         } finally {
             System.clearProperty("minecraftWebExport.exportLanguages");
         }

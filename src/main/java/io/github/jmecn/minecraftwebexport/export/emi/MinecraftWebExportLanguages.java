@@ -7,23 +7,7 @@ import java.util.stream.Collectors;
 
 public final class MinecraftWebExportLanguages {
 
-    public static final List<String> SUPPORTED = List.of(
-            "en_us",
-            "de_de",
-            "es_es",
-            "fr_fr",
-            "hu_hu",
-            "ja_jp",
-            "ko_kr",
-            "pl_pl",
-            "pt_br",
-            "ru_ru",
-            "sv_se",
-            "tr_tr",
-            "uk_ua",
-            "zh_cn",
-            "zh_hk",
-            "zh_tw");
+    public static final String DEFAULT_LANGUAGE = "en_us";
 
     private MinecraftWebExportLanguages() {
     }
@@ -31,15 +15,14 @@ public final class MinecraftWebExportLanguages {
     public static Set<String> resolve() {
         String raw = System.getProperty("minecraftWebExport.exportLanguages", "").trim();
         if (raw.isEmpty()) {
-            return Set.copyOf(SUPPORTED);
+            return Set.of(DEFAULT_LANGUAGE);
         }
-        if ("*".equals(raw)) {
-            return null;
-        }
-        return java.util.Arrays.stream(raw.split(","))
+        Set<String> parsed = java.util.Arrays.stream(raw.split(","))
                 .map(String::trim)
-                .filter(s -> !s.isEmpty())
+                .filter(s -> !s.isEmpty() && !"*".equals(s))
                 .map(s -> s.toLowerCase(Locale.ROOT))
                 .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        parsed.add(DEFAULT_LANGUAGE);
+        return Set.copyOf(parsed);
     }
 }
