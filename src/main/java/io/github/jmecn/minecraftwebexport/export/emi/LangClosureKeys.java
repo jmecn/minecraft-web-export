@@ -44,7 +44,46 @@ public final class LangClosureKeys {
             Map.entry("cable_gt_quadruple", "%s_quadruple_cable"),
             Map.entry("cable_gt_octal", "%s_octal_cable"),
             Map.entry("cable_gt_hex", "%s_hex_cable"),
-            Map.entry("small_gear", "small_%s_gear"));
+            Map.entry("small_gear", "small_%s_gear"),
+            Map.entry("pipe_tiny_fluid", "%s_tiny_fluid_pipe"),
+            Map.entry("pipe_small_fluid", "%s_small_fluid_pipe"),
+            Map.entry("pipe_normal_fluid", "%s_normal_fluid_pipe"),
+            Map.entry("pipe_large_fluid", "%s_large_fluid_pipe"),
+            Map.entry("pipe_huge_fluid", "%s_huge_fluid_pipe"),
+            Map.entry("pipe_quadruple_fluid", "%s_quadruple_fluid_pipe"),
+            Map.entry("pipe_nonuple_fluid", "%s_nonuple_fluid_pipe"),
+            Map.entry("pipe_small_item", "%s_small_item_pipe"),
+            Map.entry("pipe_normal_item", "%s_normal_item_pipe"),
+            Map.entry("pipe_large_item", "%s_large_item_pipe"),
+            Map.entry("pipe_huge_item", "%s_huge_item_pipe"),
+            Map.entry("pipe_small_restrictive", "%s_small_restrictive_pipe"),
+            Map.entry("pipe_normal_restrictive", "%s_normal_restrictive_pipe"),
+            Map.entry("pipe_large_restrictive", "%s_large_restrictive_pipe"),
+            Map.entry("pipe_huge_restrictive", "%s_huge_restrictive_pipe"));
+
+    private static final Map<String, String> GT_TOOL_ID_FORMAT_OVERRIDES = Map.ofEntries(
+            Map.entry("lv_drill", "lv_%s_drill"),
+            Map.entry("mv_drill", "mv_%s_drill"),
+            Map.entry("hv_drill", "hv_%s_drill"),
+            Map.entry("ev_drill", "ev_%s_drill"),
+            Map.entry("iv_drill", "iv_%s_drill"),
+            Map.entry("lv_chainsaw", "lv_%s_chainsaw"),
+            Map.entry("hv_chainsaw", "hv_%s_chainsaw"),
+            Map.entry("iv_chainsaw", "iv_%s_chainsaw"),
+            Map.entry("lv_wrench", "lv_%s_wrench"),
+            Map.entry("hv_wrench", "hv_%s_wrench"),
+            Map.entry("iv_wrench", "iv_%s_wrench"),
+            Map.entry("lv_wirecutter", "lv_%s_wire_cutter"),
+            Map.entry("hv_wirecutter", "hv_%s_wire_cutter"),
+            Map.entry("iv_wirecutter", "iv_%s_wire_cutter"),
+            Map.entry("lv_screwdriver", "lv_%s_screwdriver"),
+            Map.entry("hv_screwdriver", "hv_%s_screwdriver"),
+            Map.entry("iv_screwdriver", "iv_%s_screwdriver"));
+
+    private static final java.util.List<String> GT_TOOL_NAMES = java.util.List.of(
+            "sword", "pickaxe", "shovel", "axe", "hoe", "mining_hammer", "spade", "scythe", "saw", "hammer", "mallet",
+            "wrench", "file", "crowbar", "screwdriver", "mortar", "wire_cutter", "knife", "butchery_knife", "plunger",
+            "shears", "buzzsaw", "ev_buzzsaw", "ev_chainsaw", "ev_drill", "ev_screwdriver", "ev_wirecutter", "ev_wrench");
 
     private LangClosureKeys() {
     }
@@ -78,7 +117,18 @@ public final class LangClosureKeys {
         }
         if (path.endsWith("_bucket")) {
             into.add("item." + namespace + ".bucket");
+            if ("tfg".equals(namespace)) {
+                into.add("item.gtceu.bucket");
+            }
             into.add("material." + namespace + "." + path.substring(0, path.length() - "_bucket".length()));
+            return;
+        }
+        if (path.endsWith("_bud_indicator")) {
+            into.add("block.bud_indicator");
+            into.add("material." + namespace + "." + path.substring(0, path.length() - "_bud_indicator".length()));
+            return;
+        }
+        if (addGtToolClosureKeys(into, namespace, path)) {
             return;
         }
         for (var entry : GTCEU_TAG_PREFIX_PATTERNS.entrySet()) {
@@ -135,6 +185,27 @@ public final class LangClosureKeys {
         String bare = RegistryLangKeys.normalizeRegistryId(registryId);
         int colon = bare.indexOf(':');
         return colon >= 0 ? bare.substring(colon + 1) : bare;
+    }
+
+    private static boolean addGtToolClosureKeys(Set<String> into, String namespace, String path) {
+        java.util.Set<String> toolNames = new java.util.LinkedHashSet<>(GT_TOOL_ID_FORMAT_OVERRIDES.keySet());
+        toolNames.addAll(GT_TOOL_NAMES);
+        java.util.List<java.util.Map.Entry<String, String>> patterns = new java.util.ArrayList<>();
+        for (String toolName : toolNames) {
+            String pattern = GT_TOOL_ID_FORMAT_OVERRIDES.getOrDefault(toolName, "%s_" + toolName);
+            patterns.add(Map.entry(toolName, pattern));
+        }
+        patterns.sort((a, b) -> Integer.compare(b.getValue().length(), a.getValue().length()));
+        for (var entry : patterns) {
+            String material = extractMaterial(path, entry.getValue());
+            if (material == null || material.isEmpty()) {
+                continue;
+            }
+            into.add("item.gtceu.tool." + entry.getKey());
+            into.add("material." + namespace + "." + material);
+            return true;
+        }
+        return false;
     }
 
     static String extractMaterial(String path, String pattern) {

@@ -21,6 +21,8 @@ public final class EmiBundlePaths {
     public static final String ICONS_DIR = "icons";
     public static final String ITEMS_INDEX_FILE = "items/index.json";
     public static final String CATEGORIES_INDEX_FILE = "categories/index.json";
+    /** Dedicated 16×16 EMI category tab sprites (see {@link EmiCategoryIconsExporter}). */
+    public static final String CATEGORY_ICONS_DIR = "categories/icons";
     public static final String TAGS_DIR = "tags";
     public static final String TAGS_INDEX_FILE = "tags/index.json";
     public static final String LANG_DIR = "lang";

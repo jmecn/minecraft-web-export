@@ -38,6 +38,17 @@ class RegistryLabelResolverTest {
     }
 
     @Test
+    void translateRegistryResolvesTfgBucketViaGtceuTemplate() {
+        var resolver = new RegistryLabelResolver(
+                Map.of(
+                        "item.gtceu.bucket", "%s Bucket",
+                        "material.tfg.aniline", "Aniline",
+                        "gtceu.fluid.generic", "%s"),
+                Map.of());
+        assertEquals("Aniline Bucket", resolver.translateRegistry("tfg:aniline_bucket"));
+    }
+
+    @Test
     void translateRegistryResolvesTfgIngot() {
         var resolver = new RegistryLabelResolver(
                 Map.of(

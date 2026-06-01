@@ -3,6 +3,7 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 public final class IconExportSizes {
 
     private static final int DEFAULT_ICON = 32;
+    private static final int DEFAULT_CATEGORY_ICON = 16;
     private static final int DEFAULT_ATLAS_MAX = 2048;
 
     private IconExportSizes() {
@@ -23,6 +24,12 @@ public final class IconExportSizes {
             return boundedSize(Integer.getInteger("minecraftWebExport.fluidIconSize"), "minecraftWebExport.fluidIconSize");
         }
         return DEFAULT_ICON;
+    }
+
+    /** EMI recipe category tab icons ({@code RecipeScreen} renders at 16×16). */
+    public static int categoryIconCellSize() {
+        int size = Integer.getInteger("minecraftWebExport.categoryIconSize", DEFAULT_CATEGORY_ICON);
+        return boundedSize(size, "minecraftWebExport.categoryIconSize");
     }
 
     public static int atlasMaxSize() {

@@ -68,6 +68,18 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
         startNewPage();
     }
 
+    Map<String, Object> spriteFor(String itemId) {
+        SpriteRef ref = items.get(itemId);
+        if (ref == null) {
+            return Map.of();
+        }
+        Map<String, Object> sprite = new LinkedHashMap<>();
+        sprite.put("page", ref.page());
+        sprite.put("x", ref.x());
+        sprite.put("y", ref.y());
+        return sprite;
+    }
+
     void place(String itemId, OffScreenRenderer frame) {
         if (cursorX + cellSize > pageWidth) {
             nextRow();

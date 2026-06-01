@@ -46,7 +46,44 @@ public final class GtceuRegistryLabels {
             Map.entry("cable_gt_quadruple", "%s_quadruple_cable"),
             Map.entry("cable_gt_octal", "%s_octal_cable"),
             Map.entry("cable_gt_hex", "%s_hex_cable"),
-            Map.entry("small_gear", "small_%s_gear"));
+            Map.entry("small_gear", "small_%s_gear"),
+            Map.entry("pipe_tiny_fluid", "%s_tiny_fluid_pipe"),
+            Map.entry("pipe_small_fluid", "%s_small_fluid_pipe"),
+            Map.entry("pipe_normal_fluid", "%s_normal_fluid_pipe"),
+            Map.entry("pipe_large_fluid", "%s_large_fluid_pipe"),
+            Map.entry("pipe_huge_fluid", "%s_huge_fluid_pipe"),
+            Map.entry("pipe_quadruple_fluid", "%s_quadruple_fluid_pipe"),
+            Map.entry("pipe_nonuple_fluid", "%s_nonuple_fluid_pipe"),
+            Map.entry("pipe_small_item", "%s_small_item_pipe"),
+            Map.entry("pipe_normal_item", "%s_normal_item_pipe"),
+            Map.entry("pipe_large_item", "%s_large_item_pipe"),
+            Map.entry("pipe_huge_item", "%s_huge_item_pipe"),
+            Map.entry("pipe_small_restrictive", "%s_small_restrictive_pipe"),
+            Map.entry("pipe_normal_restrictive", "%s_normal_restrictive_pipe"),
+            Map.entry("pipe_large_restrictive", "%s_large_restrictive_pipe"),
+            Map.entry("pipe_huge_restrictive", "%s_huge_restrictive_pipe"));
+
+    private static final Map<String, String> TOOL_ID_FORMAT_OVERRIDES = Map.ofEntries(
+            Map.entry("lv_drill", "lv_%s_drill"),
+            Map.entry("mv_drill", "mv_%s_drill"),
+            Map.entry("hv_drill", "hv_%s_drill"),
+            Map.entry("ev_drill", "ev_%s_drill"),
+            Map.entry("iv_drill", "iv_%s_drill"),
+            Map.entry("lv_chainsaw", "lv_%s_chainsaw"),
+            Map.entry("hv_chainsaw", "hv_%s_chainsaw"),
+            Map.entry("iv_chainsaw", "iv_%s_chainsaw"),
+            Map.entry("lv_wrench", "lv_%s_wrench"),
+            Map.entry("hv_wrench", "hv_%s_wrench"),
+            Map.entry("iv_wrench", "iv_%s_wrench"),
+            Map.entry("lv_wirecutter", "lv_%s_wire_cutter"),
+            Map.entry("hv_wirecutter", "hv_%s_wire_cutter"),
+            Map.entry("iv_wirecutter", "iv_%s_wire_cutter"),
+            Map.entry("lv_screwdriver", "lv_%s_screwdriver"),
+            Map.entry("hv_screwdriver", "hv_%s_screwdriver"),
+            Map.entry("iv_screwdriver", "iv_%s_screwdriver"));
+
+    private record GtToolPattern(String toolName, String pattern, String templateKey) {
+    }
 
     private GtceuRegistryLabels() {
     }
@@ -89,6 +126,17 @@ public final class GtceuRegistryLabels {
 
     private static boolean langKeyPresent(Map<String, String> langTable, String key) {
         return langTable != null && langTable.containsKey(key);
+    }
+
+    static String resolveBucketTemplateKey(String namespace, Map<String, String> langTable) {
+        String own = "item." + namespace + ".bucket";
+        if (langKeyPresent(langTable, own)) {
+            return own;
+        }
+        if ("tfg".equals(namespace) && langKeyPresent(langTable, "item.gtceu.bucket")) {
+            return "item.gtceu.bucket";
+        }
+        return null;
     }
 
     private record FluidPath(String storageKey, String materialPath) {
@@ -186,6 +234,89 @@ public final class GtceuRegistryLabels {
     }
 
     private record TagPrefixPattern(String langSuffix, String pattern, String langKey) {
+    }
+
+    private static List<GtToolPattern> buildGtToolPatterns(Map<String, String> langTable) {
+        List<GtToolPattern> patterns = new ArrayList<>();
+        if (langTable == null) {
+            return patterns;
+        }
+        String prefix = "item.gtceu.tool.";
+        for (String key : langTable.keySet()) {
+            if (!key.startsWith(prefix)) {
+                continue;
+            }
+            String toolName = key.substring(prefix.length());
+            if (toolName.isEmpty() || toolName.contains(".")) {
+                continue;
+            }
+            String template = langTable.get(key);
+            if (template == null || !template.contains("%s")) {
+                continue;
+            }
+            String pattern = TOOL_ID_FORMAT_OVERRIDES.getOrDefault(toolName, "%s_" + toolName);
+            patterns.add(new GtToolPattern(toolName, pattern, key));
+        }
+        patterns.sort(Comparator.comparingInt((GtToolPattern p) -> p.pattern().length()).reversed());
+        return patterns;
+    }
+
+    private static String resolveGtToolTemplateKey(
+            String namespace, String toolName, Map<String, String> langTable) {
+        if (langTable == null) {
+            return null;
+        }
+        String own = "item." + namespace + ".tool." + toolName;
+        if (langTable.containsKey(own)) {
+            return own;
+        }
+        String gtceu = "item.gtceu.tool." + toolName;
+        if (!GTCEU.equals(namespace) && langTable.containsKey(gtceu)) {
+            return gtceu;
+        }
+        return null;
+    }
+
+    private static String translateGtToolItem(
+            String namespace,
+            String path,
+            Function<String, String> translateKey,
+            Map<String, String> langTable) {
+        for (GtToolPattern entry : buildGtToolPatterns(langTable)) {
+            String materialPath = LangClosureKeys.extractMaterial(path, entry.pattern());
+            if (materialPath == null) {
+                continue;
+            }
+            String templateKey = resolveGtToolTemplateKey(namespace, entry.toolName(), langTable);
+            if (templateKey == null) {
+                templateKey = entry.templateKey();
+            }
+            String matLabel = resolveKey(translateKey, materialKey(namespace, materialPath));
+            if (matLabel == null) {
+                continue;
+            }
+            String composed = composeFromTemplate(templateKey, matLabel, translateKey);
+            if (composed != null) {
+                return composed;
+            }
+        }
+        return null;
+    }
+
+    private static String translateBudIndicator(
+            String namespace, String path, Function<String, String> translateKey) {
+        if (!path.endsWith("_bud_indicator")) {
+            return null;
+        }
+        String materialPath = path.substring(0, path.length() - "_bud_indicator".length());
+        if (materialPath.isEmpty()) {
+            return null;
+        }
+        String matLabel = resolveKey(translateKey, materialKey(namespace, materialPath));
+        if (matLabel == null) {
+            return null;
+        }
+        return composeFromTemplate("block.bud_indicator", matLabel, translateKey);
     }
 
     private static List<TagPrefixPattern> buildTagPrefixPatterns(Map<String, String> langTable) {
@@ -301,10 +432,18 @@ public final class GtceuRegistryLabels {
         if (itemOverride != null) {
             return itemOverride;
         }
-        String bucketKey = "item." + namespace + ".bucket";
-        if (path.endsWith("_bucket") && langKeyPresent(langTable, bucketKey)) {
+        String budLabel = translateBudIndicator(namespace, path, translateKey);
+        if (budLabel != null) {
+            return budLabel;
+        }
+        String toolLabel = translateGtToolItem(namespace, path, translateKey, langTable);
+        if (toolLabel != null) {
+            return toolLabel;
+        }
+        String bucketTemplateKey = resolveBucketTemplateKey(namespace, langTable);
+        if (path.endsWith("_bucket") && bucketTemplateKey != null) {
             String fluidPath = path.substring(0, path.length() - "_bucket".length());
-            String bucketTemplate = resolveKey(translateKey, bucketKey);
+            String bucketTemplate = resolveKey(translateKey, bucketTemplateKey);
             String fluidLabel = translateComposedFluid(namespace, fluidPath, translateKey, langTable);
             if (bucketTemplate != null && fluidLabel != null) {
                 return formatTemplate(bucketTemplate, fluidLabel);

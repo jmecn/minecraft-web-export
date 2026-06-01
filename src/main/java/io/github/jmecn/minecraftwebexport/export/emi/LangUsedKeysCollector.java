@@ -35,7 +35,6 @@ public final class LangUsedKeysCollector {
         if (meta == null) {
             return;
         }
-        collectCategory(meta);
         JsonElement widgets = meta.get("widgets");
         if (widgets == null || !widgets.isJsonArray()) {
             return;
@@ -68,12 +67,6 @@ public final class LangUsedKeysCollector {
             JsonObject entry = element.getAsJsonObject();
             if (entry.has("nameKey") && entry.get("nameKey").isJsonPrimitive()) {
                 keys.add(entry.get("nameKey").getAsString());
-            }
-            if (entry.has("id") && entry.get("id").isJsonPrimitive()) {
-                String categoryKey = emiCategoryLangKey(entry.get("id").getAsString());
-                if (categoryKey != null) {
-                    keys.add(categoryKey);
-                }
             }
             if (entry.has("iconItem") && entry.get("iconItem").isJsonPrimitive()) {
                 addRegistryItem(entry.get("iconItem").getAsString());
@@ -141,10 +134,7 @@ public final class LangUsedKeysCollector {
 
     private void collectCategory(JsonObject meta) {
         if (meta.has("category") && meta.get("category").isJsonPrimitive()) {
-            String key = emiCategoryLangKey(meta.get("category").getAsString());
-            if (key != null) {
-                keys.add(key);
-            }
+            keys.add(CategoryLangKeys.guessNameKey(meta.get("category").getAsString()));
         }
     }
 
@@ -210,13 +200,6 @@ public final class LangUsedKeysCollector {
         keys.add("tag.item." + dotted);
         keys.add("tag.block." + dotted);
         keys.add("tag.fluid." + dotted);
-    }
-
-    private static String emiCategoryLangKey(String categoryId) {
-        if (categoryId == null || categoryId.isEmpty()) {
-            return null;
-        }
-        return "emi.category." + categoryId.replace(':', '.').replace('/', '.');
     }
 
     private static String stringProp(JsonObject object, String key) {
