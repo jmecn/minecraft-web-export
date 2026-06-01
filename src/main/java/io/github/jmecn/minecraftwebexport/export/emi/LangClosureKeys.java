@@ -12,7 +12,7 @@ import java.util.TreeSet;
 public final class LangClosureKeys {
 
     private static final String GTCEU = "gtceu";
-    private static final java.util.Set<String> COMPOSED_MATERIAL_NAMESPACES = java.util.Set.of(GTCEU, "tfg");
+    private static final java.util.Set<String> COMPOSED_MATERIAL_NAMESPACES = java.util.Set.of(GTCEU, "tfg", "greate");
 
     private static final Map<String, String> GTCEU_TAG_PREFIX_PATTERNS = Map.ofEntries(
             Map.entry("raw", "raw_%s"),
@@ -56,10 +56,19 @@ public final class LangClosureKeys {
             Map.entry("pipe_normal_item", "%s_normal_item_pipe"),
             Map.entry("pipe_large_item", "%s_large_item_pipe"),
             Map.entry("pipe_huge_item", "%s_huge_item_pipe"),
-            Map.entry("pipe_small_restrictive", "%s_small_restrictive_pipe"),
-            Map.entry("pipe_normal_restrictive", "%s_normal_restrictive_pipe"),
-            Map.entry("pipe_large_restrictive", "%s_large_restrictive_pipe"),
-            Map.entry("pipe_huge_restrictive", "%s_huge_restrictive_pipe"));
+            Map.entry("pipe_small_restrictive", "%s_small_restrictive_item_pipe"),
+            Map.entry("pipe_normal_restrictive", "%s_normal_restrictive_item_pipe"),
+            Map.entry("pipe_large_restrictive", "%s_large_restrictive_item_pipe"),
+            Map.entry("pipe_huge_restrictive", "%s_huge_restrictive_item_pipe"),
+            Map.entry("poor_raw", "poor_raw_%s"),
+            Map.entry("rich_raw", "rich_raw_%s"),
+            Map.entry("dusty_raw", "dusty_raw_%s"),
+            Map.entry("repair_kit", "repair_kit_%s"),
+            Map.entry("unfired_repair_kit", "unfired_repair_kit_%s"));
+
+    private static final String[] VOLTAGE_TIER_PREFIXES = {
+            "lv", "mv", "hv", "ev", "iv", "luv", "zpm", "uv", "uev", "uhv", "max"
+    };
 
     private static final Map<String, String> GT_TOOL_ID_FORMAT_OVERRIDES = Map.ofEntries(
             Map.entry("lv_drill", "lv_%s_drill"),
@@ -80,10 +89,37 @@ public final class LangClosureKeys {
             Map.entry("hv_screwdriver", "hv_%s_screwdriver"),
             Map.entry("iv_screwdriver", "iv_%s_screwdriver"));
 
+    /** gtmutils UtilToolType — lang keys are {@code item.gtceu.tool.<name>} (see assets/gtmutils/lang). */
+    private static final java.util.List<String> GTMUTILS_ELECTRIC_TOOL_NAMES = java.util.List.of(
+            "mv_screwdriver", "ev_screwdriver", "luv_screwdriver", "zpm_screwdriver",
+            "mv_chainsaw", "ev_chainsaw", "luv_chainsaw", "zpm_chainsaw",
+            "luv_drill", "zpm_drill",
+            "mv_wrench", "ev_wrench", "luv_wrench", "zpm_wrench",
+            "mv_wirecutter", "ev_wirecutter", "luv_wirecutter", "zpm_wirecutter",
+            "mv_buzzsaw", "hv_buzzsaw", "ev_buzzsaw", "iv_buzzsaw", "luv_buzzsaw", "zpm_buzzsaw");
+
     private static final java.util.List<String> GT_TOOL_NAMES = java.util.List.of(
             "sword", "pickaxe", "shovel", "axe", "hoe", "mining_hammer", "spade", "scythe", "saw", "hammer", "mallet",
             "wrench", "file", "crowbar", "screwdriver", "mortar", "wire_cutter", "knife", "butchery_knife", "plunger",
-            "shears", "buzzsaw", "ev_buzzsaw", "ev_chainsaw", "ev_drill", "ev_screwdriver", "ev_wirecutter", "ev_wrench");
+            "shears", "buzzsaw");
+
+    private static String defaultGtToolIdPattern(String toolName) {
+        String override = GT_TOOL_ID_FORMAT_OVERRIDES.get(toolName);
+        if (override != null) {
+            return override;
+        }
+        for (String tier : VOLTAGE_TIER_PREFIXES) {
+            String wirecutter = tier + "_wirecutter";
+            if (wirecutter.equals(toolName)) {
+                return tier + "_%s_wire_cutter";
+            }
+            String prefix = tier + "_";
+            if (toolName.startsWith(prefix)) {
+                return prefix + "%s_" + toolName.substring(prefix.length());
+            }
+        }
+        return "%s_" + toolName;
+    }
 
     private LangClosureKeys() {
     }
@@ -190,9 +226,24 @@ public final class LangClosureKeys {
     private static boolean addGtToolClosureKeys(Set<String> into, String namespace, String path) {
         java.util.Set<String> toolNames = new java.util.LinkedHashSet<>(GT_TOOL_ID_FORMAT_OVERRIDES.keySet());
         toolNames.addAll(GT_TOOL_NAMES);
+        toolNames.addAll(GTMUTILS_ELECTRIC_TOOL_NAMES);
+        for (String tier : VOLTAGE_TIER_PREFIXES) {
+            toolNames.add(tier + "_buzzsaw");
+            toolNames.add(tier + "_chainsaw");
+            toolNames.add(tier + "_drill");
+            toolNames.add(tier + "_screwdriver");
+            toolNames.add(tier + "_wrench");
+            toolNames.add(tier + "_wirecutter");
+        }
+        toolNames.add("buzzsaw");
+        toolNames.add("chainsaw");
+        toolNames.add("screwdriver");
+        toolNames.add("wrench");
+        toolNames.add("wirecutter");
+        toolNames.add("wire_cutter");
         java.util.List<java.util.Map.Entry<String, String>> patterns = new java.util.ArrayList<>();
         for (String toolName : toolNames) {
-            String pattern = GT_TOOL_ID_FORMAT_OVERRIDES.getOrDefault(toolName, "%s_" + toolName);
+            String pattern = defaultGtToolIdPattern(toolName);
             patterns.add(Map.entry(toolName, pattern));
         }
         patterns.sort((a, b) -> Integer.compare(b.getValue().length(), a.getValue().length()));

@@ -9,7 +9,7 @@ import java.util.Set;
 public final class RegistryLabelResolver {
 
     /** Namespaces that use GTCEu-style composed labels before flat / exported keys. */
-    static final Set<String> COMPOSED_FIRST_NAMESPACES = Set.of("gtceu", "tfg");
+    static final Set<String> COMPOSED_FIRST_NAMESPACES = Set.of("gtceu", "tfg", "greate");
 
     private final Map<String, String> current;
     private final Map<String, String> fallback;

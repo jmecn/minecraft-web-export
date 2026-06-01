@@ -14,7 +14,7 @@ import java.util.function.Function;
 public final class GtceuRegistryLabels {
 
     static final String GTCEU = "gtceu";
-    private static final java.util.Set<String> COMPOSED_NAMESPACES = java.util.Set.of(GTCEU, "tfg");
+    private static final java.util.Set<String> COMPOSED_NAMESPACES = java.util.Set.of(GTCEU, "tfg", "greate");
 
     private static final Map<String, String> TAG_PREFIX_PATTERN_OVERRIDES = Map.ofEntries(
             Map.entry("raw", "raw_%s"),
@@ -58,10 +58,19 @@ public final class GtceuRegistryLabels {
             Map.entry("pipe_normal_item", "%s_normal_item_pipe"),
             Map.entry("pipe_large_item", "%s_large_item_pipe"),
             Map.entry("pipe_huge_item", "%s_huge_item_pipe"),
-            Map.entry("pipe_small_restrictive", "%s_small_restrictive_pipe"),
-            Map.entry("pipe_normal_restrictive", "%s_normal_restrictive_pipe"),
-            Map.entry("pipe_large_restrictive", "%s_large_restrictive_pipe"),
-            Map.entry("pipe_huge_restrictive", "%s_huge_restrictive_pipe"));
+            Map.entry("pipe_small_restrictive", "%s_small_restrictive_item_pipe"),
+            Map.entry("pipe_normal_restrictive", "%s_normal_restrictive_item_pipe"),
+            Map.entry("pipe_large_restrictive", "%s_large_restrictive_item_pipe"),
+            Map.entry("pipe_huge_restrictive", "%s_huge_restrictive_item_pipe"),
+            Map.entry("poor_raw", "poor_raw_%s"),
+            Map.entry("rich_raw", "rich_raw_%s"),
+            Map.entry("dusty_raw", "dusty_raw_%s"),
+            Map.entry("repair_kit", "repair_kit_%s"),
+            Map.entry("unfired_repair_kit", "unfired_repair_kit_%s"));
+
+    private static final String[] VOLTAGE_TIER_PREFIXES = {
+            "lv", "mv", "hv", "ev", "iv", "luv", "zpm", "uv", "uev", "uhv", "max"
+    };
 
     private static final Map<String, String> TOOL_ID_FORMAT_OVERRIDES = Map.ofEntries(
             Map.entry("lv_drill", "lv_%s_drill"),
@@ -82,7 +91,34 @@ public final class GtceuRegistryLabels {
             Map.entry("hv_screwdriver", "hv_%s_screwdriver"),
             Map.entry("iv_screwdriver", "iv_%s_screwdriver"));
 
+    /** gtmutils {@code UtilToolType} — lang under {@code assets/gtmutils/lang} as {@code item.gtceu.tool.*}. */
+    private static final java.util.List<String> GTMUTILS_ELECTRIC_TOOL_NAMES = java.util.List.of(
+            "mv_screwdriver", "ev_screwdriver", "luv_screwdriver", "zpm_screwdriver",
+            "mv_chainsaw", "ev_chainsaw", "luv_chainsaw", "zpm_chainsaw",
+            "luv_drill", "zpm_drill",
+            "mv_wrench", "ev_wrench", "luv_wrench", "zpm_wrench",
+            "mv_wirecutter", "ev_wirecutter", "luv_wirecutter", "zpm_wirecutter",
+            "mv_buzzsaw", "hv_buzzsaw", "ev_buzzsaw", "iv_buzzsaw", "luv_buzzsaw", "zpm_buzzsaw");
+
     private record GtToolPattern(String toolName, String pattern, String templateKey) {
+    }
+
+    static String defaultGtToolIdPattern(String toolName) {
+        String override = TOOL_ID_FORMAT_OVERRIDES.get(toolName);
+        if (override != null) {
+            return override;
+        }
+        for (String tier : VOLTAGE_TIER_PREFIXES) {
+            String wirecutter = tier + "_wirecutter";
+            if (wirecutter.equals(toolName)) {
+                return tier + "_%s_wire_cutter";
+            }
+            String prefix = tier + "_";
+            if (toolName.startsWith(prefix)) {
+                return prefix + "%s_" + toolName.substring(prefix.length());
+            }
+        }
+        return "%s_" + toolName;
     }
 
     private GtceuRegistryLabels() {
@@ -162,20 +198,41 @@ public final class GtceuRegistryLabels {
         if (materialPath == null || materialPath.isEmpty() || materialPath.contains("_")) {
             return false;
         }
+        if (materialPath.length() > 12) {
+            return false;
+        }
         return materialPath.matches("^[a-z][a-z0-9]*$");
     }
 
-    private static String pickFluidTemplateKey(String storageKey, String materialPath, Map<String, String> langTable) {
+    private static String pickGenericFluidTemplate(Map<String, String> langTable) {
+        return firstPresent(langTable, "gtceu.fluid.generic", "gtceu.fluid.liquid_generic", "gtceu.fluid.generic");
+    }
+
+    private static String pickFluidTemplateKey(
+            String storageKey, String materialPath, String namespace, Map<String, String> langTable) {
+        boolean modpackFluid = !GTCEU.equals(namespace);
         return switch (storageKey) {
             case "molten" -> "gtceu.fluid.molten";
             case "plasma" -> "gtceu.fluid.plasma";
             case "liquid" -> firstPresent(langTable, "gtceu.fluid.liquid_generic", "gtceu.fluid.generic", "gtceu.fluid.liquid_generic");
-            case "gas" -> isLikelyElementMaterial(materialPath)
-                    ? firstPresent(langTable, "gtceu.fluid.gas_generic", "gtceu.fluid.generic", "gtceu.fluid.gas_generic")
-                    : firstPresent(langTable, "gtceu.fluid.gas_vapor", "gtceu.fluid.gas_generic", "gtceu.fluid.generic", "gtceu.fluid.gas_vapor");
-            default -> isLikelyElementMaterial(materialPath)
-                    ? firstPresent(langTable, "gtceu.fluid.gas_generic", "gtceu.fluid.generic", "gtceu.fluid.gas_generic")
-                    : firstPresent(langTable, "gtceu.fluid.liquid_generic", "gtceu.fluid.gas_vapor", "gtceu.fluid.generic", "gtceu.fluid.liquid_generic");
+            case "gas" -> {
+                if (modpackFluid) {
+                    yield pickGenericFluidTemplate(langTable);
+                }
+                if (isLikelyElementMaterial(materialPath)) {
+                    yield firstPresent(langTable, "gtceu.fluid.gas_generic", "gtceu.fluid.generic", "gtceu.fluid.gas_generic");
+                }
+                yield pickGenericFluidTemplate(langTable);
+            }
+            default -> {
+                if (modpackFluid) {
+                    yield pickGenericFluidTemplate(langTable);
+                }
+                if (isLikelyElementMaterial(materialPath)) {
+                    yield firstPresent(langTable, "gtceu.fluid.gas_generic", "gtceu.fluid.generic", "gtceu.fluid.gas_generic");
+                }
+                yield pickGenericFluidTemplate(langTable);
+            }
         };
     }
 
@@ -219,12 +276,16 @@ public final class GtceuRegistryLabels {
         if (!isComposedNamespace(namespace) || path.isEmpty()) {
             return null;
         }
+        String flatFluid = resolveKey(translateKey, "fluid." + namespace + "." + path);
+        if (flatFluid != null) {
+            return flatFluid;
+        }
         FluidPath parsed = parseFluidPath(path);
         String matLabel = resolveMaterialLabel(namespace, parsed.materialPath(), path, translateKey);
         if (matLabel == null) {
             return resolveKey(translateKey, materialKey(namespace, path));
         }
-        String templateKey = pickFluidTemplateKey(parsed.storageKey(), parsed.materialPath(), langTable);
+        String templateKey = pickFluidTemplateKey(parsed.storageKey(), parsed.materialPath(), namespace, langTable);
         String composed = composeFromTemplate(templateKey, matLabel, translateKey);
         if (composed != null) {
             return composed;
@@ -242,20 +303,33 @@ public final class GtceuRegistryLabels {
             return patterns;
         }
         String prefix = "item.gtceu.tool.";
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
         for (String key : langTable.keySet()) {
             if (!key.startsWith(prefix)) {
                 continue;
             }
             String toolName = key.substring(prefix.length());
-            if (toolName.isEmpty() || toolName.contains(".")) {
+            if (toolName.isEmpty() || toolName.contains(".") || !seen.add(toolName)) {
                 continue;
             }
             String template = langTable.get(key);
             if (template == null || !template.contains("%s")) {
+                seen.remove(toolName);
                 continue;
             }
-            String pattern = TOOL_ID_FORMAT_OVERRIDES.getOrDefault(toolName, "%s_" + toolName);
-            patterns.add(new GtToolPattern(toolName, pattern, key));
+            patterns.add(new GtToolPattern(toolName, defaultGtToolIdPattern(toolName), key));
+        }
+        for (String toolName : GTMUTILS_ELECTRIC_TOOL_NAMES) {
+            if (!seen.add(toolName)) {
+                continue;
+            }
+            String key = prefix + toolName;
+            String template = langTable.get(key);
+            if (template == null || !template.contains("%s")) {
+                seen.remove(toolName);
+                continue;
+            }
+            patterns.add(new GtToolPattern(toolName, defaultGtToolIdPattern(toolName), key));
         }
         patterns.sort(Comparator.comparingInt((GtToolPattern p) -> p.pattern().length()).reversed());
         return patterns;

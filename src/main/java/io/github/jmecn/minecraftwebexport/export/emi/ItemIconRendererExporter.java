@@ -103,7 +103,26 @@ public final class ItemIconRendererExporter {
         Path iconsRoot = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ICONS_DIR);
         clearLegacyDirs(outputDir);
         clearDir(iconsRoot);
+        return exportImpl(iconsRoot, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants);
+    }
 
+    /** Icon atlas at an explicit directory (e.g. {@code guide-export/assets/icons}). */
+    public static Result exportAtRoot(
+            Path iconsRoot,
+            Minecraft client,
+            Set<String> onlyItemIds,
+            Map<String, Integer> usageWeights) {
+        clearDir(iconsRoot);
+        return exportImpl(iconsRoot, client, onlyItemIds, null, usageWeights, Map.of());
+    }
+
+    private static Result exportImpl(
+            Path iconsRoot,
+            Minecraft client,
+            Set<String> onlyItemIds,
+            Set<String> onlyFluidIds,
+            Map<String, Integer> usageWeights,
+            Map<String, ItemStack> iconVariants) {
         int cell = IconExportSizes.iconCellSize();
         int atlasMax = IconExportSizes.atlasMaxSize();
         boolean exportFluids = fluidsEnabled() && (onlyFluidIds == null || !onlyFluidIds.isEmpty());

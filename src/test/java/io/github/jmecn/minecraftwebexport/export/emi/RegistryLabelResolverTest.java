@@ -80,4 +80,46 @@ class RegistryLabelResolverTest {
                 Map.of());
         assertEquals("Latex Ingot", resolver.translateRegistry("tfg:latex_ingot"));
     }
+
+    @Test
+    void translateRegistryResolvesEvElectricToolsAndRepairKit() {
+        var resolver = new RegistryLabelResolver(
+                Map.of(
+                        "item.gtceu.tool.ev_buzzsaw", "%s Buzzsaw (EV)",
+                        "item.gtceu.tool.ev_wrench", "%s Wrench (EV)",
+                        "item.gtceu.tool.mv_wrench", "%s Wrench (MV)",
+                        "tagprefix.repair_kit", "%s Repair Kit",
+                        "material.gtceu.tungsten_carbide", "Tungsten Carbide",
+                        "material.gtceu.vanadium_steel", "Vanadium Steel"),
+                Map.of());
+        assertEquals(
+                "Tungsten Carbide Buzzsaw (EV)",
+                resolver.translateRegistry("gtceu:ev_tungsten_carbide_buzzsaw"));
+        assertEquals(
+                "Tungsten Carbide Wrench (EV)",
+                resolver.translateRegistry("gtceu:ev_tungsten_carbide_wrench"));
+        assertEquals(
+                "Vanadium Steel Wrench (MV)",
+                resolver.translateRegistry("gtceu:mv_vanadium_steel_wrench"));
+        assertEquals(
+                "Tungsten Carbide Repair Kit",
+                resolver.translateRegistry("gtceu:repair_kit_tungsten_carbide"));
+    }
+
+    @Test
+    void translateRegistryResolvesTfgFluidsWithoutGasPrefix() {
+        var resolver = new RegistryLabelResolver(
+                Map.of(
+                        "material.tfg.latex", "Latex",
+                        "material.tfg.vulcanized_latex", "Vulcanized Latex",
+                        "material.gtceu.polytetrafluoroethylene", "PTFE",
+                        "gtceu.fluid.generic", "%s",
+                        "gtceu.fluid.gas_generic", "Gaseous %s",
+                        "item.gtceu.bucket", "%s Bucket"),
+                Map.of());
+        assertEquals("Latex", resolver.translateRegistry("tfg:latex", "fluid"));
+        assertEquals("Vulcanized Latex", resolver.translateRegistry("tfg:vulcanized_latex", "fluid"));
+        assertEquals("Latex Bucket", resolver.translateRegistry("tfg:latex_bucket"));
+        assertEquals("PTFE", resolver.translateRegistry("gtceu:polytetrafluoroethylene", "fluid"));
+    }
 }
