@@ -43,7 +43,7 @@ class LangUsedKeysCollectorTest {
 
     @Test
     void collectFromCategoriesIndexUsesExportedNameKey() throws Exception {
-        Path categoriesDir = outputDir.resolve("categories");
+        Path categoriesDir = outputDir.resolve("emi").resolve("categories");
         Files.createDirectories(categoriesDir);
         Files.writeString(categoriesDir.resolve("index.json"), """
                 {

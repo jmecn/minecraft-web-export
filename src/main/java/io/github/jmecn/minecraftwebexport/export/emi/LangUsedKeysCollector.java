@@ -132,12 +132,6 @@ public final class LangUsedKeysCollector {
         }
     }
 
-    private void collectCategory(JsonObject meta) {
-        if (meta.has("category") && meta.get("category").isJsonPrimitive()) {
-            keys.add(CategoryLangKeys.guessNameKey(meta.get("category").getAsString()));
-        }
-    }
-
     private void collectInteraction(JsonObject interaction) {
         if (interaction == null) {
             return;
