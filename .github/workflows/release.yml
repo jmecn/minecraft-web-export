@@ -19,6 +19,10 @@ jobs:
         with:
           java-version: "17"
           distribution: temurin
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Build and publish to GitHub Packages
         run: chmod +x gradlew && ./gradlew jar publish --no-daemon
