@@ -32,7 +32,9 @@ repositories {
 
 dependencies {
     implementation 'com.google.code.gson:gson:2.13.1'
-    jarJar(implementation('com.belerweb:pinyin4j:2.5.1')) {
+    // Plain implementation: dev run classpath (jarJar alone is not on the mod classloader in userdev).
+    implementation 'com.belerweb:pinyin4j:2.5.1'
+    jarJar('com.belerweb:pinyin4j:2.5.1') {
         version {
             strictly '[2.5.1,2.6)'
             prefer '2.5.1'

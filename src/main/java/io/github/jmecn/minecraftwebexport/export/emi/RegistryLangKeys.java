@@ -1,7 +1,10 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -99,7 +102,10 @@ public final class RegistryLangKeys {
         if (id == null || client == null || client.level == null) {
             return itemKey(registryId);
         }
-        Item item = BuiltInRegistries.ITEM.get(id);
+        Registry<Item> items = client.level.registryAccess().registryOrThrow(Registries.ITEM);
+        Item item = items.getHolder(ResourceKey.create(Registries.ITEM, id))
+                .map(Holder::value)
+                .orElse(null);
         if (item == null || item == Items.AIR) {
             return itemKey(registryId);
         }
@@ -115,7 +121,10 @@ public final class RegistryLangKeys {
         if (id == null || client == null || client.level == null) {
             return fluidKey(registryId);
         }
-        Fluid fluid = BuiltInRegistries.FLUID.get(id);
+        Registry<Fluid> fluids = client.level.registryAccess().registryOrThrow(Registries.FLUID);
+        Fluid fluid = fluids.getHolder(ResourceKey.create(Registries.FLUID, id))
+                .map(Holder::value)
+                .orElse(null);
         if (fluid == null || fluid.isSame(Fluids.EMPTY)) {
             return fluidKey(registryId);
         }

@@ -5,6 +5,8 @@ import net.sourceforge.pinyin4j.format.HanyuPinyinCaseType;
 import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
 import net.sourceforge.pinyin4j.format.HanyuPinyinToneType;
 import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,14 +14,35 @@ import java.util.List;
 /** Pinyin tokens for Chinese item search haystacks (aligned with emi-bundle-optimize pinyin-pro). */
 public final class SearchPinyin {
 
-    private static final HanyuPinyinOutputFormat FORMAT = new HanyuPinyinOutputFormat();
+    private static final Logger LOGGER = LogManager.getLogger(SearchPinyin.class);
 
-    static {
-        FORMAT.setToneType(HanyuPinyinToneType.WITHOUT_TONE);
-        FORMAT.setCaseType(HanyuPinyinCaseType.LOWERCASE);
-    }
+    private static volatile boolean warnedUnavailable;
+    private static volatile HanyuPinyinOutputFormat format;
 
     private SearchPinyin() {
+    }
+
+    private static HanyuPinyinOutputFormat pinyinFormat() {
+        HanyuPinyinOutputFormat cached = format;
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            HanyuPinyinOutputFormat created = new HanyuPinyinOutputFormat();
+            created.setToneType(HanyuPinyinToneType.WITHOUT_TONE);
+            created.setCaseType(HanyuPinyinCaseType.LOWERCASE);
+            format = created;
+            return created;
+        } catch (Throwable t) {
+            if (!warnedUnavailable) {
+                warnedUnavailable = true;
+                LOGGER.warn(
+                        "{} pinyin4j unavailable — Chinese search haystack will omit pinyin tokens: {}",
+                        ExportLog.ITEMS_SEARCH,
+                        t.toString());
+            }
+            return null;
+        }
     }
 
     static boolean containsHan(String text) {
@@ -41,12 +64,16 @@ public final class SearchPinyin {
         if (!containsHan(label)) {
             return List.of();
         }
+        HanyuPinyinOutputFormat fmt = pinyinFormat();
+        if (fmt == null) {
+            return List.of();
+        }
         List<String> syllables = new ArrayList<>();
         for (int offset = 0; offset < label.length();) {
             int cp = label.codePointAt(offset);
             if (Character.UnicodeScript.of(cp) == Character.UnicodeScript.HAN) {
                 String ch = new String(Character.toChars(cp));
-                String[] py = PinyinHelper.toHanyuPinyinStringArray(ch.charAt(0), FORMAT);
+                String[] py = PinyinHelper.toHanyuPinyinStringArray(ch.charAt(0), fmt);
                 if (py != null && py.length > 0 && !py[0].isBlank()) {
                     syllables.add(py[0]);
                 }
