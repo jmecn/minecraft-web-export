@@ -10,10 +10,19 @@ public final class RegistryLabelResolver {
     private final Map<String, String> current;
     private final Map<String, String> fallback;
     private final Map<String, String> merged;
+    private final Map<String, String> nameKeysByRegistryId;
 
     public RegistryLabelResolver(Map<String, String> current, Map<String, String> fallback) {
+        this(current, fallback, Map.of());
+    }
+
+    public RegistryLabelResolver(
+            Map<String, String> current,
+            Map<String, String> fallback,
+            Map<String, String> nameKeysByRegistryId) {
         this.current = current == null ? Map.of() : current;
         this.fallback = fallback == null ? Map.of() : fallback;
+        this.nameKeysByRegistryId = nameKeysByRegistryId == null ? Map.of() : nameKeysByRegistryId;
         this.merged = new HashMap<>(this.fallback);
         this.merged.putAll(this.current);
     }
@@ -38,6 +47,14 @@ public final class RegistryLabelResolver {
     public String translateRegistry(String registryId, String kind) {
         String bare = RegistryLangKeys.normalizeRegistryId(registryId);
         String namespace = RegistryLangKeys.namespace(bare);
+
+        String exportedKey = nameKeysByRegistryId.get(bare);
+        if (exportedKey != null && !exportedKey.isBlank()) {
+            String label = translate(exportedKey);
+            if (!exportedKey.equals(label)) {
+                return label;
+            }
+        }
 
         if (GtceuRegistryLabels.isComposedNamespace(namespace)
                 && ("item".equals(kind) || "block".equals(kind) || "fluid".equals(kind))) {

@@ -60,6 +60,7 @@ public final class ItemsSearchIndexExporter {
         Files.createDirectories(searchRoot);
 
         Map<String, String> enUs = readLangTable(bundleRoot, EmiBundlePaths.DEFAULT_LANGUAGE);
+        Map<String, String> nameKeysByRegistryId = ItemNameKeysExporter.readNameKeys(outputDir);
         List<String> writtenLocales = new ArrayList<>();
 
         for (String locale : locales) {
@@ -74,9 +75,9 @@ public final class ItemsSearchIndexExporter {
             Map<String, String> fallback = EmiBundlePaths.DEFAULT_LANGUAGE.equals(normalized)
                     ? Map.of()
                     : enUs;
-            RegistryLabelResolver currentResolver = new RegistryLabelResolver(current, fallback);
+            RegistryLabelResolver currentResolver = new RegistryLabelResolver(current, fallback, nameKeysByRegistryId);
             RegistryLabelResolver enResolver = isChineseLocale(normalized) && !EmiBundlePaths.DEFAULT_LANGUAGE.equals(normalized)
-                    ? new RegistryLabelResolver(enUs, Map.of())
+                    ? new RegistryLabelResolver(enUs, Map.of(), nameKeysByRegistryId)
                     : null;
 
             JsonArray items = new JsonArray();

@@ -59,8 +59,13 @@ public final class EmiRuntimeExportOrchestrator {
                 ? EmiItemsIndexExporter.export(outputRoot, server, cards.layoutsByRecipeId())
                 : new EmiItemsIndexExporter.Result(0, 0, 0, 0);
 
+        if (cards.written() > 0 && ItemNameKeysExporter.isEnabled()) {
+            ItemNameKeysExporter.export(outputRoot, client);
+        }
+
         if (langCollector != null && cards.written() > 0) {
             langCollector.collectFromCategoriesIndex(outputRoot);
+            langCollector.collectFromItemNameKeys(outputRoot);
             langCollector.collectFromItemsIndex(outputRoot);
             langCollector.collectFromTagsIndex(outputRoot);
             LOGGER.info("{} lang prune: {} used keys collected", ExportLog.LANG, langCollector.size());

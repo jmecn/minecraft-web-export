@@ -10,6 +10,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RegistryLabelResolverTest {
 
     @Test
+    void translateRegistryPrefersExportedNameKey() {
+        var resolver = new RegistryLabelResolver(
+                Map.of("block.afc.wood.planks.hanging_sign.copper.baobab", "Copper Baobab Hanging Sign"),
+                Map.of(),
+                Map.of("afc:wood/hanging_sign/copper/baobab", "block.afc.wood.planks.hanging_sign.copper.baobab"));
+        assertEquals(
+                "Copper Baobab Hanging Sign",
+                resolver.translateRegistry("afc:wood/hanging_sign/copper/baobab"));
+    }
+
+    @Test
     void translateRegistryResolvesFlatItemKey() {
         var resolver = new RegistryLabelResolver(
                 Map.of("item.test.smoke", "Smoke Item"),

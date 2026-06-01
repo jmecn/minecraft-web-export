@@ -20,6 +20,8 @@ public final class EmiBundlePaths {
     public static final String TEXTURE_MANIFEST_FILE = "manifest.json";
     public static final String ICONS_DIR = "icons";
     public static final String ITEMS_INDEX_FILE = "items/index.json";
+    /** Registry id → in-game {@code getDescriptionId()} lang key (see {@link ItemNameKeysExporter}). */
+    public static final String ITEM_NAME_KEYS_FILE = "items/name-keys.json";
     public static final String CATEGORIES_INDEX_FILE = "categories/index.json";
     /** Dedicated 16×16 EMI category tab sprites (see {@link EmiCategoryIconsExporter}). */
     public static final String CATEGORY_ICONS_DIR = "categories/icons";

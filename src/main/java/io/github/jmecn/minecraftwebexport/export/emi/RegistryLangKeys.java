@@ -1,5 +1,15 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,5 +88,44 @@ public final class RegistryLangKeys {
         keys.add("item." + dotted);
         keys.add("block." + dotted);
         return keys;
+    }
+
+    /**
+     * Authoritative translation key for an item ({@link Item#getDescriptionId()} / {@link ItemStack#getDescriptionId()}).
+     * Matches in-game display for mods that remap keys away from registry paths (e.g. TFC/AFC hanging signs).
+     */
+    public static String resolveItemDescriptionKey(Minecraft client, String registryId) {
+        ResourceLocation id = ResourceLocation.tryParse(normalizeRegistryId(registryId));
+        if (id == null || client == null || client.level == null) {
+            return itemKey(registryId);
+        }
+        Item item = BuiltInRegistries.ITEM.get(id);
+        if (item == null || item == Items.AIR) {
+            return itemKey(registryId);
+        }
+        String descriptionId = new ItemStack(item).getDescriptionId();
+        return descriptionId == null || descriptionId.isBlank() ? itemKey(registryId) : descriptionId;
+    }
+
+    /**
+     * Authoritative translation key for a fluid (legacy block description when present).
+     */
+    public static String resolveFluidDescriptionKey(Minecraft client, String registryId) {
+        ResourceLocation id = ResourceLocation.tryParse(normalizeRegistryId(registryId));
+        if (id == null || client == null || client.level == null) {
+            return fluidKey(registryId);
+        }
+        Fluid fluid = BuiltInRegistries.FLUID.get(id);
+        if (fluid == null || fluid.isSame(Fluids.EMPTY)) {
+            return fluidKey(registryId);
+        }
+        Block block = fluid.defaultFluidState().createLegacyBlock().getBlock();
+        if (block != null) {
+            String descriptionId = block.getDescriptionId();
+            if (descriptionId != null && !descriptionId.isBlank()) {
+                return descriptionId;
+            }
+        }
+        return fluidKey(registryId);
     }
 }

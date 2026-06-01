@@ -77,6 +77,14 @@ public final class LangUsedKeysCollector {
         }
     }
 
+    public void collectFromItemNameKeys(Path outputDir) throws IOException {
+        for (String key : ItemNameKeysExporter.readNameKeys(outputDir).values()) {
+            if (key != null && !key.isBlank()) {
+                keys.add(key);
+            }
+        }
+    }
+
     public void collectFromItemsIndex(Path outputDir) throws IOException {
         Path indexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexFile)) {

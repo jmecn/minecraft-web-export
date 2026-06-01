@@ -21,6 +21,7 @@ final class ExportLog {
     static final String INDEX_TAGS = "[index]";
     static final String RECIPE_TEXTURES = "[recipe-textures]";
     static final String ITEMS_SEARCH = "[items-search]";
+    static final String ITEM_NAME_KEYS = "[item-name-keys]";
 
     /** Per-item failure lines at DEBUG beyond this count (summary lines still log at INFO/WARN). */
     static final int DETAIL_FAILURE_LIMIT = 20;
