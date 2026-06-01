@@ -16,12 +16,20 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
 
+/**
+ * Merges mod language files the same way {@link net.minecraft.client.resources.language.ClientLanguage}
+ * does at runtime: {@link ResourceManager#listResourceStacks} per {@code assets/<ns>/lang/<locale>.json},
+ * lower-priority packs first, later packs override individual keys (KubeJS partial overrides included).
+ */
 public final class LangMergerExporter {
 
     private static final Logger LOGGER = LogManager.getLogger(LangMergerExporter.class);
@@ -37,6 +45,12 @@ public final class LangMergerExporter {
             int closureKeysRequested,
             int keysSkipped,
             int keysPerLanguage) {
+    }
+
+    static final class MergeStats {
+        int keysSkipped;
+        int duplicateKeyWarnings;
+        int resourceLayersRead;
     }
 
     public static boolean isEnabled() {
@@ -94,42 +108,18 @@ public final class LangMergerExporter {
         for (String langCode : languages) {
             String langFile = langCode + ".json";
             Map<String, String> merged = new TreeMap<>();
-            Map<ResourceLocation, Resource> hits = collectLangHits(client, langFile, onlyNamespaces);
+            Map<ResourceLocation, List<Resource>> stacks = collectLangStacks(client, langFile, onlyNamespaces);
+            MergeStats stats = new MergeStats();
 
-            if (hits.isEmpty()) {
+            if (stacks.isEmpty()) {
                 LOGGER.warn(
                         "{} {} - no mod lang files matched (namespaces={})",
                         ExportLog.LANG,
                         langCode,
                         onlyNamespaces == null ? "all" : onlyNamespaces);
                 logLangPathProbe(client, langFile);
-            }
-
-            for (Map.Entry<ResourceLocation, Resource> hit : hits.entrySet()) {
-                try (var reader = new InputStreamReader(hit.getValue().open(), StandardCharsets.UTF_8)) {
-                    JsonObject object = JsonParser.parseReader(reader).getAsJsonObject();
-                    for (var entry : object.entrySet()) {
-                        String key = entry.getKey();
-                        if (!shouldMergeLangKey(key, onlyKeys)) {
-                            keysSkipped++;
-                            continue;
-                        }
-                        String value = entry.getValue().getAsString();
-                        if (merged.containsKey(key)) {
-                            duplicateWarnings++;
-                            ExportLog.detailFailure(
-                                    LOGGER,
-                                    duplicateWarnings,
-                                    "{} duplicate key '{}' from {}",
-                                    ExportLog.LANG,
-                                    key,
-                                    hit.getKey());
-                        }
-                        merged.put(key, value);
-                    }
-                } catch (Exception e) {
-                    LOGGER.warn("{} failed to read {}: {}", ExportLog.LANG, hit.getKey(), e.getMessage());
-                }
+            } else {
+                mergeLangStacksInto(merged, stacks, onlyKeys, stats);
             }
 
             if (onlyKeys != null) {
@@ -138,11 +128,12 @@ public final class LangMergerExporter {
 
             if (merged.isEmpty()) {
                 LOGGER.warn(
-                        "{} {} - 0 keys after merge ({}, {} mod files read)",
+                        "{} {} - 0 keys after merge ({}, {} lang file stacks, {} pack layers)",
                         ExportLog.LANG,
                         langCode,
                         mode,
-                        hits.size());
+                        stacks.size(),
+                        stats.resourceLayersRead);
                 continue;
             }
 
@@ -152,12 +143,15 @@ public final class LangMergerExporter {
             languagesWritten++;
             totalBytes += json.length();
             keysPerLanguage = merged.size();
+            keysSkipped += stats.keysSkipped;
+            duplicateWarnings += stats.duplicateKeyWarnings;
             LOGGER.info(
-                    "{} {} - {} keys from {} mod files ({})",
+                    "{} {} - {} keys from {} lang file stacks ({} pack layers, {})",
                     ExportLog.LANG,
                     langCode,
                     merged.size(),
-                    hits.size(),
+                    stacks.size(),
+                    stats.resourceLayersRead,
                     mode);
         }
 
@@ -191,12 +185,60 @@ public final class LangMergerExporter {
         return path.equals(langFile) || path.equals("lang/" + langFile) || path.endsWith("/" + langFile);
     }
 
-    static Map<ResourceLocation, Resource> collectLangHitsForNamespaces(
+    static Map<ResourceLocation, List<Resource>> collectLangStacksForNamespaces(
             Minecraft client, String langFile, Set<String> onlyNamespaces) {
-        return collectLangHits(client, langFile, onlyNamespaces);
+        return collectLangStacks(client, langFile, onlyNamespaces);
     }
 
-    private static Map<ResourceLocation, Resource> collectLangHits(
+    /**
+     * Key-level merge of all pack layers (same order as {@code ClientLanguage.appendFrom}).
+     */
+    static void mergeLangStacksInto(
+            Map<String, String> merged,
+            Map<ResourceLocation, List<Resource>> stacks,
+            Set<String> onlyKeys,
+            MergeStats stats) {
+        Map<String, ResourceLocation> keyOrigin = new HashMap<>();
+        for (Map.Entry<ResourceLocation, List<Resource>> stackEntry : stacks.entrySet()) {
+            ResourceLocation location = stackEntry.getKey();
+            List<Resource> layers = stackEntry.getValue();
+            if (layers == null || layers.isEmpty()) {
+                continue;
+            }
+            for (Resource resource : layers) {
+                stats.resourceLayersRead++;
+                try (var reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8)) {
+                    JsonObject object = JsonParser.parseReader(reader).getAsJsonObject();
+                    for (var entry : object.entrySet()) {
+                        String key = entry.getKey();
+                        if (!shouldMergeLangKey(key, onlyKeys)) {
+                            stats.keysSkipped++;
+                            continue;
+                        }
+                        String value = entry.getValue().getAsString();
+                        ResourceLocation previous = keyOrigin.get(key);
+                        if (previous != null && !previous.equals(location)) {
+                            stats.duplicateKeyWarnings++;
+                            ExportLog.detailFailure(
+                                    LOGGER,
+                                    stats.duplicateKeyWarnings,
+                                    "{} duplicate key '{}' from {} (was {})",
+                                    ExportLog.LANG,
+                                    key,
+                                    location,
+                                    previous);
+                        }
+                        merged.put(key, value);
+                        keyOrigin.put(key, location);
+                    }
+                } catch (Exception e) {
+                    LOGGER.warn("{} failed to read {}: {}", ExportLog.LANG, location, e.getMessage());
+                }
+            }
+        }
+    }
+
+    private static Map<ResourceLocation, List<Resource>> collectLangStacks(
             Minecraft client,
             String langFile,
             Set<String> onlyNamespaces) {
@@ -204,28 +246,38 @@ public final class LangMergerExporter {
                 && !ResourceExportFilter.isExcluded(location)
                 && (onlyNamespaces == null || onlyNamespaces.contains(location.getNamespace()));
 
-        Map<ResourceLocation, Resource> hits = new LinkedHashMap<>();
-        mergeLangHits(hits, client.getResourceManager(), filter);
+        Map<ResourceLocation, List<Resource>> stacks = new LinkedHashMap<>();
+        appendLangStacks(stacks, client.getResourceManager(), filter);
         var server = client.getSingleplayerServer();
         if (server != null) {
-            mergeLangHits(hits, server.getResourceManager(), filter);
+            appendLangStacks(stacks, server.getResourceManager(), filter);
         }
-        return hits;
+        return stacks;
     }
 
-    private static void mergeLangHits(
-            Map<ResourceLocation, Resource> into,
+    private static void appendLangStacks(
+            Map<ResourceLocation, List<Resource>> into,
             ResourceManager resourceManager,
             Predicate<ResourceLocation> filter) {
-        for (var entry : resourceManager.listResources("lang", filter).entrySet()) {
-            into.putIfAbsent(entry.getKey(), entry.getValue());
+        for (var entry : resourceManager.listResourceStacks("lang", filter).entrySet()) {
+            into.compute(
+                    entry.getKey(),
+                    (id, existing) -> {
+                        if (existing == null || existing.isEmpty()) {
+                            return new ArrayList<>(entry.getValue());
+                        }
+                        var combined = new ArrayList<>(existing);
+                        combined.addAll(entry.getValue());
+                        return combined;
+                    });
         }
     }
 
     private static void logLangPathProbe(Minecraft client, String langFile) {
         int shown = 0;
         StringBuilder sample = new StringBuilder();
-        for (ResourceLocation location : client.getResourceManager().listResources("lang", loc -> matchesLangPath(loc, langFile)).keySet()) {
+        for (ResourceLocation location :
+                client.getResourceManager().listResourceStacks("lang", loc -> matchesLangPath(loc, langFile)).keySet()) {
             if (shown++ >= 5) {
                 break;
             }
@@ -236,7 +288,7 @@ public final class LangMergerExporter {
         }
         if (shown > 0) {
             LOGGER.warn(
-                    "{} client has {} lang file(s) for {} but none passed namespace filter; sample: {}",
+                    "{} client has {} lang file stack(s) for {} but none passed namespace filter; sample: {}",
                     ExportLog.LANG,
                     shown,
                     langFile,

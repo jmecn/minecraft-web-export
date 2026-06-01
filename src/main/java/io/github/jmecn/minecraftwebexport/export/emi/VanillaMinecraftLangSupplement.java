@@ -1,24 +1,21 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Closure lang merge only sees modpack {@code assets/minecraft/lang} overrides (~100 keys).
- * Pull missing {@code item|block|fluid.minecraft.*} from the vanilla resource pack (and en_us fallback).
+ * After closure merge, fill missing {@code item|block|fluid.minecraft.*} using the same pack-layer
+ * lang merge as {@link LangMergerExporter} (not a single winning {@code listResources} file).
  */
 final class VanillaMinecraftLangSupplement {
 
@@ -82,27 +79,26 @@ final class VanillaMinecraftLangSupplement {
 
     private static int copyMissingFromMinecraftPack(
             Map<String, String> merged, Minecraft client, String langFile, Set<String> missing) {
-        Map<ResourceLocation, Resource> hits =
-                LangMergerExporter.collectLangHitsForNamespaces(client, langFile, Set.of("minecraft"));
-        if (hits.isEmpty()) {
+        Map<ResourceLocation, List<Resource>> stacks =
+                LangMergerExporter.collectLangStacksForNamespaces(client, langFile, Set.of("minecraft"));
+        if (stacks.isEmpty()) {
             return 0;
         }
+        Map<String, String> minecraftMerged = new TreeMap<>();
+        LangMergerExporter.mergeLangStacksInto(minecraftMerged, stacks, null, new LangMergerExporter.MergeStats());
         int added = 0;
         Set<String> found = new TreeSet<>();
-        for (Resource resource : hits.values()) {
-            try (var reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8)) {
-                JsonObject object = JsonParser.parseReader(reader).getAsJsonObject();
-                for (String key : missing) {
-                    if (merged.containsKey(key) || !object.has(key)) {
-                        continue;
-                    }
-                    merged.put(key, object.get(key).getAsString());
-                    found.add(key);
-                    added++;
-                }
-            } catch (Exception e) {
-                LOGGER.warn("{} failed to read vanilla minecraft lang {}: {}", ExportLog.LANG, langFile, e.getMessage());
+        for (String key : missing) {
+            if (merged.containsKey(key)) {
+                continue;
             }
+            String value = minecraftMerged.get(key);
+            if (value == null) {
+                continue;
+            }
+            merged.put(key, value);
+            found.add(key);
+            added++;
         }
         missing.removeAll(found);
         return added;
