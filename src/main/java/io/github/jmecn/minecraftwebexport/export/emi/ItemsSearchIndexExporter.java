@@ -23,13 +23,12 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Precomputes {@code items-search/<locale>.json} for substring item filtering in the site shell.
+ * Precomputes {@code items-lang/<locale>.json} for registry labels and substring item filtering.
  */
 public final class ItemsSearchIndexExporter {
 
     private static final Logger LOGGER = LogManager.getLogger(ItemsSearchIndexExporter.class);
     private static final Gson GSON = ExportGson.GSON;
-    private static final String ITEMS_SEARCH_DIR = "items-search";
     private static final int PROGRESS_EVERY = 5000;
 
     private ItemsSearchIndexExporter() {
@@ -44,22 +43,26 @@ public final class ItemsSearchIndexExporter {
     }
 
     public static Result export(Path outputDir, List<String> languages) throws IOException {
+        return export(outputDir, languages, false);
+    }
+
+    public static Result export(Path outputDir, List<String> languages, boolean readComposeLang) throws IOException {
         Path bundleRoot = EmiBundlePaths.resolve(outputDir, "");
         List<String> itemIds = readItemIds(bundleRoot);
         List<String> locales = resolveLocales(bundleRoot, languages);
         if (itemIds.isEmpty() || locales.isEmpty()) {
             LOGGER.warn(
                     "{} skipped: {} items, {} locales",
-                    ExportLog.ITEMS_SEARCH,
+                    ExportLog.ITEMS_LANG,
                     itemIds.size(),
                     locales.size());
             return new Result(0, itemIds.size(), List.of());
         }
 
-        Path searchRoot = bundleRoot.resolve(ITEMS_SEARCH_DIR);
+        Path searchRoot = bundleRoot.resolve(EmiBundlePaths.ITEMS_LANG_DIR);
         Files.createDirectories(searchRoot);
 
-        Map<String, String> enUs = readLangTable(bundleRoot, EmiBundlePaths.DEFAULT_LANGUAGE);
+        Map<String, String> enUs = readLangTable(bundleRoot, EmiBundlePaths.DEFAULT_LANGUAGE, readComposeLang);
         Map<String, String> nameKeysByRegistryId = ItemNameKeysExporter.readNameKeys(outputDir);
         List<String> writtenLocales = new ArrayList<>();
 
@@ -67,11 +70,11 @@ public final class ItemsSearchIndexExporter {
             String normalized = normalizeLocale(locale);
             LOGGER.info(
                     "{} {}: building {} items ...",
-                    ExportLog.ITEMS_SEARCH,
+                    ExportLog.ITEMS_LANG,
                     normalized,
                     itemIds.size());
             long startedAt = System.currentTimeMillis();
-            Map<String, String> current = readLangTable(bundleRoot, normalized);
+            Map<String, String> current = readLangTable(bundleRoot, normalized, readComposeLang);
             Map<String, String> fallback = EmiBundlePaths.DEFAULT_LANGUAGE.equals(normalized)
                     ? Map.of()
                     : enUs;
@@ -83,15 +86,17 @@ public final class ItemsSearchIndexExporter {
             JsonArray items = new JsonArray();
             for (int i = 0; i < itemIds.size(); i++) {
                 String id = itemIds.get(i);
+                String label = currentResolver.translateRegistry(id);
                 JsonObject row = new JsonObject();
                 row.addProperty("id", id);
+                row.addProperty("label", label);
                 row.addProperty("haystack", buildHaystack(id, normalized, currentResolver, enResolver));
                 items.add(row);
                 int n = i + 1;
                 if (n % PROGRESS_EVERY == 0) {
                     LOGGER.info(
                             "{} {}: {}/{} ({} ms)",
-                            ExportLog.ITEMS_SEARCH,
+                            ExportLog.ITEMS_LANG,
                             normalized,
                             n,
                             itemIds.size(),
@@ -100,24 +105,24 @@ public final class ItemsSearchIndexExporter {
             }
             LOGGER.info(
                     "{} {}: {} done ({} ms)",
-                    ExportLog.ITEMS_SEARCH,
+                    ExportLog.ITEMS_LANG,
                     normalized,
                     itemIds.size(),
                     System.currentTimeMillis() - startedAt);
 
             JsonObject payload = new JsonObject();
-            payload.addProperty("schema", 1);
+            payload.addProperty("schema", 2);
             payload.addProperty("locale", normalized);
             payload.addProperty("itemCount", itemIds.size());
             payload.add("items", items);
 
             Path out = searchRoot.resolve(normalized + ".json");
-            LOGGER.info("{} {}: writing {} ...", ExportLog.ITEMS_SEARCH, normalized, out);
+            LOGGER.info("{} {}: writing {} ...", ExportLog.ITEMS_LANG, normalized, out);
             Files.writeString(out, GSON.toJson(payload) + "\n", StandardCharsets.UTF_8);
             writtenLocales.add(normalized);
             LOGGER.info(
                     "{} {}: {} items",
-                    ExportLog.ITEMS_SEARCH,
+                    ExportLog.ITEMS_LANG,
                     normalized,
                     itemIds.size());
         }
@@ -223,8 +228,9 @@ public final class ItemsSearchIndexExporter {
         }
     }
 
-    private static Map<String, String> readLangTable(Path bundleRoot, String locale) throws IOException {
-        Path langPath = bundleRoot.resolve(EmiBundlePaths.LANG_DIR).resolve(locale + ".json");
+    private static Map<String, String> readLangTable(Path bundleRoot, String locale, boolean composeLang) throws IOException {
+        String dir = composeLang ? EmiBundlePaths.COMPOSE_LANG_DIR : EmiBundlePaths.LANG_DIR;
+        Path langPath = bundleRoot.resolve(dir).resolve(locale + ".json");
         if (!Files.isRegularFile(langPath)) {
             return Map.of();
         }

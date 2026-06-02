@@ -72,9 +72,55 @@ public final class EmiRuntimeExportOrchestrator {
         }
 
         Set<String> langKeys = resolveLangMergeKeys(plan, langCollector);
+        boolean langPruneForWeb = langPrune && langCollector != null;
+
+        List<String> languages = List.of();
+        ItemsSearchIndexExporter.Result itemsLang = ItemsSearchIndexExporter.Result.EMPTY;
+        Path emiRoot = EmiBundlePaths.resolve(outputRoot, "");
+        if (items.itemCount() > 0 && ItemsSearchIndexExporter.isEnabled()) {
+            if (langPruneForWeb && LangMergerExporter.isEnabled()) {
+                LangMergerExporter.exportTo(
+                        emiRoot.resolve(EmiBundlePaths.COMPOSE_LANG_DIR),
+                        client,
+                        null,
+                        null);
+            }
+            languages = exportedLanguages(outputRoot);
+            if (languages.isEmpty() && LangMergerExporter.isEnabled()) {
+                languages = MinecraftWebExportLanguages.resolve() != null
+                        ? MinecraftWebExportLanguages.resolve().stream().sorted().toList()
+                        : List.of(EmiBundlePaths.DEFAULT_LANGUAGE);
+            }
+            if (!languages.isEmpty()) {
+                itemsLang = ItemsSearchIndexExporter.export(outputRoot, languages, langPruneForWeb);
+            }
+        }
+
         LangMergerExporter.Result langs = LangMergerExporter.isEnabled()
-                ? LangMergerExporter.exportEmiLang(outputRoot, client, langKeys)
+                ? LangMergerExporter.exportEmiLang(
+                        outputRoot,
+                        client,
+                        langPruneForWeb ? LangMergerExporter.filterWebDeployKeys(langKeys) : langKeys)
                 : emptyLangResult();
+
+        if (langPruneForWeb) {
+            Path composeDir = emiRoot.resolve(EmiBundlePaths.COMPOSE_LANG_DIR);
+            if (Files.isDirectory(composeDir)) {
+                try (var walk = Files.walk(composeDir)) {
+                    walk.sorted(Comparator.reverseOrder()).forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (IOException e) {
+                            LOGGER.warn("{} failed to delete {}: {}", ExportLog.LANG, path, e.toString());
+                        }
+                    });
+                }
+            }
+        }
+
+        if (languages.isEmpty()) {
+            languages = exportedLanguages(outputRoot);
+        }
 
         Set<String> itemsForIcons = plan.itemsForIcons(cards.referencedItems());
         Set<String> fluidsForIcons = plan.fluidsForIcons(cards.referencedFluids());
@@ -89,18 +135,12 @@ public final class EmiRuntimeExportOrchestrator {
                 cards.iconVariants())
                 : emptyIconResult();
 
-        List<String> languages = exportedLanguages(outputRoot);
-        ItemsSearchIndexExporter.Result itemsSearch = ItemsSearchIndexExporter.Result.EMPTY;
-        if (items.itemCount() > 0 && ItemsSearchIndexExporter.isEnabled()) {
-            itemsSearch = ItemsSearchIndexExporter.export(outputRoot, languages);
-        }
-
         EmiBundleManifestWriter.write(
                 outputRoot,
                 languages,
                 cards.imageScale(),
                 cards.written(),
-                itemsSearch.locales());
+                itemsLang.locales());
 
         // Tag/list popovers in emi-recipe-renderer need EMI GUI nine-patch + widget sprites.
         RecipeTextureExporter.export(outputRoot, client, java.util.Set.of());

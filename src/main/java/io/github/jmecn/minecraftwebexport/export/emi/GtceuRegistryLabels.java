@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -194,45 +195,24 @@ public final class GtceuRegistryLabels {
         return new FluidPath("primary", path);
     }
 
-    private static boolean isLikelyElementMaterial(String materialPath) {
-        if (materialPath == null || materialPath.isEmpty() || materialPath.contains("_")) {
-            return false;
-        }
-        if (materialPath.length() > 12) {
-            return false;
-        }
-        return materialPath.matches("^[a-z][a-z0-9]*$");
-    }
-
-    private static String pickGenericFluidTemplate(Map<String, String> langTable) {
-        return firstPresent(langTable, "gtceu.fluid.generic", "gtceu.fluid.liquid_generic", "gtceu.fluid.generic");
-    }
-
     private static String pickFluidTemplateKey(
             String storageKey, String materialPath, String namespace, Map<String, String> langTable) {
+        String normalizedStorage = GtMaterialFacts.normalizeStorageKey(storageKey);
+        Optional<String> gtKey =
+                GtMaterialFacts.fluidTranslationKey(namespace, materialPath, normalizedStorage);
+        if (gtKey.isPresent()) {
+            return gtKey.get();
+        }
+
         boolean modpackFluid = !GTCEU.equals(namespace);
-        return switch (storageKey) {
+        return switch (normalizedStorage) {
             case "molten" -> "gtceu.fluid.molten";
             case "plasma" -> "gtceu.fluid.plasma";
             case "liquid" -> firstPresent(langTable, "gtceu.fluid.liquid_generic", "gtceu.fluid.generic", "gtceu.fluid.liquid_generic");
-            case "gas" -> {
-                if (modpackFluid) {
-                    yield pickGenericFluidTemplate(langTable);
-                }
-                if (isLikelyElementMaterial(materialPath)) {
-                    yield firstPresent(langTable, "gtceu.fluid.gas_generic", "gtceu.fluid.generic", "gtceu.fluid.gas_generic");
-                }
-                yield pickGenericFluidTemplate(langTable);
-            }
-            default -> {
-                if (modpackFluid) {
-                    yield pickGenericFluidTemplate(langTable);
-                }
-                if (isLikelyElementMaterial(materialPath)) {
-                    yield firstPresent(langTable, "gtceu.fluid.gas_generic", "gtceu.fluid.generic", "gtceu.fluid.gas_generic");
-                }
-                yield pickGenericFluidTemplate(langTable);
-            }
+            case "gas", "primary" -> modpackFluid
+                    ? pickGenericFluidTemplate(langTable)
+                    : pickGenericFluidTemplate(langTable);
+            default -> modpackFluid ? pickGenericFluidTemplate(langTable) : pickGenericFluidTemplate(langTable);
         };
     }
 
@@ -411,6 +391,10 @@ public final class GtceuRegistryLabels {
         return patterns;
     }
 
+    private static String pickGenericFluidTemplate(Map<String, String> langTable) {
+        return firstPresent(langTable, "gtceu.fluid.generic", "gtceu.fluid.liquid_generic", "gtceu.fluid.generic");
+    }
+
     private static String composeTagPrefixLabel(
             String namespace,
             String materialPath,
@@ -421,8 +405,7 @@ public final class GtceuRegistryLabels {
         if (matLabel == null) {
             return null;
         }
-        String polymerKey = "tagprefix.polymer." + langSuffix;
-        String prefixKey = langKeyPresent(langTable, polymerKey) ? polymerKey : "tagprefix." + langSuffix;
+        String prefixKey = GtMaterialFacts.tagPrefixLangKey(langSuffix, namespace, materialPath, langTable);
         String prefixTemplate = resolveKey(translateKey, prefixKey);
         if (prefixTemplate == null) {
             return null;

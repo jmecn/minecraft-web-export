@@ -18,10 +18,25 @@ class LangMergerExporterTest {
     }
 
     @Test
-    void shouldMergeLangKeyAllowsTfgMaterialInClosure() {
-        Set<String> closure = Set.of("item.tfg.latex_ingot");
-        assertTrue(LangMergerExporter.shouldMergeLangKey("material.tfg.latex", closure));
-        assertTrue(LangMergerExporter.shouldMergeLangKey("tagprefix.ingot", closure));
+    void shouldMergeLangKeyAllowsTfgMaterialWhenFullMerge() {
+        assertTrue(LangMergerExporter.shouldMergeLangKey("material.tfg.latex", null));
+        assertTrue(LangMergerExporter.shouldMergeLangKey("tagprefix.ingot", null));
+    }
+
+    @Test
+    void filterWebDeployKeysOmitsRegistryComposeTables() {
+        Set<String> closure = Set.of(
+                "item.tfg.latex_ingot",
+                "material.tfg.latex",
+                "tagprefix.ingot",
+                "tag.item.c.latex",
+                "gtceu.assembler");
+        Set<String> web = LangMergerExporter.filterWebDeployKeys(closure);
+        assertFalse(web.contains("material.tfg.latex"));
+        assertFalse(web.contains("tagprefix.ingot"));
+        assertFalse(web.contains("item.tfg.latex_ingot"));
+        assertTrue(web.contains("tag.item.c.latex"));
+        assertTrue(web.contains("gtceu.assembler"));
     }
 
     @Test

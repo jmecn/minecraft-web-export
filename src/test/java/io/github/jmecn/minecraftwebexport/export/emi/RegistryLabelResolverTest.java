@@ -122,4 +122,26 @@ class RegistryLabelResolverTest {
         assertEquals("Latex Bucket", resolver.translateRegistry("tfg:latex_bucket"));
         assertEquals("PTFE", resolver.translateRegistry("gtceu:polytetrafluoroethylene", "fluid"));
     }
+
+    @Test
+    void ingotUsesPlainTagprefixWhenPolymerKeyAlsoPresentWithoutGt() {
+    var resolver = new RegistryLabelResolver(
+        Map.of(
+            "tagprefix.ingot", "%s Ingot",
+            "tagprefix.polymer.ingot", "%s Rod",
+            "material.gtceu.stainless_steel", "Stainless Steel"),
+        Map.of());
+    assertEquals("Stainless Steel Ingot", resolver.translateRegistry("gtceu:stainless_steel_ingot"));
+  }
+
+    @Test
+    void steamFluidUsesGenericTemplateWithoutGtNotGasGeneric() {
+    var resolver = new RegistryLabelResolver(
+        Map.of(
+            "material.gtceu.steam", "Steam",
+            "gtceu.fluid.generic", "%s",
+            "gtceu.fluid.gas_generic", "Gaseous %s"),
+        Map.of());
+    assertEquals("Steam", resolver.translateRegistry("gtceu:steam", "fluid"));
+  }
 }

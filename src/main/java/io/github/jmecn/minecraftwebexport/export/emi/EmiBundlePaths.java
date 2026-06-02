@@ -28,7 +28,9 @@ public final class EmiBundlePaths {
     public static final String TAGS_DIR = "tags";
     public static final String TAGS_INDEX_FILE = "tags/index.json";
     public static final String LANG_DIR = "lang";
-    public static final String ITEMS_SEARCH_DIR = "items-search";
+    /** Ephemeral full lang for Export compose; removed before bundle publish (see {@link #COMPOSE_LANG_DIR}). */
+    public static final String COMPOSE_LANG_DIR = ".compose-lang";
+    public static final String ITEMS_LANG_DIR = "items-lang";
 
     public static final String DEFAULT_LANGUAGE = "en_us";
 

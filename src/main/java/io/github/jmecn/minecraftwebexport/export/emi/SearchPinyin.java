@@ -38,7 +38,7 @@ public final class SearchPinyin {
                 warnedUnavailable = true;
                 LOGGER.warn(
                         "{} pinyin4j unavailable — Chinese search haystack will omit pinyin tokens: {}",
-                        ExportLog.ITEMS_SEARCH,
+                        ExportLog.ITEMS_LANG,
                         t.toString());
             }
             return null;

@@ -69,7 +69,47 @@ public final class LangMergerExporter {
         if (onlyKeys.contains(key)) {
             return true;
         }
-        return isGtceuTranslationKey(key) || isEmiCategoryLangKey(key);
+        return isEmiCategoryLangKey(key);
+    }
+
+    /**
+     * Keys kept in CDN {@code lang/} after FULL prune: EMI categories, tags — not registry compose tables
+     * ({@code material.*}, {@code tagprefix.*}, …) which live in {@code items-lang}.
+     */
+    public static Set<String> filterWebDeployKeys(Set<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return keys;
+        }
+        java.util.TreeSet<String> out = new java.util.TreeSet<>();
+        for (String key : keys) {
+            if (isWebDeployLangKey(key)) {
+                out.add(key);
+            }
+        }
+        return out;
+    }
+
+    static boolean isWebDeployLangKey(String key) {
+        if (key == null || key.isEmpty()) {
+            return false;
+        }
+        if (key.startsWith("tag.item.")
+                || key.startsWith("tag.block.")
+                || key.startsWith("tag.fluid.")) {
+            return true;
+        }
+        if (key.startsWith("emi.category.")) {
+            return true;
+        }
+        if (key.startsWith("material.")
+                || key.startsWith("tagprefix.")
+                || key.startsWith("gtceu.fluid.")) {
+            return false;
+        }
+        if (key.startsWith("item.") || key.startsWith("block.") || key.startsWith("fluid.")) {
+            return false;
+        }
+        return true;
     }
 
     private static boolean isGtceuTranslationKey(String key) {
