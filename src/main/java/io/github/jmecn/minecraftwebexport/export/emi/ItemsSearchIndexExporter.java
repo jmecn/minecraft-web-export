@@ -27,6 +27,9 @@ import java.util.TreeSet;
  */
 public final class ItemsSearchIndexExporter {
 
+    /** Top-level key in {@code items/index.json} listing registry ids referenced as fluids in recipes. */
+    public static final String FLUID_REGISTRY_IDS_KEY = "fluidRegistryIds";
+
     private static final Logger LOGGER = LogManager.getLogger(ItemsSearchIndexExporter.class);
     private static final Gson GSON = ExportGson.GSON;
     private static final int PROGRESS_EVERY = 5000;
@@ -49,6 +52,7 @@ public final class ItemsSearchIndexExporter {
     public static Result export(Path outputDir, List<String> languages, boolean readComposeLang) throws IOException {
         Path bundleRoot = EmiBundlePaths.resolve(outputDir, "");
         List<String> itemIds = readItemIds(bundleRoot);
+        Set<String> fluidRegistryIds = readFluidRegistryIds(bundleRoot);
         List<String> locales = resolveLocales(bundleRoot, languages);
         if (itemIds.isEmpty() || locales.isEmpty()) {
             LOGGER.warn(
@@ -86,11 +90,14 @@ public final class ItemsSearchIndexExporter {
             JsonArray items = new JsonArray();
             for (int i = 0; i < itemIds.size(); i++) {
                 String id = itemIds.get(i);
-                String label = currentResolver.translateRegistry(id);
+                String kind = resolveRegistryKind(id, fluidRegistryIds, currentResolver);
+                String label = currentResolver.translateRegistry(id, kind);
                 JsonObject row = new JsonObject();
                 row.addProperty("id", id);
                 row.addProperty("label", label);
-                row.addProperty("haystack", buildHaystack(id, normalized, currentResolver, enResolver));
+                row.addProperty(
+                        "haystack",
+                        buildHaystack(id, kind, normalized, currentResolver, enResolver));
                 items.add(row);
                 int n = i + 1;
                 if (n % PROGRESS_EVERY == 0) {
@@ -151,6 +158,7 @@ public final class ItemsSearchIndexExporter {
 
     static String buildHaystack(
             String id,
+            String kind,
             String locale,
             RegistryLabelResolver currentResolver,
             RegistryLabelResolver enResolver) {
@@ -159,12 +167,12 @@ public final class ItemsSearchIndexExporter {
 
         appendToken(seen, parts, id);
 
-        String nameCurrent = currentResolver.translateRegistry(id);
+        String nameCurrent = currentResolver.translateRegistry(id, kind);
         appendToken(seen, parts, nameCurrent);
 
         if (isChineseLocale(locale)) {
             if (enResolver != null) {
-                String nameEn = enResolver.translateRegistry(id);
+                String nameEn = enResolver.translateRegistry(id, kind);
                 appendToken(seen, parts, nameEn);
             }
             for (String py : SearchPinyin.tokensForLabel(nameCurrent)) {
@@ -183,6 +191,67 @@ public final class ItemsSearchIndexExporter {
         parts.add(token);
     }
 
+    /**
+     * {@code item} unless listed in {@link #FLUID_REGISTRY_IDS_KEY}, or heuristically a GTCEu/TFG fluid
+     * when the index predates fluid tracking.
+     */
+    static String resolveRegistryKind(
+            String registryId,
+            Set<String> fluidRegistryIds,
+            RegistryLabelResolver resolver) {
+        if (fluidRegistryIds != null && fluidRegistryIds.contains(registryId)) {
+            return "fluid";
+        }
+        if (fluidRegistryIds == null || fluidRegistryIds.isEmpty()) {
+            return inferFluidKindWhenIndexMissing(registryId, resolver);
+        }
+        return "item";
+    }
+
+    private static String inferFluidKindWhenIndexMissing(
+            String registryId, RegistryLabelResolver resolver) {
+        String bare = RegistryLangKeys.normalizeRegistryId(registryId);
+        String namespace = RegistryLabelResolver.registryNamespace(bare);
+        if (!RegistryLabelResolver.COMPOSED_FIRST_NAMESPACES.contains(namespace)) {
+            return "item";
+        }
+        int colon = bare.indexOf(':');
+        if (colon <= 0 || colon >= bare.length() - 1) {
+            return "item";
+        }
+        String path = bare.substring(colon + 1);
+        if (path.endsWith("_bucket")) {
+            return "item";
+        }
+        String asItem = resolver.translateRegistry(registryId, "item");
+        if (!asItem.equals(bare)) {
+            return "item";
+        }
+        String asFluid = resolver.translateRegistry(registryId, "fluid");
+        return asFluid.equals(bare) ? "item" : "fluid";
+    }
+
+    static Set<String> readFluidRegistryIds(Path bundleRoot) throws IOException {
+        Path indexPath = bundleRoot.resolve(EmiBundlePaths.ITEMS_INDEX_FILE);
+        if (!Files.isRegularFile(indexPath)) {
+            return Set.of();
+        }
+        JsonObject index = JsonParser.parseString(Files.readString(indexPath)).getAsJsonObject();
+        if (!index.has(FLUID_REGISTRY_IDS_KEY) || !index.get(FLUID_REGISTRY_IDS_KEY).isJsonArray()) {
+            return Set.of();
+        }
+        Set<String> ids = new TreeSet<>();
+        for (JsonElement element : index.getAsJsonArray(FLUID_REGISTRY_IDS_KEY)) {
+            if (element.isJsonPrimitive()) {
+                String id = element.getAsString();
+                if (id != null && !id.isEmpty()) {
+                    ids.add(id);
+                }
+            }
+        }
+        return Set.copyOf(ids);
+    }
+
     private static List<String> readItemIds(Path bundleRoot) throws IOException {
         Path indexPath = bundleRoot.resolve(EmiBundlePaths.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {
@@ -191,7 +260,10 @@ public final class ItemsSearchIndexExporter {
         JsonObject index = JsonParser.parseString(Files.readString(indexPath)).getAsJsonObject();
         Set<String> ids = new TreeSet<>();
         for (Map.Entry<String, JsonElement> entry : index.entrySet()) {
-            if ("schema".equals(entry.getKey()) || !entry.getValue().isJsonArray()) {
+            String key = entry.getKey();
+            if ("schema".equals(key)
+                    || FLUID_REGISTRY_IDS_KEY.equals(key)
+                    || !entry.getValue().isJsonArray()) {
                 continue;
             }
             String namespace = entry.getKey();

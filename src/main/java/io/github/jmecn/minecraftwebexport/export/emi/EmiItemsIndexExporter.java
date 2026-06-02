@@ -97,6 +97,7 @@ public final class EmiItemsIndexExporter {
 
         Map<String, Map<String, Set<String>>> inputs = new TreeMap<>();
         Map<String, Map<String, Set<String>>> outputs = new TreeMap<>();
+        Set<String> fluidRegistryIds = new TreeSet<>();
         int scanTotal = recipeIds.size();
         int scanStride = ExportProgressLog.stride(scanTotal, SCAN_LOG_STRIDE_PROPERTY, 20, 200);
         int scanProgress = 0;
@@ -131,7 +132,7 @@ public final class EmiItemsIndexExporter {
                     addCanonicalId(widget.get("tagDisplayItem").getAsString(), ids);
                 }
                 if (widget.has("ingredient")) {
-                    collectIngredientIds(widget.get("ingredient"), ids, tagItems);
+                    collectIngredientIds(widget.get("ingredient"), ids, tagItems, fluidRegistryIds);
                 }
                 addRecipeRefs(bucket, categoryId, ids, recipeId);
             }
@@ -202,6 +203,9 @@ public final class EmiItemsIndexExporter {
         root.put("schema", 1);
         for (Map.Entry<String, Set<String>> entry : indexBuckets.entrySet()) {
             root.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        if (!fluidRegistryIds.isEmpty()) {
+            root.put(ItemsSearchIndexExporter.FLUID_REGISTRY_IDS_KEY, new ArrayList<>(fluidRegistryIds));
         }
 
         String json = GSON.toJson(root);
@@ -463,6 +467,14 @@ public final class EmiItemsIndexExporter {
             JsonElement ingredient,
             Set<String> out,
             Map<String, Set<String>> tagItems) {
+        collectIngredientIds(ingredient, out, tagItems, null);
+    }
+
+    private static void collectIngredientIds(
+            JsonElement ingredient,
+            Set<String> out,
+            Map<String, Set<String>> tagItems,
+            Set<String> fluidRegistryIds) {
         if (ingredient == null || ingredient.isJsonNull()) {
             return;
         }
@@ -470,6 +482,8 @@ public final class EmiItemsIndexExporter {
             String raw = ingredient.getAsString().trim();
             if (raw.startsWith("item:")) {
                 addCanonicalId(raw.substring(5), out);
+            } else if (raw.startsWith("fluid:")) {
+                addFluidRegistryId(raw.substring(6), out, fluidRegistryIds);
             } else if (raw.startsWith("#item:")) {
                 out.addAll(tagItems.getOrDefault(raw.substring(6), Set.of()));
             } else if (raw.contains(":") && !raw.startsWith("#")) {
@@ -479,7 +493,7 @@ public final class EmiItemsIndexExporter {
         }
         if (ingredient.isJsonArray()) {
             for (JsonElement child : ingredient.getAsJsonArray()) {
-                collectIngredientIds(child, out, tagItems);
+                collectIngredientIds(child, out, tagItems, fluidRegistryIds);
             }
             return;
         }
@@ -490,8 +504,10 @@ public final class EmiItemsIndexExporter {
         JsonObject obj = ingredient.getAsJsonObject();
         if (obj.has("type") && obj.get("type").isJsonPrimitive() && obj.has("id") && obj.get("id").isJsonPrimitive()) {
             String kind = obj.get("type").getAsString();
-            if ("item".equals(kind) || "fluid".equals(kind)) {
+            if ("item".equals(kind)) {
                 addCanonicalId(obj.get("id").getAsString(), out);
+            } else if ("fluid".equals(kind)) {
+                addFluidRegistryId(obj.get("id").getAsString(), out, fluidRegistryIds);
             }
         }
         if (obj.has("entries") && obj.get("entries").isJsonArray()) {
@@ -513,10 +529,21 @@ public final class EmiItemsIndexExporter {
                 if (entry.has("fluid") && entry.get("fluid").isJsonObject()) {
                     JsonObject fluid = entry.getAsJsonObject("fluid");
                     if (fluid.has("id") && fluid.get("id").isJsonPrimitive()) {
-                        addCanonicalId(fluid.get("id").getAsString(), out);
+                        addFluidRegistryId(fluid.get("id").getAsString(), out, fluidRegistryIds);
                     }
                 }
             }
+        }
+    }
+
+    private static void addFluidRegistryId(String raw, Set<String> out, Set<String> fluidRegistryIds) {
+        String id = canonicalRegistryId(raw);
+        if (id == null || id.isBlank()) {
+            return;
+        }
+        out.add(id);
+        if (fluidRegistryIds != null) {
+            fluidRegistryIds.add(id);
         }
     }
 

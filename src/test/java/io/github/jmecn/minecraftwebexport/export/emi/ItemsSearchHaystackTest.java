@@ -19,6 +19,7 @@ class ItemsSearchHaystackTest {
                 Map.of());
         String haystack = ItemsSearchIndexExporter.buildHaystack(
                 "test:iron_ingot",
+                "item",
                 "zh_cn",
                 zh,
                 en);
@@ -35,6 +36,7 @@ class ItemsSearchHaystackTest {
                 Map.of());
         String haystack = ItemsSearchIndexExporter.buildHaystack(
                 "test:iron_ingot",
+                "item",
                 "en_us",
                 en,
                 null);
