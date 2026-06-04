@@ -83,13 +83,12 @@ public final class EmiRuntimeExportOrchestrator {
                         emiRoot.resolve(EmiBundlePaths.COMPOSE_LANG_DIR),
                         client,
                         null,
-                        null);
+                        null,
+                        plan.hints());
             }
             languages = exportedLanguages(outputRoot);
-            if (languages.isEmpty() && LangMergerExporter.isEnabled()) {
-                languages = MinecraftWebExportLanguages.resolve() != null
-                        ? MinecraftWebExportLanguages.resolve().stream().sorted().toList()
-                        : List.of(EmiBundlePaths.DEFAULT_LANGUAGE);
+            if (languages.isEmpty()) {
+                languages = MinecraftWebExportLanguages.resolve(plan.hints()).stream().sorted().toList();
             }
             if (!languages.isEmpty()) {
                 itemsLang = ItemsSearchIndexExporter.export(outputRoot, languages, langPruneForWeb);
@@ -100,7 +99,8 @@ public final class EmiRuntimeExportOrchestrator {
                 ? LangMergerExporter.exportEmiLang(
                         outputRoot,
                         client,
-                        langPruneForWeb ? LangMergerExporter.filterWebDeployKeys(langKeys) : langKeys)
+                        langPruneForWeb ? LangMergerExporter.filterWebDeployKeys(langKeys) : langKeys,
+                        plan.hints())
                 : emptyLangResult();
 
         if (langPruneForWeb) {

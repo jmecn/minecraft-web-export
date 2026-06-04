@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.export.ExportGson;
+import io.github.jmecn.minecraftwebexport.export.module.ExportHints;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
@@ -125,16 +126,32 @@ public final class LangMergerExporter {
         return key.startsWith("emi.category.");
     }
 
+    public static Result exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys, ExportHints hints)
+            throws IOException {
+        return exportTo(EmiBundlePaths.resolve(outputDir, EmiBundlePaths.LANG_DIR), client, null, onlyKeys, hints);
+    }
+
+    /** @deprecated use {@link #exportEmiLang(Path, Minecraft, Set, ExportHints)} */
+    @Deprecated
     public static Result exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys) throws IOException {
-        return exportTo(EmiBundlePaths.resolve(outputDir, EmiBundlePaths.LANG_DIR), client, null, onlyKeys);
+        return exportEmiLang(outputDir, client, onlyKeys, ExportHints.defaults());
     }
 
     public static Result exportTo(Path langRoot, Minecraft client, Set<String> onlyNamespaces, Set<String> onlyKeys)
             throws IOException {
+        return exportTo(langRoot, client, onlyNamespaces, onlyKeys, ExportHints.defaults());
+    }
+
+    public static Result exportTo(
+            Path langRoot,
+            Minecraft client,
+            Set<String> onlyNamespaces,
+            Set<String> onlyKeys,
+            ExportHints hints) throws IOException {
         Files.createDirectories(langRoot);
 
-        Set<String> languages = MinecraftWebExportLanguages.resolve();
-        if (languages == null) {
+        Set<String> languages = MinecraftWebExportLanguages.resolve(hints);
+        if (languages.isEmpty()) {
             languages = client.getLanguageManager().getLanguages().keySet();
         }
 

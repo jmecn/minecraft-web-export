@@ -28,8 +28,17 @@ public final class ExportPlanner {
 
         if (mode == ExportMode.FULL) {
             Set<String> allRecipes = collectExportableRecipeIds(client);
+            ExportHints hints = mergeModuleHints(modules, scope, ExportSeeds.empty());
             LOGGER.info("[export] mode=full, recipes={}", allRecipes.size());
-            return ExportPlan.full(allRecipes);
+            return new ExportPlan(
+                    ExportMode.FULL,
+                    allRecipes,
+                    Set.of(),
+                    Set.of(),
+                    Set.of(),
+                    Set.of(),
+                    hints,
+                    ExportSeeds.empty());
         }
 
         ExportSeeds merged = ExportSeeds.empty();
@@ -40,10 +49,7 @@ public final class ExportPlanner {
             }
         }
 
-        ExportHints hints = ExportHints.defaults();
-        for (ExportModule module : modules) {
-            hints = hints.merge(module.buildHints(scope, merged));
-        }
+        ExportHints hints = mergeModuleHints(modules, scope, merged);
 
         Set<String> availableRecipes = collectExportableRecipeIds(client);
         Set<String> recipeIds = filterRecipeIds(merged.recipeIds(), availableRecipes);
@@ -86,6 +92,14 @@ public final class ExportPlanner {
             }
         }
         return Set.copyOf(filtered);
+    }
+
+    private static ExportHints mergeModuleHints(List<ExportModule> modules, ExportScope scope, ExportSeeds seeds) {
+        ExportHints hints = ExportHints.defaults();
+        for (ExportModule module : modules) {
+            hints = hints.merge(module.buildHints(scope, seeds));
+        }
+        return hints;
     }
 
     /** @deprecated use {@link #collectExportableRecipeIds(Minecraft)} */
