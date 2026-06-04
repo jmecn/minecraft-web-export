@@ -73,26 +73,13 @@ public final class EmiRuntimeExportOrchestrator {
 
         Set<String> langKeys = resolveLangMergeKeys(plan, langCollector);
         boolean langPruneForWeb = langPrune && langCollector != null;
-
-        List<String> languages = List.of();
-        ItemsSearchIndexExporter.Result itemsLang = ItemsSearchIndexExporter.Result.EMPTY;
         Path emiRoot = EmiBundlePaths.resolve(outputRoot, "");
-        if (items.itemCount() > 0 && ItemsSearchIndexExporter.isEnabled()) {
-            if (langPruneForWeb && LangMergerExporter.isEnabled()) {
-                LangMergerExporter.exportTo(
-                        emiRoot.resolve(EmiBundlePaths.COMPOSE_LANG_DIR),
-                        client,
-                        null,
-                        null,
-                        plan.hints());
-            }
-            languages = exportedLanguages(outputRoot);
-            if (languages.isEmpty()) {
-                languages = MinecraftWebExportLanguages.resolve(plan.hints()).stream().sorted().toList();
-            }
-            if (!languages.isEmpty()) {
-                itemsLang = ItemsSearchIndexExporter.export(outputRoot, languages, langPruneForWeb);
-            }
+        Path composeDir = emiRoot.resolve(EmiBundlePaths.COMPOSE_LANG_DIR);
+
+        // items-lang reads emi/lang/ (or compose-lang/ when pruned). Lang merge must run first for SCOPED
+        // and other non-prune exports; FULL+prune uses compose-lang for the full registry table first.
+        if (langPruneForWeb && LangMergerExporter.isEnabled()) {
+            LangMergerExporter.exportTo(composeDir, client, null, null, plan.hints());
         }
 
         LangMergerExporter.Result langs = LangMergerExporter.isEnabled()
@@ -103,18 +90,27 @@ public final class EmiRuntimeExportOrchestrator {
                         plan.hints())
                 : emptyLangResult();
 
-        if (langPruneForWeb) {
-            Path composeDir = emiRoot.resolve(EmiBundlePaths.COMPOSE_LANG_DIR);
-            if (Files.isDirectory(composeDir)) {
-                try (var walk = Files.walk(composeDir)) {
-                    walk.sorted(Comparator.reverseOrder()).forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (IOException e) {
-                            LOGGER.warn("{} failed to delete {}: {}", ExportLog.LANG, path, e.toString());
-                        }
-                    });
-                }
+        List<String> languages = List.of();
+        ItemsSearchIndexExporter.Result itemsLang = ItemsSearchIndexExporter.Result.EMPTY;
+        if (items.itemCount() > 0 && ItemsSearchIndexExporter.isEnabled()) {
+            languages = exportedLanguages(outputRoot);
+            if (languages.isEmpty()) {
+                languages = MinecraftWebExportLanguages.resolve(plan.hints()).stream().sorted().toList();
+            }
+            if (!languages.isEmpty()) {
+                itemsLang = ItemsSearchIndexExporter.export(outputRoot, languages, langPruneForWeb);
+            }
+        }
+
+        if (langPruneForWeb && Files.isDirectory(composeDir)) {
+            try (var walk = Files.walk(composeDir)) {
+                walk.sorted(Comparator.reverseOrder()).forEach(path -> {
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (IOException e) {
+                        LOGGER.warn("{} failed to delete {}: {}", ExportLog.LANG, path, e.toString());
+                    }
+                });
             }
         }
 
