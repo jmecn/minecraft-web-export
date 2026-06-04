@@ -298,4 +298,26 @@ public final class LangClosureKeys {
         }
         return Set.copyOf(merged);
     }
+
+    /** {@code tag.item.*} / {@code tag.block.*} / {@code tag.fluid.*} for scoped {@code emi/lang/}. */
+    public static void addForTag(Set<String> into, String tagId) {
+        if (tagId == null || tagId.isBlank()) {
+            return;
+        }
+        String dotted = RegistryLangKeys.dottedRegistryId(tagId);
+        if (dotted.isEmpty()) {
+            return;
+        }
+        into.add("tag.item." + dotted);
+        into.add("tag.block." + dotted);
+        into.add("tag.fluid." + dotted);
+    }
+
+    public static Set<String> mergeTagLangKeys(Set<String> seedLangKeys, Set<String> tagIds) {
+        Set<String> merged = new TreeSet<>(seedLangKeys == null ? Set.of() : seedLangKeys);
+        for (String tagId : tagIds == null ? Set.<String>of() : tagIds) {
+            addForTag(merged, tagId);
+        }
+        return Set.copyOf(merged);
+    }
 }

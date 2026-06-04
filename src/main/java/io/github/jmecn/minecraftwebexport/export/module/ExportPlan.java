@@ -62,6 +62,7 @@ public record ExportPlan(
             return null;
         }
         Set<String> merged = LangClosureKeys.mergeClosureLangKeys(closureLangKeys, closureItemIds, closureFluidIds);
+        merged = LangClosureKeys.mergeTagLangKeys(merged, closureTagIds);
         return merged.isEmpty() ? null : merged;
     }
 

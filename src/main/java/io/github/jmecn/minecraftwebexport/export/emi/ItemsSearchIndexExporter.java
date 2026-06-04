@@ -253,9 +253,14 @@ public final class ItemsSearchIndexExporter {
     }
 
     private static List<String> readItemIds(Path bundleRoot) throws IOException {
+        return List.copyOf(readIndexedItemIds(bundleRoot));
+    }
+
+    /** Registry ids listed in {@code items/index.json} (all namespaces). */
+    public static Set<String> readIndexedItemIds(Path bundleRoot) throws IOException {
         Path indexPath = bundleRoot.resolve(EmiBundlePaths.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {
-            return List.of();
+            return Set.of();
         }
         JsonObject index = JsonParser.parseString(Files.readString(indexPath)).getAsJsonObject();
         Set<String> ids = new TreeSet<>();
@@ -278,7 +283,7 @@ public final class ItemsSearchIndexExporter {
                 ids.add(path.contains(":") ? path : namespace + ":" + path);
             }
         }
-        return List.copyOf(ids);
+        return Set.copyOf(ids);
     }
 
     private static List<String> resolveLocales(Path bundleRoot, List<String> languages) throws IOException {

@@ -72,13 +72,18 @@ public final class EmiRuntimeExportOrchestrator {
         }
 
         Set<String> langKeys = resolveLangMergeKeys(plan, langCollector);
-        boolean langPruneForWeb = langPrune && langCollector != null;
         Path emiRoot = EmiBundlePaths.resolve(outputRoot, "");
         Path composeDir = emiRoot.resolve(EmiBundlePaths.COMPOSE_LANG_DIR);
+        if (plan.mode() == ExportMode.SCOPED && items.itemCount() > 0) {
+            langKeys = augmentScopedLangKeys(langKeys, plan, emiRoot);
+        }
+        boolean langPruneForWeb = langPrune && langCollector != null;
+        boolean composeLangForItems = items.itemCount() > 0
+                && LangMergerExporter.isEnabled()
+                && (langPruneForWeb || plan.mode() == ExportMode.SCOPED);
 
-        // items-lang reads emi/lang/ (or compose-lang/ when pruned). Lang merge must run first for SCOPED
-        // and other non-prune exports; FULL+prune uses compose-lang for the full registry table first.
-        if (langPruneForWeb && LangMergerExporter.isEnabled()) {
+        // items-lang needs full mod lang (compose-lang). SCOPED deploy keeps closure-filtered emi/lang/.
+        if (composeLangForItems) {
             LangMergerExporter.exportTo(composeDir, client, null, null, plan.hints());
         }
 
@@ -98,11 +103,11 @@ public final class EmiRuntimeExportOrchestrator {
                 languages = MinecraftWebExportLanguages.resolve(plan.hints()).stream().sorted().toList();
             }
             if (!languages.isEmpty()) {
-                itemsLang = ItemsSearchIndexExporter.export(outputRoot, languages, langPruneForWeb);
+                itemsLang = ItemsSearchIndexExporter.export(outputRoot, languages, composeLangForItems);
             }
         }
 
-        if (langPruneForWeb && Files.isDirectory(composeDir)) {
+        if (composeLangForItems && Files.isDirectory(composeDir)) {
             try (var walk = Files.walk(composeDir)) {
                 walk.sorted(Comparator.reverseOrder()).forEach(path -> {
                     try {
@@ -173,6 +178,22 @@ public final class EmiRuntimeExportOrchestrator {
                 tags.tagsIndexed(),
                 langs.languagesWritten(),
                 icons.totalSpritesWritten());
+    }
+
+    private static Set<String> augmentScopedLangKeys(Set<String> langKeys, ExportPlan plan, Path emiRoot) {
+        Set<String> seed = langKeys == null ? Set.of() : langKeys;
+        try {
+            Set<String> merged = LangClosureKeys.mergeClosureLangKeys(
+                    seed,
+                    ItemsSearchIndexExporter.readIndexedItemIds(emiRoot),
+                    ItemsSearchIndexExporter.readFluidRegistryIds(emiRoot));
+            merged = LangClosureKeys.mergeTagLangKeys(merged, plan.closureTagIds());
+            return merged.isEmpty() ? null : merged;
+        } catch (IOException e) {
+            LOGGER.warn("{} scoped lang keys: failed to read items index: {}", ExportLog.LANG, e.toString());
+            Set<String> merged = LangClosureKeys.mergeTagLangKeys(seed, plan.closureTagIds());
+            return merged.isEmpty() ? langKeys : merged;
+        }
     }
 
     private static Set<String> resolveLangMergeKeys(ExportPlan plan, LangUsedKeysCollector langCollector) {
