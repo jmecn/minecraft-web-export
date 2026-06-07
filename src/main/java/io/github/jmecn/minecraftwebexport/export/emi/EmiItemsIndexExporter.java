@@ -65,20 +65,28 @@ public final class EmiItemsIndexExporter {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        });
+        }, Set.of());
     }
 
     public static Result export(
             Path outputDir,
             MinecraftServer server,
             Map<String, JsonObject> layoutsByRecipeId) throws IOException {
+        return export(outputDir, server, layoutsByRecipeId, Set.of());
+    }
+
+    public static Result export(
+            Path outputDir,
+            MinecraftServer server,
+            Map<String, JsonObject> layoutsByRecipeId,
+            Set<String> seedItemIds) throws IOException {
         if (layoutsByRecipeId == null || layoutsByRecipeId.isEmpty()) {
             LOGGER.warn("{} no in-memory layouts - skipping items index", ExportLog.EMI_ITEMS);
             return new Result(0, 0, 0, 0);
         }
         List<String> recipeIds = new ArrayList<>(layoutsByRecipeId.keySet());
         Collections.sort(recipeIds);
-        return exportWithLayouts(outputDir, server, recipeIds, layoutsByRecipeId::get);
+        return exportWithLayouts(outputDir, server, recipeIds, layoutsByRecipeId::get, seedItemIds);
     }
 
     @FunctionalInterface
@@ -90,7 +98,8 @@ public final class EmiItemsIndexExporter {
             Path outputDir,
             MinecraftServer server,
             List<String> recipeIds,
-            LayoutLoader layoutLookup) throws IOException {
+            LayoutLoader layoutLookup,
+            Set<String> seedItemIds) throws IOException {
         Path itemsIndexFile = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEMS_INDEX_FILE);
         Map<String, Set<String>> tagItems = loadTagItems(outputDir);
         ExportedTagSets exportedTagSets = loadExportedTagSets(outputDir);
@@ -142,6 +151,7 @@ public final class EmiItemsIndexExporter {
         Set<String> allItemIds = new TreeSet<>();
         allItemIds.addAll(inputs.keySet());
         allItemIds.addAll(outputs.keySet());
+        mergeSeedItemIds(allItemIds, seedItemIds);
         LOGGER.info("{} resolving registry tags for {} items", ExportLog.EMI_ITEMS, allItemIds.size());
         Map<String, RegistryTagSets> registryTagSetsByItem = resolveRegistryTags(allItemIds, server);
 
@@ -227,6 +237,20 @@ public final class EmiItemsIndexExporter {
                 itemsIndexFile);
         int indexedCount = indexBuckets.values().stream().mapToInt(Set::size).sum();
         return new Result(indexedCount, inputRefs, outputRefs, json.length());
+    }
+
+    private static void mergeSeedItemIds(Set<String> allItemIds, Set<String> seedItemIds) {
+        if (seedItemIds == null || seedItemIds.isEmpty()) {
+            return;
+        }
+        int before = allItemIds.size();
+        for (String raw : seedItemIds) {
+            addCanonicalId(raw, allItemIds);
+        }
+        int added = allItemIds.size() - before;
+        if (added > 0) {
+            LOGGER.info("{} merged {} seed/closure items ({} new)", ExportLog.EMI_ITEMS, seedItemIds.size(), added);
+        }
     }
 
     private static void logScanProgress(int progress, int total, int stride) {

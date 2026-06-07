@@ -42,14 +42,24 @@ public record ExportPlan(
                 ExportSeeds.empty());
     }
 
+    /**
+     * Layout-referenced item ids union seed/closure items (icons and {@code items/index.json}).
+     * Recipe layouts additionally contribute tag-expanded members during index export.
+     */
     public Set<String> itemsForIcons(Set<String> layoutReferencedItems) {
         return union(layoutReferencedItems, closureItemIds);
+    }
+
+    /** Seed/closure item registry ids merged into {@code items/index.json} after recipe scan. */
+    public Set<String> seedItemsForIndex() {
+        return closureItemIds;
     }
 
     public Set<String> fluidsForIcons(Set<String> layoutReferencedFluids) {
         return union(layoutReferencedFluids, closureFluidIds);
     }
 
+    /** Layout-referenced tag ids union seed/closure tags for {@code tags/**} member export. */
     public Set<String> tagsForExport(Set<String> layoutReferencedTags) {
         if (mode == ExportMode.FULL) {
             return copy(layoutReferencedTags);

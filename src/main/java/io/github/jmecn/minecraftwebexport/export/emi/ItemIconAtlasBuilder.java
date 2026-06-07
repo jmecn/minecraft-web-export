@@ -241,6 +241,7 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
         sb.append("  image-rendering: crisp-edges;\n");
         sb.append("  background-repeat: no-repeat;\n");
         sb.append("  display: inline-block;\n");
+        sb.append("  --cell: ").append(cellSize).append(";\n");
         sb.append("}\n\n");
 
         for (var entry : items.entrySet()) {
@@ -249,14 +250,15 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
             sb.append('.').append(cssClass).append("[data-item=\"")
                     .append(escapeCssAttr(entry.getKey()))
                     .append("\"] {\n");
+            sb.append("  --sprite-x: ").append(ref.x()).append(";\n");
+            sb.append("  --sprite-y: ").append(ref.y()).append(";\n");
+            sb.append("  --atlas-w: ").append(page.width()).append(";\n");
+            sb.append("  --atlas-h: ").append(page.height()).append(";\n");
             sb.append("  background-image: url('")
                     .append(page.fileName())
                     .append("');\n");
-            sb.append("  background-position: -")
-                    .append(ref.x())
-                    .append("px -")
-                    .append(ref.y())
-                    .append("px;\n");
+            sb.append("  background-size: calc(var(--atlas-w) * 1px) calc(var(--atlas-h) * 1px);\n");
+            sb.append("  background-position: calc(var(--sprite-x) * -1px) calc(var(--sprite-y) * -1px);\n");
             sb.append("}\n\n");
         }
         return sb.toString();

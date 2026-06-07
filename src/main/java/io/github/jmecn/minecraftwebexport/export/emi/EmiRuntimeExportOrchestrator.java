@@ -56,7 +56,11 @@ public final class EmiRuntimeExportOrchestrator {
                 ? EmiRecipeCategoriesExporter.export(outputRoot, client)
                 : new EmiRecipeCategoriesExporter.Result(0, 0);
         EmiItemsIndexExporter.Result items = cards.written() > 0
-                ? EmiItemsIndexExporter.export(outputRoot, server, cards.layoutsByRecipeId())
+                ? EmiItemsIndexExporter.export(
+                        outputRoot,
+                        server,
+                        cards.layoutsByRecipeId(),
+                        plan.seedItemsForIndex())
                 : new EmiItemsIndexExporter.Result(0, 0, 0, 0);
 
         if (cards.written() > 0 && ItemNameKeysExporter.isEnabled()) {

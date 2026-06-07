@@ -36,6 +36,7 @@ class ExportPlanTest {
         assertEquals(
                 Set.of("layout:item", "minecraft:oak_log"),
                 plan.itemsForIcons(Set.of("layout:item")));
+        assertEquals(Set.of("minecraft:oak_log"), plan.seedItemsForIndex());
         assertEquals(
                 Set.of("layout:fluid", "minecraft:water"),
                 plan.fluidsForIcons(Set.of("layout:fluid")));

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -176,6 +178,41 @@ class EmiItemsIndexExporterTest {
                 "minecraft:activator_rail",
                 rail.getAsJsonObject("outputs").getAsJsonArray("minecraft:crafting").get(0).getAsString());
         assertTrue(!rail.has("inputs") || rail.getAsJsonObject("inputs").isEmpty());
+    }
+
+    @Test
+    void mergesSeedItemIdsWithoutRecipeRefs() throws IOException {
+        RecipeBundleMods mods = RecipeBundleMods.empty();
+        EmiItemsIndexExporter.export(
+                tempDir,
+                null,
+                Map.of(
+                        "minecraft:stick",
+                        layout("""
+                                {
+                                  "schema": 2,
+                                  "id": "minecraft:stick",
+                                  "category": "minecraft:crafting",
+                                  "widgets": [
+                                    {
+                                      "type": "slot",
+                                      "role": "output",
+                                      "ingredient": "item:minecraft:stick"
+                                    }
+                                  ]
+                                }
+                                """)),
+                Set.of("minecraft:oak_log"));
+
+        Path oakFile = EmiBundlePaths.resolve(tempDir, "items/minecraft/oak_log.json");
+        Path itemsIndexFile = EmiBundlePaths.resolve(tempDir, EmiBundlePaths.ITEMS_INDEX_FILE);
+        JsonObject index = JsonParser.parseString(Files.readString(itemsIndexFile)).getAsJsonObject();
+
+        assertTrue(Files.exists(oakFile));
+        assertTrue(index.getAsJsonArray("minecraft").contains(JsonParser.parseString("\"oak_log\"")));
+        JsonObject oak = JsonParser.parseString(Files.readString(oakFile)).getAsJsonObject();
+        assertTrue(!oak.has("inputs"));
+        assertTrue(!oak.has("outputs"));
     }
 
     private static JsonObject layout(String json) {
