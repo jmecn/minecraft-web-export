@@ -11,12 +11,6 @@ import net.minecraftforge.fml.loading.FMLPaths;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-/**
- * Minimal Forge entrypoint for the extracted web export runtime.
- *
- * <p>This scaffold intentionally mirrors the structure of {@code Field-Guide-Modern/forge}
- * while keeping the first cut small enough to evolve into a standalone export mod.</p>
- */
 @Mod(MinecraftWebExportMod.MOD_ID)
 public final class MinecraftWebExportMod {
 
