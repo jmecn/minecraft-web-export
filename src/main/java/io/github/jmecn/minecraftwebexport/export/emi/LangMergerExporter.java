@@ -107,10 +107,7 @@ public final class LangMergerExporter {
                 || key.startsWith("gtceu.fluid.")) {
             return false;
         }
-        if (key.startsWith("item.") || key.startsWith("block.") || key.startsWith("fluid.")) {
-            return false;
-        }
-        return true;
+        return !key.startsWith("item.") && !key.startsWith("block.") && !key.startsWith("fluid.");
     }
 
     private static boolean isGtceuTranslationKey(String key) {

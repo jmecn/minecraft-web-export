@@ -9,13 +9,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.FogRenderer;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL12;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collection;
 
 public class OffScreenRenderer implements AutoCloseable {
 
@@ -40,10 +38,8 @@ public class OffScreenRenderer implements AutoCloseable {
         frameBuffer.destroyBuffers();
 
         var minecraft = Minecraft.getInstance();
-        if (minecraft != null) {
-            var window = minecraft.getWindow();
-            RenderSystem.viewport(0, 0, window.getWidth(), window.getHeight());
-        }
+        var window = minecraft.getWindow();
+        RenderSystem.viewport(0, 0, window.getWidth(), window.getHeight());
     }
 
     public byte[] captureAsPng(Runnable runnable) {
@@ -66,13 +62,6 @@ public class OffScreenRenderer implements AutoCloseable {
     public void captureAsPng(Runnable runnable, Path path) throws IOException {
         renderToBuffer(runnable);
         nativeImage.writeToFile(path);
-    }
-
-    public boolean isAnimated(Collection<TextureAtlasSprite> sprites) {
-        return false;
-    }
-
-    public void uploadAnimatedFirstFrame(Collection<TextureAtlasSprite> sprites) {
     }
 
     private void renderToBuffer(Runnable runnable) {
@@ -108,18 +97,6 @@ public class OffScreenRenderer implements AutoCloseable {
         poseStack.translate(0.0f, 0.0f, -11000.0f);
         RenderSystem.applyModelViewMatrix();
         Lighting.setupFor3DItems();
-        FogRenderer.setupNoFog();
-    }
-
-    public void setupGuiEntityRendering(int width, int height) {
-        var matrix4f = new Matrix4f().setOrtho(0.0f, width, height, 0.0f, 1000.0f, 21000.0f);
-        RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
-
-        var poseStack = RenderSystem.getModelViewStack();
-        poseStack.setIdentity();
-        poseStack.translate(0.0f, 0.0f, -11000.0f);
-        RenderSystem.applyModelViewMatrix();
-        Lighting.setupForEntityInInventory();
         FogRenderer.setupNoFog();
     }
 

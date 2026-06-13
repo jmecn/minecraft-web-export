@@ -187,7 +187,7 @@ public final class ItemIconRendererExporter {
              var atlas = new ItemIconAtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights)) {
             var bufferSource = client.renderBuffers().bufferSource();
             var guiGraphics = new GuiGraphics(client, bufferSource);
-            IconPlaceholderRenderer.render(client, guiGraphics, renderer);
+            IconPlaceholderRenderer.render(guiGraphics, renderer);
             atlas.place(IconPlaceholderRenderer.REGISTRY_ID, renderer);
 
             renderer.setupItemRendering();
@@ -399,9 +399,6 @@ public final class ItemIconRendererExporter {
             OffScreenRenderer renderer,
             ItemStack stack) {
         var sprites = collectSprites(client, stack);
-        if (renderer.isAnimated(sprites)) {
-            renderer.uploadAnimatedFirstFrame(sprites);
-        }
         Runnable draw = () -> {
             guiGraphics.renderItem(stack, 0, 0);
             guiGraphics.renderItemDecorations(client.font, stack, 0, 0, "");
@@ -416,9 +413,6 @@ public final class ItemIconRendererExporter {
             Item item) {
         ItemStack stack = new ItemStack(item);
         var sprites = collectSprites(client, item);
-        if (renderer.isAnimated(sprites)) {
-            renderer.uploadAnimatedFirstFrame(sprites);
-        }
         Runnable draw = () -> {
             guiGraphics.renderItem(stack, 0, 0);
             guiGraphics.renderItemDecorations(client.font, stack, 0, 0, "");

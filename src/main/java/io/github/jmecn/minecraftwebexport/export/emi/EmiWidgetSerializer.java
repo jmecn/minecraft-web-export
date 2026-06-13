@@ -297,7 +297,7 @@ final class EmiWidgetSerializer {
                     items.add(id.toString());
                 }
                 String iconKey = IconStackKey.forEmiStack(emiStack);
-                if (iconKey != null && IconStackKey.isVariantKey(iconKey)) {
+                if (IconStackKey.isVariantKey(iconKey)) {
                     ItemStack stack = IconStackKey.toItemStack(emiStack);
                     if (!stack.isEmpty()) {
                         iconVariants.put(iconKey, stack);

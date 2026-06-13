@@ -1,6 +1,5 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class IconPlaceholderRenderer {
@@ -13,15 +12,14 @@ public final class IconPlaceholderRenderer {
     private IconPlaceholderRenderer() {
     }
 
-    public static void render(Minecraft client, GuiGraphics guiGraphics, OffScreenRenderer renderer) {
+    public static void render(GuiGraphics guiGraphics, OffScreenRenderer renderer) {
         Runnable draw = () -> {
             for (int y = 0; y < 16; y++) {
                 for (int x = 0; x < 16; x++) {
-                    int color = ((x / 4) + (y / 4)) % 2 == 0 ? MAGENTA : BLACK;
+                    int color = ((x / 8) + (y / 8)) % 2 == 0 ? MAGENTA : BLACK;
                     guiGraphics.fill(x, y, x + 1, y + 1, color);
                 }
             }
-            guiGraphics.drawString(client.font, "?", 6, 4, 0xFFFFFFFF, false);
         };
         renderer.setupFlatGuiRendering();
         renderer.captureAsPng(draw);

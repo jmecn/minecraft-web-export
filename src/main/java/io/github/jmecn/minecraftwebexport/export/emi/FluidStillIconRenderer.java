@@ -39,13 +39,6 @@ public final class FluidStillIconRenderer {
 
         TextureAtlas atlas = client.getModelManager().getAtlas(InventoryMenu.BLOCK_ATLAS);
         TextureAtlasSprite sprite = atlas.getSprite(still);
-        if (sprite == null) {
-            return false;
-        }
-
-        if (renderer.isAnimated(List.of(sprite))) {
-            renderer.uploadAnimatedFirstFrame(List.of(sprite));
-        }
 
         int tint = extensions.getTintColor(stack);
         float a = ((tint >> 24) & 0xFF) / 255.0F;

@@ -67,7 +67,7 @@ public final class EmiCategoryIconsExporter {
             try (var renderer = new OffScreenRenderer(cell, cell);
                  var atlas = new ItemIconAtlasBuilder(iconsRoot, cell, atlasMax, "category", layout, null)) {
                 GuiGraphics guiGraphics = new GuiGraphics(client, bufferSource);
-                IconPlaceholderRenderer.render(client, guiGraphics, renderer);
+                IconPlaceholderRenderer.render(guiGraphics, renderer);
                 atlas.place(IconPlaceholderRenderer.REGISTRY_ID, renderer);
 
                 int index = 0;
@@ -77,7 +77,7 @@ public final class EmiCategoryIconsExporter {
                     String categoryId = category.getId().toString();
                     Map<String, Object> entry = categories.get(i);
                     index++;
-                    boolean ok = false;
+                    boolean ok;
                     try {
                         ok = CategoryIconRenderer.render(client, guiGraphics, renderer, category);
                         if (!ok) {

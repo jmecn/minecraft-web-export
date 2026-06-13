@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExportHintsTest {
 
@@ -30,7 +31,7 @@ class ExportHintsTest {
         assertEquals(5, merged.itemUsageWeights().get("minecraft:oak_log"));
         assertEquals(1, merged.fluidUsageWeights().get("minecraft:water"));
         assertEquals(java.util.List.of("minecraft", "gtceu"), merged.namespacePriority());
-        assertEquals(true, merged.exportEntityPreviews());
+        assertTrue(merged.exportEntityPreviews());
         assertEquals(java.util.List.of("en_us", "zh_cn"), merged.exportLanguages());
     }
 

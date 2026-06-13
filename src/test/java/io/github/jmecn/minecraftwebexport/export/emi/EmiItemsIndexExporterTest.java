@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EmiItemsIndexExporterTest {
@@ -244,8 +245,8 @@ class EmiItemsIndexExporterTest {
         assertTrue(Files.exists(oakFile));
         assertTrue(index.getAsJsonArray("minecraft").contains(JsonParser.parseString("\"oak_log\"")));
         JsonObject oak = JsonParser.parseString(Files.readString(oakFile)).getAsJsonObject();
-        assertTrue(!oak.has("inputs"));
-        assertTrue(!oak.has("outputs"));
+        assertFalse(oak.has("inputs"));
+        assertFalse(oak.has("outputs"));
     }
 
     private static JsonObject layout(String json) {
