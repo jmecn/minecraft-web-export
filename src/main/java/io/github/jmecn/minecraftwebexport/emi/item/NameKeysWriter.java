@@ -1,24 +1,23 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
-import io.github.jmecn.minecraftwebexport.model.emi.item.NameKeysResult;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.emi.item.NameKeysResult;
 import net.minecraft.client.Minecraft;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class NameKeysWriter {
 
@@ -93,7 +92,7 @@ public final class NameKeysWriter {
 
         Path out = bundleRoot.resolve(Constants.ITEM_NAME_KEYS_FILE);
         Files.createDirectories(out.getParent());
-        Files.writeString(out, Json.GSON.toJson(root) + "\n", StandardCharsets.UTF_8);
+        JsonIO.writeLine(out, root);
 
         MweMod.LOGGER.info(
                 "{} {} registry ids ({} fluids) -> {}",

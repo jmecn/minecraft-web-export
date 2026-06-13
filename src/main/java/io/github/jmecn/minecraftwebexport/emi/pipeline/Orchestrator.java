@@ -1,5 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.pipeline;
+
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.bundle.ManifestWriter;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.icon.ItemIconWriter;
@@ -24,7 +26,6 @@ import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembersResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
-import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.pipeline.Planner;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;

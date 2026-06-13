@@ -1,13 +1,12 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
-import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembers;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
-import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
+import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
+import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

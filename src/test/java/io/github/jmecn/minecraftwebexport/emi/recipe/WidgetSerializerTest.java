@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
-import io.github.jmecn.minecraftwebexport.emi.recipe.WidgetSerializer;
 
 import com.google.gson.JsonParser;
 import dev.emi.emi.api.recipe.EmiRecipe;

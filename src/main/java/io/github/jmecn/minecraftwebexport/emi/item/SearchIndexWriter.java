@@ -1,20 +1,20 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
-import io.github.jmecn.minecraftwebexport.model.emi.item.SearchIndexResult;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
-import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
-import io.github.jmecn.minecraftwebexport.emi.lang.SearchPinyin;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
+import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
+import io.github.jmecn.minecraftwebexport.emi.lang.SearchPinyin;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.emi.item.SearchIndexResult;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class SearchIndexWriter {
 
@@ -117,7 +116,7 @@ public final class SearchIndexWriter {
 
             Path out = searchRoot.resolve(normalized + ".json");
             MweMod.LOGGER.info("{} {}: writing {} ...", Log.ITEMS_LANG, normalized, out);
-            Files.writeString(out, Json.GSON.toJson(payload) + "\n", StandardCharsets.UTF_8);
+            JsonIO.writeLine(out, payload);
             writtenLocales.add(normalized);
             MweMod.LOGGER.info(
                     "{} {}: {} items",

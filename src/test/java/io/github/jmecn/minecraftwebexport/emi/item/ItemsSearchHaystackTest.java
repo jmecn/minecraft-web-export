@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
-import io.github.jmecn.minecraftwebexport.emi.item.SearchIndexWriter;
-import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
 
+import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

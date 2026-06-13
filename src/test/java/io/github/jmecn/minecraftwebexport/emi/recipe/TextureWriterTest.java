@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
-import io.github.jmecn.minecraftwebexport.emi.recipe.TextureWriter;
 
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;

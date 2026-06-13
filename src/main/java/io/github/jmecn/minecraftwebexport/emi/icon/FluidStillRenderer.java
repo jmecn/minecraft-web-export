@@ -1,8 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import io.github.jmecn.minecraftwebexport.Constants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -13,8 +12,6 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.fluids.FluidStack;
-
-import java.util.List;
 
 public final class FluidStillRenderer {
 

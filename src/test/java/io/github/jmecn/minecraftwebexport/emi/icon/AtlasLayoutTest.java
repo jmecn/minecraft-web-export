@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
-import io.github.jmecn.minecraftwebexport.emi.icon.AtlasLayout;
 
+import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

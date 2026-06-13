@@ -1,10 +1,9 @@
 package io.github.jmecn.minecraftwebexport.emi.tag;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.tag.MembersIndexWriter;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 
 import org.junit.jupiter.api.Test;
 

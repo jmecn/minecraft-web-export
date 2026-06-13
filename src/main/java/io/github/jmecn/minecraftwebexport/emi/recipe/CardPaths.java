@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
 
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 
 import java.nio.file.Path;
 

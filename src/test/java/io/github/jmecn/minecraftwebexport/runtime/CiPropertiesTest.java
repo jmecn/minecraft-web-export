@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.runtime;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.runtime.CiProperties;
 
+import io.github.jmecn.minecraftwebexport.Constants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

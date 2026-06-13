@@ -1,7 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
-import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -21,6 +18,9 @@ import dev.emi.emi.api.widget.TextureWidget;
 import dev.emi.emi.api.widget.TooltipWidget;
 import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.widget.RecipeButtonWidget;
+import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;

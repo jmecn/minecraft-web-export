@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.icon.ExportSizes;
 
+import io.github.jmecn.minecraftwebexport.Constants;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

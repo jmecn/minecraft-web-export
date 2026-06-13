@@ -1,16 +1,20 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.CategoryIconResult;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.category.IconRenderer;
-import io.github.jmecn.minecraftwebexport.emi.category.IndexWriter;
-import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.stack.EmiStack;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.category.IconRenderer;
+import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.category.CategoriesIndex;
+import io.github.jmecn.minecraftwebexport.model.category.CategoryEntry;
+import io.github.jmecn.minecraftwebexport.model.category.CategoryIconSprite;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.CategoryIconResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
@@ -18,16 +22,13 @@ import net.minecraft.world.item.ItemStack;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class CategoryIconWriter {
 
     private CategoryIconWriter() {
     }
-
 
     public static boolean isEnabled() {
         return !Boolean.getBoolean(Constants.PROP_SKIP_CATEGORY_ICON_EXPORT);
@@ -41,7 +42,7 @@ public final class CategoryIconWriter {
         }
 
         List<EmiRecipeCategory> registered = manager.getCategories();
-        List<Map<String, Object>> categories = new ArrayList<>();
+        List<CategoryEntry> categories = new ArrayList<>();
         int order = 0;
         for (EmiRecipeCategory category : registered) {
             categories.add(buildCategoryEntry(category, order++));
@@ -69,7 +70,6 @@ public final class CategoryIconWriter {
                 for (int i = 0; i < registered.size(); i++) {
                     EmiRecipeCategory category = registered.get(i);
                     String categoryId = category.getId().toString();
-                    Map<String, Object> entry = categories.get(i);
                     index++;
                     boolean ok;
                     try {
@@ -79,7 +79,7 @@ public final class CategoryIconWriter {
                         }
                         if (ok) {
                             atlas.place(categoryId, renderer);
-                            attachIconSprite(entry, atlas.spriteFor(categoryId));
+                            categories.set(i, categories.get(i).withIcon(toSprite(atlas.spriteFor(categoryId))));
                             placed++;
                         } else {
                             failures++;
@@ -104,13 +104,12 @@ public final class CategoryIconWriter {
             }
         }
 
-        Map<String, Object> root = new LinkedHashMap<>();
-        root.put("schema", 2);
-        root.put("iconCellSize", ExportSizes.categoryIconCellSize());
-        root.put("iconsDir", Constants.CATEGORY_ICONS_DIR);
-        root.put("categories", categories);
+        int cellSize = ExportSizes.categoryIconCellSize();
+        CategoriesIndex index = CategoriesIndex.of(cellSize, Constants.CATEGORY_ICONS_DIR, categories);
+        Path indexFile = Paths.resolve(outputRoot, Constants.CATEGORIES_INDEX_FILE);
+        JsonIO.write(indexFile, index);
+        long indexBytes = JsonIO.toUtf8Bytes(index).length;
 
-        long indexBytes = IndexWriter.writeCategoriesIndex(outputRoot, root);
         MweMod.LOGGER.info(
                 "{} {} categories, {} icons placed, {} failed -> {}",
                 Log.EMI,
@@ -122,23 +121,24 @@ public final class CategoryIconWriter {
         return new CategoryIconResult(categories.size(), placed, failures, indexBytes, atlasIndexBytes);
     }
 
-    private static Map<String, Object> buildCategoryEntry(EmiRecipeCategory category, int order) {
-        Map<String, Object> entry = new LinkedHashMap<>();
+    private static CategoryEntry buildCategoryEntry(EmiRecipeCategory category, int order) {
         String categoryId = category.getId().toString();
-        entry.put("id", categoryId);
-        entry.put("order", order);
         int priority = dev.emi.emi.data.EmiRecipeCategoryProperties.getOrder(category);
-        if (priority != 0) {
-            entry.put("priority", priority);
-        }
-        entry.put("nameKey", LangKeys.resolveNameKey(category));
-        return entry;
+        Integer priorityField = priority != 0 ? priority : null;
+        return new CategoryEntry(categoryId, order, priorityField, LangKeys.resolveNameKey(category), null);
     }
 
-    private static void attachIconSprite(Map<String, Object> entry, Map<String, Object> sprite) {
-        if (sprite != null && !sprite.isEmpty()) {
-            entry.put("icon", sprite);
+    private static CategoryIconSprite toSprite(Map<String, Object> sprite) {
+        if (sprite == null || sprite.isEmpty()) {
+            return null;
         }
+        Object page = sprite.get("page");
+        Object x = sprite.get("x");
+        Object y = sprite.get("y");
+        if (page instanceof Number pageNumber && x instanceof Number xNumber && y instanceof Number yNumber) {
+            return new CategoryIconSprite(pageNumber.intValue(), xNumber.intValue(), yNumber.intValue());
+        }
+        return null;
     }
 
     private static boolean renderWorkstationFallback(

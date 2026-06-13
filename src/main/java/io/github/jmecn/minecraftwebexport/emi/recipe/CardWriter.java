@@ -1,22 +1,23 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+
+import com.google.gson.JsonObject;
+import dev.emi.emi.EmiRenderHelper;
+import dev.emi.emi.api.recipe.EmiRecipe;
+import dev.emi.emi.runtime.EmiDrawContext;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRendererPool;
 import io.github.jmecn.minecraftwebexport.emi.lang.UsedKeysCollector;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
-
-import com.google.gson.JsonObject;
-import dev.emi.emi.EmiRenderHelper;
-import dev.emi.emi.api.recipe.EmiRecipe;
-import dev.emi.emi.runtime.EmiDrawContext;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import net.minecraft.client.Minecraft;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.server.MinecraftServer;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,7 +26,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class CardWriter {
 
@@ -96,13 +96,10 @@ public final class CardWriter {
                     if (langKeys != null) {
                         langKeys.collectMeta(meta);
                     }
-                    String metaJson = Json.GSON.toJson(meta);
-                    metaBytes += metaJson.length();
-
                     Path metaFile = CardPaths.metaPath(outputDir, recipeId);
                     Path pngFile = CardPaths.pngPath(outputDir, recipeId);
-                    Files.createDirectories(metaFile.getParent());
-                    Files.writeString(metaFile, metaJson);
+                    JsonIO.write(metaFile, meta);
+                    metaBytes += JsonIO.toUtf8Bytes(meta).length;
 
                     pngBytes += renderRecipePng(client, recipe, scale, pngFile, rendererPool);
                     written++;

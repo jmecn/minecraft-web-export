@@ -1,6 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
@@ -11,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 final class VanillaSupplement {
 

@@ -1,24 +1,22 @@
 package io.github.jmecn.minecraftwebexport.emi.tag;
+
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
-import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembersResult;
-import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembers;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembers;
+import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembersResult;
+import io.github.jmecn.minecraftwebexport.model.tag.TagValues;
+import io.github.jmecn.minecraftwebexport.model.tag.TagsCatalog;
 import net.minecraft.server.MinecraftServer;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class MembersIndexWriter {
 
@@ -110,22 +108,13 @@ public final class MembersIndexWriter {
         if (itemTags.isEmpty() && blockTags.isEmpty() && fluidTags.isEmpty()) {
             return 0;
         }
-        Map<String, Object> root = new LinkedHashMap<>();
-        root.put("schema", 1);
-        if (!itemTags.isEmpty()) {
-            root.put("items", new ArrayList<>(itemTags));
-        }
-        if (!blockTags.isEmpty()) {
-            root.put("blocks", new ArrayList<>(blockTags));
-        }
-        if (!fluidTags.isEmpty()) {
-            root.put("fluids", new ArrayList<>(fluidTags));
-        }
+        TagsCatalog catalog = TagsCatalog.of(
+                new ArrayList<>(itemTags),
+                new ArrayList<>(blockTags),
+                new ArrayList<>(fluidTags));
         Path indexFile = Paths.resolve(outputDir, Constants.TAGS_INDEX_FILE);
-        Files.createDirectories(indexFile.getParent());
-        String json = Json.GSON.toJson(root);
-        Files.writeString(indexFile, json);
-        return json.length();
+        JsonIO.write(indexFile, catalog);
+        return JsonIO.toUtf8Bytes(catalog).length;
     }
 
     private static WriteOutcome writeTagFile(Path outputDir, ParsedTagId parsed, TagKind kind, Set<String> values)
@@ -133,18 +122,11 @@ public final class MembersIndexWriter {
         if (values == null || values.isEmpty()) {
             return WriteOutcome.EMPTY;
         }
-        JsonObject root = new JsonObject();
-        JsonArray array = new JsonArray();
-        for (String value : values) {
-            array.add(value);
-        }
-        root.add("values", array);
+        TagValues document = new TagValues(new ArrayList<>(values));
 
         Path outFile = parsed.toTagFilePath(outputDir, kind);
-        Files.createDirectories(outFile.getParent());
-        String json = Json.GSON.toJson(root);
-        Files.writeString(outFile, json);
-        return new WriteOutcome(true, values.size(), json.length());
+        JsonIO.write(outFile, document);
+        return new WriteOutcome(true, values.size(), JsonIO.toUtf8Bytes(document).length);
     }
 
     private record WriteOutcome(boolean written, int memberRefs, int bytes) {

@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.pipeline;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 
 import org.junit.jupiter.api.Test;
 

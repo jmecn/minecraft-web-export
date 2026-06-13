@@ -1,11 +1,11 @@
 package io.github.jmecn.minecraftwebexport.emi.category;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
-import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
 
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.render.EmiRenderable;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.data.EmiRecipeCategoryProperties;
+import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
+import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;

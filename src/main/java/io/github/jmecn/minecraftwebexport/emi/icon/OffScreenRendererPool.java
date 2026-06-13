@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 
 import java.util.HashMap;
 import java.util.Map;

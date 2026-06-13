@@ -1,13 +1,14 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.ItemIconResult;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 
 import com.google.common.io.MoreFiles;
 import com.google.common.io.RecursiveDeleteOption;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.ItemIconResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -34,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class ItemIconWriter {
 

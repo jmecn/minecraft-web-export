@@ -1,11 +1,10 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
-import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutBuilder;
 
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.Widget;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 

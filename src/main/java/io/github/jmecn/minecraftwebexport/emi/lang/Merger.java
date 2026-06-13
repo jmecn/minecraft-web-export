@@ -1,14 +1,15 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
-import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.emi.support.ResourceFilter;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.emi.support.ResourceFilter;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
@@ -27,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Merger {
 
@@ -173,10 +173,9 @@ public final class Merger {
             }
 
             Path out = langRoot.resolve(langFile);
-            String json = Json.GSON.toJson(merged);
-            Files.writeString(out, json);
+            JsonIO.write(out, merged);
             languagesWritten++;
-            totalBytes += json.length();
+            totalBytes += JsonIO.toUtf8Bytes(merged).length;
             keysPerLanguage = merged.size();
             keysSkipped += stats.keysSkipped;
             duplicateWarnings += stats.duplicateKeyWarnings;

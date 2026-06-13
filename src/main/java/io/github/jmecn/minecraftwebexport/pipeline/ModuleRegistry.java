@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
-import io.github.jmecn.minecraftwebexport.pipeline.Module;
 
 import java.util.ArrayList;
 import java.util.Collections;

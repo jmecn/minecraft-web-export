@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.model.bundle;
 
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -19,7 +19,7 @@ class BundleTest {
                 "minecraft_web_export:missing_icon",
                 new ItemsLangRef("items-lang", List.of("en_us")));
 
-        String json = Json.GSON.toJson(document);
+        String json = JsonIO.toJson(document);
 
         assertTrue(json.contains("\"schema\":" + Constants.BUNDLE_SCHEMA));
         assertTrue(json.contains("\"imageScale\":2"));

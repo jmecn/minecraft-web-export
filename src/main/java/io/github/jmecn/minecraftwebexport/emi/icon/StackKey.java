@@ -1,8 +1,8 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
 
-import io.github.jmecn.minecraftwebexport.Constants;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.ItemEmiStack;
+import io.github.jmecn.minecraftwebexport.Constants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;

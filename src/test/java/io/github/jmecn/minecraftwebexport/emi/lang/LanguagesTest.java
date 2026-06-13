@@ -1,8 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.lang.Languages;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

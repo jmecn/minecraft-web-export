@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.tag;
-import io.github.jmecn.minecraftwebexport.emi.tag.ClosureExpander;
 
 import org.junit.jupiter.api.Test;
 

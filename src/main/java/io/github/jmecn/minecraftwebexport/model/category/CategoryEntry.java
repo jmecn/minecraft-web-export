@@ -6,4 +6,8 @@ public record CategoryEntry(
         Integer priority,
         String nameKey,
         CategoryIconSprite icon) {
+
+    public CategoryEntry withIcon(CategoryIconSprite icon) {
+        return new CategoryEntry(id, order, priority, nameKey, icon);
+    }
 }

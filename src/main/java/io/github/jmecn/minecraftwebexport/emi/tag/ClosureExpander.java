@@ -1,8 +1,9 @@
 package io.github.jmecn.minecraftwebexport.emi.tag;
+
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagExpansion;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembers;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
-
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -19,7 +20,6 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class ClosureExpander {
 

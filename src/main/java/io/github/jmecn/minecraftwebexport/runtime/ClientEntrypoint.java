@@ -1,11 +1,11 @@
 package io.github.jmecn.minecraftwebexport.runtime;
+
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.pipeline.Coordinator;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
-
-import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.pipeline.Coordinator;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;

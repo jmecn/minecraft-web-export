@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutBuilder;
 
+import io.github.jmecn.minecraftwebexport.Constants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

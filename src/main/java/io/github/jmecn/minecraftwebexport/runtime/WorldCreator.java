@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.runtime;
 
+import io.github.jmecn.minecraftwebexport.MweMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
@@ -16,7 +17,6 @@ import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorPresets;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class WorldCreator {
 

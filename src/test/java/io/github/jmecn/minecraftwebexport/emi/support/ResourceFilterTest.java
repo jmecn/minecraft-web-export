@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.support;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.support.ResourceFilter;
 
+import io.github.jmecn.minecraftwebexport.Constants;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 

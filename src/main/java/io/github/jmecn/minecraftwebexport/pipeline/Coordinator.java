@@ -1,4 +1,6 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
+
+import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Orchestrator;
 import io.github.jmecn.minecraftwebexport.model.emi.EmiExportReport;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
@@ -6,14 +8,12 @@ import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
-
 import net.minecraft.client.Minecraft;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Coordinator {
 

@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 
+import io.github.jmecn.minecraftwebexport.Constants;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class PlaceholderRenderer {

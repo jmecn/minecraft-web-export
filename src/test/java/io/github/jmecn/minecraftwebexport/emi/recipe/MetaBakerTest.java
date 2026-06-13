@@ -1,6 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
-import io.github.jmecn.minecraftwebexport.emi.recipe.CardPaths;
-import io.github.jmecn.minecraftwebexport.emi.recipe.MetaBaker;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;

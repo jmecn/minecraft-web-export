@@ -1,7 +1,8 @@
 package io.github.jmecn.minecraftwebexport.emi.bundle;
-import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
+
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.bundle.Bundle;
 import io.github.jmecn.minecraftwebexport.model.bundle.ItemsLangRef;
 
@@ -37,6 +38,6 @@ public final class ManifestWriter {
                 languages,
                 PlaceholderRenderer.REGISTRY_ID,
                 itemsLang);
-        Json.write(Paths.resolve(outputDir, Constants.BUNDLE_FILE), document);
+        JsonIO.write(Paths.resolve(outputDir, Constants.BUNDLE_FILE), document);
     }
 }

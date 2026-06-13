@@ -1,9 +1,7 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
+
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
-import io.github.jmecn.minecraftwebexport.pipeline.ModuleRegistry;
-import io.github.jmecn.minecraftwebexport.pipeline.Planner;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

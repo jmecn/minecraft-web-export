@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
 
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;

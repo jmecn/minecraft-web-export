@@ -1,13 +1,14 @@
 package io.github.jmecn.minecraftwebexport.emi.pipeline;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import com.google.common.collect.Iterables;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.runtime.EmiHidden;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -19,7 +20,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Visibility {
 

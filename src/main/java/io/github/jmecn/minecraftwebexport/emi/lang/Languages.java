@@ -1,9 +1,9 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
+
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;

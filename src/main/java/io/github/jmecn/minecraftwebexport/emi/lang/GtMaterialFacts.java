@@ -1,12 +1,12 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Optional;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 final class GtMaterialFacts {
 

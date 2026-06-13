@@ -1,13 +1,11 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.item.NameKeysWriter;
-import io.github.jmecn.minecraftwebexport.emi.lang.ClosureKeys;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.item.NameKeysWriter;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,7 +13,6 @@ import java.nio.file.Path;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public final class UsedKeysCollector {
 

@@ -1,12 +1,9 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.recipe.CardPaths;
-import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutBuilder;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import io.github.jmecn.minecraftwebexport.Constants;
 
 final class MetaBaker {
 

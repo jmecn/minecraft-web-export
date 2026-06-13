@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.emi.lang.UsedKeysCollector;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;

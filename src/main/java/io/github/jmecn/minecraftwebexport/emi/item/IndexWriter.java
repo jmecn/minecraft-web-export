@@ -1,7 +1,11 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
-import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
@@ -9,11 +13,8 @@ import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.emi.tag.ClosureExpander;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -37,7 +38,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class IndexWriter {
 
@@ -284,7 +284,7 @@ public final class IndexWriter {
                 detail.put("tagsInBundle", tagSets.intersection(exportedTagSets).asJsonMap());
             }
 
-            Files.writeString(itemFile, Json.GSON.toJson(detail));
+            JsonIO.write(itemFile, detail);
             if (ProgressLog.shouldLog(writeProgress, writeTotal, writeStride)) {
                 int pct = ProgressLog.percent(writeProgress, writeTotal);
                 MweMod.LOGGER.info(
@@ -305,9 +305,7 @@ public final class IndexWriter {
             root.put(Constants.FLUID_REGISTRY_IDS_KEY, new ArrayList<>(fluidRegistryIds));
         }
 
-        String json = Json.GSON.toJson(root);
-        Files.createDirectories(itemsIndexFile.getParent());
-        Files.writeString(itemsIndexFile, json);
+        JsonIO.write(itemsIndexFile, root);
         if (skippedHiddenItems > 0) {
             MweMod.LOGGER.info(
                     "{} item visibility: {} indexed, {} skipped (hidden_from_recipe_viewers)",
@@ -323,7 +321,8 @@ public final class IndexWriter {
                 outputRefs,
                 itemsIndexFile);
         int indexedCount = indexBuckets.values().stream().mapToInt(Set::size).sum();
-        return new ItemIndexResult(indexedCount, inputRefs, outputRefs, json.length());
+        long indexBytes = JsonIO.toUtf8Bytes(root).length;
+        return new ItemIndexResult(indexedCount, inputRefs, outputRefs, indexBytes);
     }
 
     private static void mergeSeedItemIds(Set<String> allItemIds, Set<String> seedItemIds) {

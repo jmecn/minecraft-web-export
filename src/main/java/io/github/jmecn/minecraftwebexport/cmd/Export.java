@@ -1,5 +1,7 @@
 package io.github.jmecn.minecraftwebexport.cmd;
+
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Orchestrator;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
 import io.github.jmecn.minecraftwebexport.model.emi.EmiExportReport;
@@ -8,8 +10,6 @@ import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import io.github.jmecn.minecraftwebexport.pipeline.Planner;
 import io.github.jmecn.minecraftwebexport.runtime.OutputPaths;
-
-import io.github.jmecn.minecraftwebexport.MweMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
@@ -27,12 +27,15 @@ public final class Export {
             Minecraft client = Minecraft.getInstance();
             if (!Readiness.isReadyForExport(client)) {
                 if (client.player == null || client.level == null || client.getSingleplayerServer() == null) {
-                    source.sendFailure(Component.literal(Constants.COMMAND_LOG_PREFIX + "需要在已加载的单人世界中执行"));
+                    source.sendFailure(Component.literal(
+                            Constants.COMMAND_LOG_PREFIX + "must run in a loaded singleplayer world"));
                 } else if (Readiness.isReloadFailed()) {
-                    source.sendFailure(Component.literal(Constants.COMMAND_LOG_PREFIX + "EMI 重载失败，无法导出"));
+                    source.sendFailure(Component.literal(
+                            Constants.COMMAND_LOG_PREFIX + "EMI reload failed; export unavailable"));
                 } else {
                     source.sendFailure(Component.literal(
-                            Constants.COMMAND_LOG_PREFIX + "EMI 未就绪 (status=" + Readiness.reloadStatusLabel() + ")"));
+                            Constants.COMMAND_LOG_PREFIX + "EMI not ready (status="
+                                    + Readiness.reloadStatusLabel() + ")"));
                 }
                 return 0;
             }
@@ -43,8 +46,8 @@ public final class Export {
             Plan plan = Planner.plan(client, Mode.FULL, List.of(), scope);
             EmiExportReport report = new Orchestrator().export(outputRoot, client, plan);
 
-            Component message = Component.literal(String.format(
-                    "%s已写入 %s (recipes=%d/%d, items=%d, tags=%d, langs=%d, icons=%d)",
+            String summary = String.format(
+                    "%swrote %s (recipes=%d/%d, items=%d, tags=%d, langs=%d, icons=%d)",
                     Constants.COMMAND_LOG_PREFIX,
                     report.outputRoot().toAbsolutePath(),
                     report.recipesWritten(),
@@ -52,16 +55,18 @@ public final class Export {
                     report.itemIndexCount(),
                     report.tagIndexCount(),
                     report.languagesWritten(),
-                    report.iconsWritten()));
-            source.sendSystemMessage(message);
-            MweMod.LOGGER.info(message.getString());
+                    report.iconsWritten());
+            source.sendSystemMessage(Component.literal(summary));
+            MweMod.LOGGER.info(summary);
             return 1;
         } catch (IOException e) {
-            source.sendFailure(Component.literal(Constants.COMMAND_LOG_PREFIX + "导出失败: " + e.getMessage()));
+            source.sendFailure(Component.literal(
+                    Constants.COMMAND_LOG_PREFIX + "export failed: " + e.getMessage()));
             MweMod.LOGGER.error(Constants.COMMAND_LOG_PREFIX + "export failed", e);
             return 0;
         } catch (Exception e) {
-            source.sendFailure(Component.literal(Constants.COMMAND_LOG_PREFIX + "导出失败: " + e.getMessage()));
+            source.sendFailure(Component.literal(
+                    Constants.COMMAND_LOG_PREFIX + "export failed: " + e.getMessage()));
             MweMod.LOGGER.error(Constants.COMMAND_LOG_PREFIX + "export failed", e);
             return 0;
         }

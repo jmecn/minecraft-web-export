@@ -1,22 +1,15 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.model.Json;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.LayoutBuildResult;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
-import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
-import io.github.jmecn.minecraftwebexport.emi.recipe.CardWriter;
-import io.github.jmecn.minecraftwebexport.emi.recipe.TextureWriter;
-import io.github.jmecn.minecraftwebexport.emi.recipe.WidgetSerializer;
-import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.api.widget.WidgetHolder;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.LayoutBuildResult;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -25,12 +18,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class LayoutBuilder {
 

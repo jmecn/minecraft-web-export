@@ -1,6 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.emi.lang.Merger;
-import io.github.jmecn.minecraftwebexport.emi.lang.VanillaSupplement;
 
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;

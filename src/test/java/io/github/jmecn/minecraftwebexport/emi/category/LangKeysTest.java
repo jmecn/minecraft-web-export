@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.category;
-import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
 
 import org.junit.jupiter.api.Test;
 

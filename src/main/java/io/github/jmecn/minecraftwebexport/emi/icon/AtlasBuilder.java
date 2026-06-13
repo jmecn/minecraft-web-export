@@ -1,9 +1,10 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.model.Json;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
-import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +14,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 final class AtlasBuilder implements AutoCloseable {
 
@@ -134,8 +134,8 @@ final class AtlasBuilder implements AutoCloseable {
         indexRoot.put("items", items);
 
         Path indexPath = outputDir.resolve("index.json");
-        String indexJson = Json.GSON.toJson(indexRoot);
-        Files.writeString(indexPath, indexJson);
+        JsonIO.write(indexPath, indexRoot);
+        long indexJsonBytes = JsonIO.toUtf8Bytes(indexRoot).length;
 
         Path cssPath = outputDir.resolve(cssFileName);
         String css = buildCss();
@@ -146,11 +146,11 @@ final class AtlasBuilder implements AutoCloseable {
                 Log.ICONS,
                 items.size(),
                 pages.size(),
-                indexJson.length(),
+                indexJsonBytes,
                 pngBytes,
                 css.length());
 
-        return new AtlasResult(items.size(), pages.size(), indexJson.length(), pngBytes, css.length());
+        return new AtlasResult(items.size(), pages.size(), indexJsonBytes, pngBytes, css.length());
     }
 
     @Override

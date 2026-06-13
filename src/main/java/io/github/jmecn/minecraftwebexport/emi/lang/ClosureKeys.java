@@ -1,6 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 

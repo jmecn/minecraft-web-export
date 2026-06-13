@@ -1,4 +1,8 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
+
+import dev.emi.emi.api.EmiApi;
+import dev.emi.emi.api.recipe.EmiRecipe;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ClosureResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
@@ -6,9 +10,6 @@ import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
-
-import dev.emi.emi.api.EmiApi;
-import dev.emi.emi.api.recipe.EmiRecipe;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 
@@ -16,7 +17,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Planner {
 

@@ -1,6 +1,4 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.emi.lang.GtceuLabels;
-import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 
 import java.util.HashMap;
 import java.util.List;
