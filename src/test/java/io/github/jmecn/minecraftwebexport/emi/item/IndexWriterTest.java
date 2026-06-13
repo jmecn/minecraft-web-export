@@ -1,4 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
+import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembers;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
 import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
@@ -56,13 +59,13 @@ class IndexWriterTest {
                         }
                         """));
 
-        IndexWriter.Result result = IndexWriter.export(tempDir, null, mods);
+        ItemIndexResult result = IndexWriter.export(tempDir, null, mods);
 
         assertEquals(3, result.itemCount());
         assertEquals(2, result.inputsIndexed());
         assertEquals(1, result.outputsIndexed());
 
-        Path itemsIndexFile = Paths.resolve(tempDir, Paths.ITEMS_INDEX_FILE);
+        Path itemsIndexFile = Paths.resolve(tempDir, Constants.ITEMS_INDEX_FILE);
         JsonObject json = JsonParser.parseString(Files.readString(itemsIndexFile)).getAsJsonObject();
         Path stickFile = Paths.resolve(tempDir, "items/minecraft/stick.json");
         Path pickaxeFile = Paths.resolve(tempDir, "items/minecraft/iron_pickaxe.json");
@@ -242,7 +245,7 @@ class IndexWriterTest {
                 Set.of("minecraft:oak_log"));
 
         Path oakFile = Paths.resolve(tempDir, "items/minecraft/oak_log.json");
-        Path itemsIndexFile = Paths.resolve(tempDir, Paths.ITEMS_INDEX_FILE);
+        Path itemsIndexFile = Paths.resolve(tempDir, Constants.ITEMS_INDEX_FILE);
         JsonObject index = JsonParser.parseString(Files.readString(itemsIndexFile)).getAsJsonObject();
 
         assertTrue(Files.exists(oakFile));

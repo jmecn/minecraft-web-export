@@ -1,17 +1,15 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRendererPool;
 import io.github.jmecn.minecraftwebexport.emi.lang.UsedKeysCollector;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
-import io.github.jmecn.minecraftwebexport.emi.recipe.CardPaths;
-import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutBuilder;
-import io.github.jmecn.minecraftwebexport.emi.recipe.MetaBaker;
-import io.github.jmecn.minecraftwebexport.emi.recipe.Resolver;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
-import io.github.jmecn.minecraftwebexport.pipeline.Mode;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.emi.emi.EmiRenderHelper;
 import dev.emi.emi.api.recipe.EmiRecipe;
@@ -27,29 +25,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class CardWriter {
-    private static final com.google.gson.Gson GSON = io.github.jmecn.minecraftwebexport.emi.bundle.Gson.GSON;
-    private static final String LOG_STRIDE_PROPERTY = "minecraftWebExport.recipeCardLogStride";
 
     private CardWriter() {
     }
 
-    public record Result(
-            int requested,
-            int written,
-            int missing,
-            int failures,
-            long pngBytes,
-            long metaBytes,
-            int imageScale,
-            Set<String> referencedItems,
-            Set<String> referencedFluids,
-            Set<String> referencedTags,
-            Map<String, net.minecraft.world.item.ItemStack> iconVariants,
-            Map<String, JsonObject> layoutsByRecipeId) {
-    }
 
     public static boolean isEnabled() {
         return LayoutBuilder.isEnabled();
@@ -59,7 +41,7 @@ public final class CardWriter {
         return LayoutBuilder.layoutScale();
     }
 
-    public static Result export(
+    public static CardWriteResult export(
             Path outputDir,
             Minecraft client,
             Set<String> recipeIds,
@@ -80,7 +62,7 @@ public final class CardWriter {
         long metaBytes = 0;
         int scale = imageScale();
         int total = recipeIds.size();
-        int logStride = ProgressLog.stride(total, LOG_STRIDE_PROPERTY, 20, 200);
+        int logStride = ProgressLog.stride(total, Constants.PROP_RECIPE_CARD_LOG_STRIDE, 20, 200);
         int progress = 0;
 
         try (OffScreenRendererPool rendererPool = new OffScreenRendererPool()) {
@@ -114,7 +96,7 @@ public final class CardWriter {
                     if (langKeys != null) {
                         langKeys.collectMeta(meta);
                     }
-                    String metaJson = GSON.toJson(meta);
+                    String metaJson = Json.GSON.toJson(meta);
                     metaBytes += metaJson.length();
 
                     Path metaFile = CardPaths.metaPath(outputDir, recipeId);
@@ -136,7 +118,7 @@ public final class CardWriter {
             }
         }
 
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "{} cards done: {}/{} written ({} png bytes, {} meta bytes), {} missing, {} skipped (visibility), {} failed",
                 Log.EMI,
                 written,
@@ -147,7 +129,7 @@ public final class CardWriter {
                 skippedVisibility,
                 failures);
 
-        return new Result(
+        return new CardWriteResult(
                 total,
                 written,
                 missing,
@@ -194,7 +176,7 @@ public final class CardWriter {
             int logStride) {
         if (ProgressLog.shouldLog(progress, total, logStride)) {
             int pct = ProgressLog.percent(progress, total);
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} cards {}% {}/{} - {} ok, {} missing, {} fail",
                     Log.EMI,
                     pct,

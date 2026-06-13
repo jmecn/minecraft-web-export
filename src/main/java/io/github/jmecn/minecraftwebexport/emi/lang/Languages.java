@@ -1,6 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
-import io.github.jmecn.minecraftwebexport.pipeline.Hints;
-
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -10,10 +10,9 @@ import java.util.stream.Collectors;
 
 public final class Languages {
 
-    public static final String DEFAULT_LANGUAGE = "en_us";
+    public static final String DEFAULT_LANGUAGE = Constants.DEFAULT_LANGUAGE;
 
-    private Languages() {
-    }
+    private Languages() {}
 
     public static Set<String> resolve(Hints hints) {
         Set<String> fromModules = fromHintLanguages(hints);
@@ -37,7 +36,7 @@ public final class Languages {
     }
 
     private static Set<String> resolveFromSystemProperty() {
-        String raw = System.getProperty("minecraftWebExport.exportLanguages", "").trim();
+        String raw = System.getProperty(Constants.PROP_EXPORT_LANGUAGES, "").trim();
         if (raw.isEmpty()) {
             return Set.of(DEFAULT_LANGUAGE);
         }

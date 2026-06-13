@@ -1,39 +1,30 @@
 package io.github.jmecn.minecraftwebexport.runtime;
 
+import io.github.jmecn.minecraftwebexport.Constants;
+
 public final class CiProperties {
-
-    public static final String RUN_EXPORT_AND_EXIT_PROPERTY = "minecraftWebExport.runExportAndExit";
-    public static final String EXPORT_TIMEOUT_SECONDS_PROPERTY = "minecraftWebExport.exportTimeoutSeconds";
-    public static final String EXPORT_WORLD_NAME_PROPERTY = "minecraftWebExport.exportWorldName";
-    public static final String EXPORT_WORLD_DELAY_TICKS_PROPERTY = "minecraftWebExport.exportWorldDelayTicks";
-    public static final String EXPORT_WARMUP_TICKS_PROPERTY = "minecraftWebExport.exportWarmupTicks";
-
-    private static final int DEFAULT_EXPORT_WARMUP_TICKS = 40;
-    private static final int DEFAULT_EXPORT_WORLD_DELAY_TICKS = 600;
-    private static final int DEFAULT_EXPORT_TIMEOUT_SECONDS = 7200;
-    private static final String DEFAULT_EXPORT_WORLD_NAME = "emi-export";
 
     private CiProperties() {}
 
     public static boolean runExportAndExit() {
-        return Boolean.getBoolean(RUN_EXPORT_AND_EXIT_PROPERTY);
+        return Boolean.getBoolean(Constants.PROP_RUN_EXPORT_AND_EXIT);
     }
 
     public static int exportWarmupTicks() {
-        return Math.max(0, Integer.getInteger(EXPORT_WARMUP_TICKS_PROPERTY, DEFAULT_EXPORT_WARMUP_TICKS));
+        return Math.max(0, Integer.getInteger(Constants.PROP_EXPORT_WARMUP_TICKS, Constants.CI_DEFAULT_EXPORT_WARMUP_TICKS));
     }
 
     public static int exportWorldDelayTicks() {
-        return Math.max(0, Integer.getInteger(EXPORT_WORLD_DELAY_TICKS_PROPERTY, DEFAULT_EXPORT_WORLD_DELAY_TICKS));
+        return Math.max(0, Integer.getInteger(Constants.PROP_EXPORT_WORLD_DELAY_TICKS, Constants.CI_DEFAULT_EXPORT_WORLD_DELAY_TICKS));
     }
 
     public static int exportTimeoutSeconds() {
-        return Integer.getInteger(EXPORT_TIMEOUT_SECONDS_PROPERTY, DEFAULT_EXPORT_TIMEOUT_SECONDS);
+        return Integer.getInteger(Constants.PROP_EXPORT_TIMEOUT_SECONDS, Constants.CI_DEFAULT_EXPORT_TIMEOUT_SECONDS);
     }
 
     public static String exportWorldName() {
-        String raw = System.getProperty(EXPORT_WORLD_NAME_PROPERTY, DEFAULT_EXPORT_WORLD_NAME).trim();
-        return raw.isEmpty() ? DEFAULT_EXPORT_WORLD_NAME : raw;
+        String raw = System.getProperty(Constants.PROP_EXPORT_WORLD_NAME, Constants.CI_DEFAULT_EXPORT_WORLD_NAME).trim();
+        return raw.isEmpty() ? Constants.CI_DEFAULT_EXPORT_WORLD_NAME : raw;
     }
 
     public static boolean timedOut(long startNanos) {

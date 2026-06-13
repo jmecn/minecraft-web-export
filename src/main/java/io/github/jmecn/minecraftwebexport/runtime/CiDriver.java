@@ -1,9 +1,10 @@
 package io.github.jmecn.minecraftwebexport.runtime;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
 import io.github.jmecn.minecraftwebexport.pipeline.Coordinator;
-import io.github.jmecn.minecraftwebexport.pipeline.Result;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LoadingOverlay;
 import net.minecraftforge.common.MinecraftForge;
@@ -13,8 +14,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import java.nio.file.Path;
 
 public final class CiDriver {
-
-    private static final int HEARTBEAT_TICKS = 200;
 
     private final Path gameDirectory;
     private final String outputRootOverride;
@@ -31,7 +30,7 @@ public final class CiDriver {
     }
 
     public void register() {
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "mode=runExportAndExit, world={}, output={}, warmupTicks={}, timeoutSeconds={}",
                 WorldCreator.saveName(),
                 OutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir(),
@@ -73,9 +72,9 @@ public final class CiDriver {
             if (!newState.equals(state)) {
                 state = newState;
                 sameStateTicks = 0;
-                MinecraftWebExportMod.LOGGER.info(newState);
-            } else if (++sameStateTicks % HEARTBEAT_TICKS == 0) {
-                MinecraftWebExportMod.LOGGER.info("{} (still waiting, {} ticks)", newState, sameStateTicks);
+                MweMod.LOGGER.info(newState);
+            } else if (++sameStateTicks % Constants.HEARTBEAT_TICKS == 0) {
+                MweMod.LOGGER.info("{} (still waiting, {} ticks)", newState, sameStateTicks);
             }
         }
     }
@@ -107,7 +106,7 @@ public final class CiDriver {
             if (event.phase != TickEvent.Phase.END || phase == Phase.DONE) {
                 return;
             }
-            if (!Boolean.getBoolean(ExportProperties.ENABLE_PROPERTY)) {
+            if (!Boolean.getBoolean(Constants.PROP_EXPORT_ENABLED)) {
                 return;
             }
 
@@ -116,14 +115,14 @@ public final class CiDriver {
             if (phase == Phase.ARMED) {
                 startNanos = System.nanoTime();
                 phase = Phase.WORLD_OPENING;
-                MinecraftWebExportMod.LOGGER.info(
+                MweMod.LOGGER.info(
                         "runExportAndExit: armed (timeout={}s), waiting for idle menu...",
                         CiProperties.exportTimeoutSeconds());
             }
 
             if (isFatalMenuScreen(client)) {
                 phase = Phase.DONE;
-                MinecraftWebExportMod.LOGGER.error(
+                MweMod.LOGGER.error(
                         "fatal menu screen ({}); aborting export",
                         client.screen.getClass().getName());
                 System.exit(1);
@@ -133,7 +132,7 @@ public final class CiDriver {
                 String phaseAtTimeout = phase.name();
                 phase = Phase.DONE;
                 String screen = client.screen == null ? "null" : client.screen.getClass().getName();
-                MinecraftWebExportMod.LOGGER.error(
+                MweMod.LOGGER.error(
                         "export timed out after {}s (phase={}, player={}, level={}, screen={})",
                         CiProperties.exportTimeoutSeconds(),
                         phaseAtTimeout,
@@ -155,7 +154,7 @@ public final class CiDriver {
             if (client.player != null && client.level != null) {
                 phase = Phase.WARMUP;
                 warmupTicks = 0;
-                MinecraftWebExportMod.LOGGER.info(
+                MweMod.LOGGER.info(
                         "player + level present (player={}, dim={}), warming up {} ticks",
                         client.player.getName().getString(),
                         client.level.dimension().location(),
@@ -180,9 +179,9 @@ public final class CiDriver {
                 int delayTarget = reuseSave ? 0 : CiProperties.exportWorldDelayTicks();
                 if (delayTarget > 0 && worldDelayTicks < delayTarget) {
                     worldDelayTicks++;
-                    if (worldDelayTicks == 1 || worldDelayTicks % HEARTBEAT_TICKS == 0
+                    if (worldDelayTicks == 1 || worldDelayTicks % Constants.HEARTBEAT_TICKS == 0
                             || worldDelayTicks == delayTarget) {
-                        MinecraftWebExportMod.LOGGER.info(
+                        MweMod.LOGGER.info(
                                 "world create delay {}/{} ticks (screen={})",
                                 worldDelayTicks,
                                 delayTarget,
@@ -192,12 +191,12 @@ public final class CiDriver {
                 }
                 worldRequestSent = true;
                 if (reuseSave) {
-                    MinecraftWebExportMod.LOGGER.info(
+                    MweMod.LOGGER.info(
                             "save '{}' exists, opening cached world",
                             WorldCreator.saveName());
                     WorldCreator.openExisting(client);
                 } else {
-                    MinecraftWebExportMod.LOGGER.info(
+                    MweMod.LOGGER.info(
                             "save '{}' missing, creating void world",
                             WorldCreator.saveName());
                     WorldCreator.createAndLoad(client);
@@ -219,12 +218,12 @@ public final class CiDriver {
 
             if (Readiness.isReloadFailed()) {
                 phase = Phase.DONE;
-                MinecraftWebExportMod.LOGGER.error("EMI reload failed (status=-1); aborting export");
+                MweMod.LOGGER.error("EMI reload failed (status=-1); aborting export");
                 System.exit(1);
                 return;
             }
             if (!isEmiReady(client)) {
-                if (warmupTicks % HEARTBEAT_TICKS == 0) {
+                if (warmupTicks % Constants.HEARTBEAT_TICKS == 0) {
                     stateLog.tick("waiting: EMI not ready (status=" + Readiness.reloadStatusLabel() + ")");
                 }
                 warmupTicks = 0;
@@ -233,8 +232,8 @@ public final class CiDriver {
 
             if (warmupTicks < CiProperties.exportWarmupTicks()) {
                 warmupTicks++;
-                if (warmupTicks % HEARTBEAT_TICKS == 0 || warmupTicks == CiProperties.exportWarmupTicks()) {
-                    MinecraftWebExportMod.LOGGER.info(
+                if (warmupTicks % Constants.HEARTBEAT_TICKS == 0 || warmupTicks == CiProperties.exportWarmupTicks()) {
+                    MweMod.LOGGER.info(
                             "warmup {}/{}",
                             warmupTicks,
                             CiProperties.exportWarmupTicks());
@@ -244,10 +243,10 @@ public final class CiDriver {
 
             phase = Phase.DONE;
             Path outputRoot = OutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir();
-            MinecraftWebExportMod.LOGGER.info("running EMI export to {} ...", outputRoot.toAbsolutePath());
+            MweMod.LOGGER.info("running EMI export to {} ...", outputRoot.toAbsolutePath());
             try {
-                Result result = coordinator.run(outputRoot, gameDirectory, client);
-                MinecraftWebExportMod.LOGGER.info(
+                ExportResult result = coordinator.run(outputRoot, gameDirectory, client);
+                MweMod.LOGGER.info(
                         "EMI export finished (recipes={}/{}, items={}, tags={}, langs={}, icons={}), exiting 0",
                         result.recipesWritten(),
                         result.recipesRequested(),
@@ -257,7 +256,7 @@ public final class CiDriver {
                         result.iconsWritten());
                 System.exit(0);
             } catch (Exception e) {
-                MinecraftWebExportMod.LOGGER.error("EMI export failed for {}", outputRoot.toAbsolutePath(), e);
+                MweMod.LOGGER.error("EMI export failed for {}", outputRoot.toAbsolutePath(), e);
                 System.exit(1);
             }
         }

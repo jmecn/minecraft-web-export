@@ -1,12 +1,13 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.model.emi.item.SearchIndexResult;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.item.NameKeysWriter;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
 import io.github.jmecn.minecraftwebexport.emi.lang.SearchPinyin;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -24,64 +25,57 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class SearchIndexWriter {
-
-    public static final String FLUID_REGISTRY_IDS_KEY = "fluidRegistryIds";
-    private static final com.google.gson.Gson GSON = io.github.jmecn.minecraftwebexport.emi.bundle.Gson.GSON;
-    private static final int PROGRESS_EVERY = 5000;
 
     private SearchIndexWriter() {
     }
 
-    public record Result(int localeCount, int itemCount, List<String> locales) {
-        public static final Result EMPTY = new Result(0, 0, List.of());
-    }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean("minecraftWebExport.skipItemsSearchExport");
+        return !Boolean.getBoolean(Constants.PROP_SKIP_ITEMS_SEARCH_EXPORT);
     }
 
-    public static Result export(Path outputDir, List<String> languages) throws IOException {
+    public static SearchIndexResult export(Path outputDir, List<String> languages) throws IOException {
         return export(outputDir, languages, false);
     }
 
-    public static Result export(Path outputDir, List<String> languages, boolean readComposeLang) throws IOException {
+    public static SearchIndexResult export(Path outputDir, List<String> languages, boolean readComposeLang) throws IOException {
         Path bundleRoot = Paths.resolve(outputDir, "");
         List<String> itemIds = readItemIds(bundleRoot);
         Set<String> fluidRegistryIds = readFluidRegistryIds(bundleRoot);
         List<String> locales = resolveLocales(bundleRoot, languages);
         if (itemIds.isEmpty() || locales.isEmpty()) {
-            MinecraftWebExportMod.LOGGER.warn(
+            MweMod.LOGGER.warn(
                     "{} skipped: {} items, {} locales",
                     Log.ITEMS_LANG,
                     itemIds.size(),
                     locales.size());
-            return new Result(0, itemIds.size(), List.of());
+            return new SearchIndexResult(0, itemIds.size(), List.of());
         }
 
-        Path searchRoot = bundleRoot.resolve(Paths.ITEMS_LANG_DIR);
+        Path searchRoot = bundleRoot.resolve(Constants.ITEMS_LANG_DIR);
         Files.createDirectories(searchRoot);
 
-        Map<String, String> enUs = readLangTable(bundleRoot, Paths.DEFAULT_LANGUAGE, readComposeLang);
+        Map<String, String> enUs = readLangTable(bundleRoot, Constants.DEFAULT_LANGUAGE, readComposeLang);
         Map<String, String> nameKeysByRegistryId = NameKeysWriter.readNameKeys(outputDir);
         List<String> writtenLocales = new ArrayList<>();
 
         for (String locale : locales) {
             String normalized = normalizeLocale(locale);
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} {}: building {} items ...",
                     Log.ITEMS_LANG,
                     normalized,
                     itemIds.size());
             long startedAt = System.currentTimeMillis();
             Map<String, String> current = readLangTable(bundleRoot, normalized, readComposeLang);
-            Map<String, String> fallback = Paths.DEFAULT_LANGUAGE.equals(normalized)
+            Map<String, String> fallback = Constants.DEFAULT_LANGUAGE.equals(normalized)
                     ? Map.of()
                     : enUs;
             RegistryResolver currentResolver = new RegistryResolver(current, fallback, nameKeysByRegistryId);
-            RegistryResolver enResolver = isChineseLocale(normalized) && !Paths.DEFAULT_LANGUAGE.equals(normalized)
+            RegistryResolver enResolver = isChineseLocale(normalized) && !Constants.DEFAULT_LANGUAGE.equals(normalized)
                     ? new RegistryResolver(enUs, Map.of(), nameKeysByRegistryId)
                     : null;
 
@@ -98,8 +92,8 @@ public final class SearchIndexWriter {
                         buildHaystack(id, kind, normalized, currentResolver, enResolver));
                 items.add(row);
                 int n = i + 1;
-                if (n % PROGRESS_EVERY == 0) {
-                    MinecraftWebExportMod.LOGGER.info(
+                if (n % Constants.SEARCH_INDEX_PROGRESS_EVERY == 0) {
+                    MweMod.LOGGER.info(
                             "{} {}: {}/{} ({} ms)",
                             Log.ITEMS_LANG,
                             normalized,
@@ -108,7 +102,7 @@ public final class SearchIndexWriter {
                             System.currentTimeMillis() - startedAt);
                 }
             }
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} {}: {} done ({} ms)",
                     Log.ITEMS_LANG,
                     normalized,
@@ -122,22 +116,22 @@ public final class SearchIndexWriter {
             payload.add("items", items);
 
             Path out = searchRoot.resolve(normalized + ".json");
-            MinecraftWebExportMod.LOGGER.info("{} {}: writing {} ...", Log.ITEMS_LANG, normalized, out);
-            Files.writeString(out, GSON.toJson(payload) + "\n", StandardCharsets.UTF_8);
+            MweMod.LOGGER.info("{} {}: writing {} ...", Log.ITEMS_LANG, normalized, out);
+            Files.writeString(out, Json.GSON.toJson(payload) + "\n", StandardCharsets.UTF_8);
             writtenLocales.add(normalized);
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} {}: {} items",
                     Log.ITEMS_LANG,
                     normalized,
                     itemIds.size());
         }
 
-        return new Result(writtenLocales.size(), itemIds.size(), List.copyOf(writtenLocales));
+        return new SearchIndexResult(writtenLocales.size(), itemIds.size(), List.copyOf(writtenLocales));
     }
 
     static String normalizeLocale(String locale) {
         if (locale == null || locale.isBlank()) {
-            return Paths.DEFAULT_LANGUAGE;
+            return Constants.DEFAULT_LANGUAGE;
         }
         return locale.trim().toLowerCase(Locale.ROOT).replace('-', '_');
     }
@@ -226,16 +220,16 @@ public final class SearchIndexWriter {
     }
 
     public static Set<String> readFluidRegistryIds(Path bundleRoot) throws IOException {
-        Path indexPath = bundleRoot.resolve(Paths.ITEMS_INDEX_FILE);
+        Path indexPath = bundleRoot.resolve(Constants.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {
             return Set.of();
         }
         JsonObject index = JsonParser.parseString(Files.readString(indexPath)).getAsJsonObject();
-        if (!index.has(FLUID_REGISTRY_IDS_KEY) || !index.get(FLUID_REGISTRY_IDS_KEY).isJsonArray()) {
+        if (!index.has(Constants.FLUID_REGISTRY_IDS_KEY) || !index.get(Constants.FLUID_REGISTRY_IDS_KEY).isJsonArray()) {
             return Set.of();
         }
         Set<String> ids = new TreeSet<>();
-        for (JsonElement element : index.getAsJsonArray(FLUID_REGISTRY_IDS_KEY)) {
+        for (JsonElement element : index.getAsJsonArray(Constants.FLUID_REGISTRY_IDS_KEY)) {
             if (element.isJsonPrimitive()) {
                 String id = element.getAsString();
                 if (id != null && !id.isEmpty()) {
@@ -251,7 +245,7 @@ public final class SearchIndexWriter {
     }
 
     public static Set<String> readIndexedItemIds(Path bundleRoot) throws IOException {
-        Path indexPath = bundleRoot.resolve(Paths.ITEMS_INDEX_FILE);
+        Path indexPath = bundleRoot.resolve(Constants.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {
             return Set.of();
         }
@@ -260,7 +254,7 @@ public final class SearchIndexWriter {
         for (Map.Entry<String, JsonElement> entry : index.entrySet()) {
             String key = entry.getKey();
             if ("schema".equals(key)
-                    || FLUID_REGISTRY_IDS_KEY.equals(key)
+                    || Constants.FLUID_REGISTRY_IDS_KEY.equals(key)
                     || !entry.getValue().isJsonArray()) {
                 continue;
             }
@@ -283,9 +277,9 @@ public final class SearchIndexWriter {
         if (languages != null && !languages.isEmpty()) {
             return languages.stream().map(SearchIndexWriter::normalizeLocale).distinct().sorted().toList();
         }
-        Path langDir = bundleRoot.resolve(Paths.LANG_DIR);
+        Path langDir = bundleRoot.resolve(Constants.LANG_DIR);
         if (!Files.isDirectory(langDir)) {
-            return List.of(Paths.DEFAULT_LANGUAGE);
+            return List.of(Constants.DEFAULT_LANGUAGE);
         }
         try (var stream = Files.list(langDir)) {
             return stream
@@ -299,7 +293,7 @@ public final class SearchIndexWriter {
     }
 
     private static Map<String, String> readLangTable(Path bundleRoot, String locale, boolean composeLang) throws IOException {
-        String dir = composeLang ? Paths.COMPOSE_LANG_DIR : Paths.LANG_DIR;
+        String dir = composeLang ? Constants.COMPOSE_LANG_DIR : Constants.LANG_DIR;
         Path langPath = bundleRoot.resolve(dir).resolve(locale + ".json");
         if (!Files.isRegularFile(langPath)) {
             return Map.of();

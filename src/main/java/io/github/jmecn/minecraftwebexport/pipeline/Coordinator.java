@@ -1,13 +1,11 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Orchestrator;
-import io.github.jmecn.minecraftwebexport.pipeline.Mode;
-import io.github.jmecn.minecraftwebexport.pipeline.Module;
-import io.github.jmecn.minecraftwebexport.pipeline.ModuleRegistry;
-import io.github.jmecn.minecraftwebexport.pipeline.Plan;
-import io.github.jmecn.minecraftwebexport.pipeline.Planner;
-import io.github.jmecn.minecraftwebexport.pipeline.Result;
-import io.github.jmecn.minecraftwebexport.pipeline.Scope;
-import io.github.jmecn.minecraftwebexport.pipeline.Seeds;
+import io.github.jmecn.minecraftwebexport.model.emi.EmiExportReport;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
 
 import net.minecraft.client.Minecraft;
 
@@ -15,7 +13,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Coordinator {
 
@@ -29,7 +27,7 @@ public final class Coordinator {
         this.emiOrchestrator = Objects.requireNonNull(emiOrchestrator, "emiOrchestrator");
     }
 
-    public Result run(Path outputRoot, Path gameDirectory, Minecraft client) throws IOException {
+    public ExportResult run(Path outputRoot, Path gameDirectory, Minecraft client) throws IOException {
         Objects.requireNonNull(outputRoot, "outputRoot");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(client, "client");
@@ -46,14 +44,14 @@ public final class Coordinator {
         Seeds mergedSeeds = plan.mode() == Mode.FULL ? Seeds.empty() : plan.sourceSeeds();
 
         if (plan.mode() == Mode.SCOPED) {
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "[export] scoped export via modules {} (recipes={})",
                     modules.stream().map(Module::moduleId).toList(),
                     plan.recipeIds().size());
         }
 
-        Orchestrator.Report emiReport = emiOrchestrator.export(outputRoot, client, plan);
-        Result result = Result.from(scope, plan, emiReport, mergedSeeds, modules);
+        EmiExportReport emiReport = emiOrchestrator.export(outputRoot, client, plan);
+        ExportResult result = ExportResult.from(scope, plan, emiReport, mergedSeeds, modules);
 
         for (Module module : modules) {
             module.exportExtras(scope, result);

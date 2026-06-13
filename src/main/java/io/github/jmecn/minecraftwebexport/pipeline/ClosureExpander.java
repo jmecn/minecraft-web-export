@@ -1,4 +1,7 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
+import io.github.jmecn.minecraftwebexport.model.emi.tag.TagExpansion;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ClosureResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
 
 import net.minecraft.server.MinecraftServer;
 
@@ -17,7 +20,7 @@ final class ClosureExpander {
         Set<String> blocks = new TreeSet<>(seeds.blockIds());
 
         if (server != null && !seeds.tagIds().isEmpty()) {
-            io.github.jmecn.minecraftwebexport.emi.tag.ClosureExpander.Expansion expansion =
+            TagExpansion expansion =
                     io.github.jmecn.minecraftwebexport.emi.tag.ClosureExpander.expand(server, seeds.tagIds());
             items.addAll(expansion.items());
             fluids.addAll(expansion.fluids());
@@ -31,13 +34,5 @@ final class ClosureExpander {
                 Set.copyOf(fluids),
                 Set.copyOf(tags),
                 Set.copyOf(seeds.langKeys()));
-    }
-
-    record ClosureResult(
-            Set<String> itemIds,
-            Set<String> blockIds,
-            Set<String> fluidIds,
-            Set<String> tagIds,
-            Set<String> langKeys) {
     }
 }

@@ -1,4 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.PackRef;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -8,11 +10,7 @@ import java.util.TreeMap;
 
 public final class BundleMods {
 
-    public record PackRef(String file, long bytes) {
-    }
 
-    public record ModEntry(List<String> routes, List<PackRef> packs) {
-    }
 
     private final Map<String, ModEntry> mods;
 

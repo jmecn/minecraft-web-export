@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.recipe.CardPaths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutBuilder;
 
@@ -14,7 +15,7 @@ final class MetaBaker {
 
     static JsonObject bake(JsonObject layout) {
         JsonObject meta = new JsonObject();
-        meta.addProperty("schema", CardPaths.META_SCHEMA);
+        meta.addProperty("schema", Constants.RECIPE_META_SCHEMA);
 
         JsonObject panel = layout.getAsJsonObject("panel");
         int width = panel != null && panel.has("width") ? panel.get("width").getAsInt() : 1;

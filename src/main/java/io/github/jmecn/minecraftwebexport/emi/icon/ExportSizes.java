@@ -1,40 +1,37 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
 
+import io.github.jmecn.minecraftwebexport.Constants;
+
 public final class ExportSizes {
 
-    private static final int DEFAULT_ICON = 32;
-    private static final int DEFAULT_CATEGORY_ICON = 32;
-    private static final int DEFAULT_ATLAS_MAX = 2048;
-
-    private ExportSizes() {
-    }
+    private ExportSizes() {}
 
     public static int iconCellSize() {
-        Integer unified = Integer.getInteger("minecraftWebExport.iconSize");
+        Integer unified = Integer.getInteger(Constants.PROP_ICON_SIZE);
         if (unified != null) {
-            return boundedSize(unified, "minecraftWebExport.iconSize");
+            return boundedSize(unified, Constants.PROP_ICON_SIZE);
         }
-        if (System.getProperty("minecraftWebExport.itemIconSize") != null) {
-            return boundedSize(Integer.getInteger("minecraftWebExport.itemIconSize"), "minecraftWebExport.itemIconSize");
+        if (System.getProperty(Constants.PROP_ITEM_ICON_SIZE) != null) {
+            return boundedSize(Integer.getInteger(Constants.PROP_ITEM_ICON_SIZE), Constants.PROP_ITEM_ICON_SIZE);
         }
-        if (System.getProperty("minecraftWebExport.blockItemIconSize") != null) {
-            return boundedSize(Integer.getInteger("minecraftWebExport.blockItemIconSize"), "minecraftWebExport.blockItemIconSize");
+        if (System.getProperty(Constants.PROP_BLOCK_ITEM_ICON_SIZE) != null) {
+            return boundedSize(Integer.getInteger(Constants.PROP_BLOCK_ITEM_ICON_SIZE), Constants.PROP_BLOCK_ITEM_ICON_SIZE);
         }
-        if (System.getProperty("minecraftWebExport.fluidIconSize") != null) {
-            return boundedSize(Integer.getInteger("minecraftWebExport.fluidIconSize"), "minecraftWebExport.fluidIconSize");
+        if (System.getProperty(Constants.PROP_FLUID_ICON_SIZE) != null) {
+            return boundedSize(Integer.getInteger(Constants.PROP_FLUID_ICON_SIZE), Constants.PROP_FLUID_ICON_SIZE);
         }
-        return DEFAULT_ICON;
+        return Constants.DEFAULT_ICON_SIZE;
     }
 
     public static int categoryIconCellSize() {
-        int size = Integer.getInteger("minecraftWebExport.categoryIconSize", DEFAULT_CATEGORY_ICON);
-        return boundedSize(size, "minecraftWebExport.categoryIconSize");
+        int size = Integer.getInteger(Constants.PROP_CATEGORY_ICON_SIZE, Constants.DEFAULT_CATEGORY_ICON_SIZE);
+        return boundedSize(size, Constants.PROP_CATEGORY_ICON_SIZE);
     }
 
     public static int atlasMaxSize() {
-        int size = Integer.getInteger("minecraftWebExport.itemIconAtlasMaxSize", DEFAULT_ATLAS_MAX);
+        int size = Integer.getInteger(Constants.PROP_ITEM_ICON_ATLAS_MAX_SIZE, Constants.DEFAULT_ATLAS_MAX_SIZE);
         if (size < 256 || size > 8192) {
-            throw new IllegalArgumentException("minecraftWebExport.itemIconAtlasMaxSize must be 256..8192, got " + size);
+            throw new IllegalArgumentException(Constants.PROP_ITEM_ICON_ATLAS_MAX_SIZE + " must be 256..8192, got " + size);
         }
         return size;
     }

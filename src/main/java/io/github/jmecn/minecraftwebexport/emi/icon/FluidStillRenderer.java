@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -16,8 +17,6 @@ import net.minecraftforge.fluids.FluidStack;
 import java.util.List;
 
 public final class FluidStillRenderer {
-
-    private static final int GUI_SIZE = 16;
 
     private FluidStillRenderer() {
     }
@@ -58,7 +57,7 @@ public final class FluidStillRenderer {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.setShaderColor(fr, fg, fb, fa);
-            guiGraphics.blit(0, 0, 0, GUI_SIZE, GUI_SIZE, sprite);
+            guiGraphics.blit(0, 0, 0, Constants.FLUID_GUI_SIZE, Constants.FLUID_GUI_SIZE, sprite);
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         };
         renderer.captureAsPng(draw);

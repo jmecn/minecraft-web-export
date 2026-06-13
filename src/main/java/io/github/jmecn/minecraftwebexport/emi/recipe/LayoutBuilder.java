@@ -1,12 +1,17 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.LayoutBuildResult;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
 import io.github.jmecn.minecraftwebexport.emi.recipe.CardWriter;
-import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutPaths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.TextureWriter;
 import io.github.jmecn.minecraftwebexport.emi.recipe.WidgetSerializer;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.emi.emi.api.recipe.EmiRecipe;
@@ -28,45 +33,24 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class LayoutBuilder {
-    private static final com.google.gson.Gson GSON = io.github.jmecn.minecraftwebexport.emi.bundle.Gson.GSON;
-
-    private static final int PANEL_MARGIN = 4;
-    private static final String LAYOUT_LOG_STRIDE_PROPERTY = "minecraftWebExport.layoutLogStride";
 
     private LayoutBuilder() {
     }
 
     static int panelMargin() {
-        return PANEL_MARGIN;
+        return Constants.PANEL_MARGIN;
     }
 
     static int progressLogStride(int total) {
-        return ProgressLog.stride(total, LAYOUT_LOG_STRIDE_PROPERTY, 20, 200);
+        return ProgressLog.stride(total, Constants.PROP_LAYOUT_LOG_STRIDE, 20, 200);
     }
 
-    public record Result(
-            int requested,
-            int written,
-            int missing,
-            int failures,
-            int chromeLayers,
-            int chromeDeduped,
-            int uniqueChromeFiles,
-            long jsonBytes,
-            long chromeBytes,
-            Set<String> referencedItems,
-            Set<String> referencedFluids,
-            Set<String> referencedTags,
-            Map<String, ItemStack> iconVariants,
-            TextureWriter.Result textures,
-            BundleMods mods) {
-    }
 
     public static boolean isEnabled() {
-        if (Boolean.getBoolean("minecraftWebExport.skipEmiLayoutExport")) {
+        if (Boolean.getBoolean(Constants.PROP_SKIP_EMI_LAYOUT_EXPORT)) {
             return false;
         }
-        String prop = System.getProperty("minecraftWebExport.exportEmiLayout");
+        String prop = System.getProperty(Constants.PROP_EXPORT_EMI_LAYOUT);
         if (prop != null) {
             return !"false".equalsIgnoreCase(prop);
         }
@@ -74,12 +58,12 @@ public final class LayoutBuilder {
     }
 
     public static int layoutScale() {
-        return Math.max(1, Integer.getInteger("minecraftWebExport.recipeLayoutScale", 2));
+        return Math.max(1, Integer.getInteger(Constants.PROP_RECIPE_LAYOUT_SCALE, Constants.DEFAULT_RECIPE_LAYOUT_SCALE));
     }
 
-    public static Result export(Path outputDir, Minecraft client, Set<String> recipeIds) throws IOException {
-        CardWriter.Result cards = CardWriter.export(outputDir, client, recipeIds, null);
-        return new Result(
+    public static LayoutBuildResult export(Path outputDir, Minecraft client, Set<String> recipeIds) throws IOException {
+        CardWriteResult cards = CardWriter.export(outputDir, client, recipeIds, null);
+        return new LayoutBuildResult(
                 cards.requested(),
                 cards.written(),
                 cards.missing(),
@@ -93,7 +77,7 @@ public final class LayoutBuilder {
                 cards.referencedFluids(),
                 cards.referencedTags(),
                 cards.iconVariants(),
-                new TextureWriter.Result(0, 0, 0, 0),
+                new TextureWriteResult(0, 0, 0, 0),
                 BundleMods.empty());
     }
 
@@ -175,12 +159,12 @@ public final class LayoutBuilder {
         JsonObject panel = new JsonObject();
         panel.addProperty("width", displayWidth);
         panel.addProperty("height", displayHeight);
-        panel.addProperty("margin", PANEL_MARGIN);
-        panel.addProperty("frameWidth", displayWidth + PANEL_MARGIN * 2);
-        panel.addProperty("frameHeight", displayHeight + PANEL_MARGIN * 2);
+        panel.addProperty("margin", Constants.PANEL_MARGIN);
+        panel.addProperty("frameWidth", displayWidth + Constants.PANEL_MARGIN * 2);
+        panel.addProperty("frameHeight", displayHeight + Constants.PANEL_MARGIN * 2);
 
         JsonObject root = new JsonObject();
-        root.addProperty("schema", LayoutPaths.SCHEMA_VERSION);
+        root.addProperty("schema", Constants.LAYOUT_PACK_SCHEMA);
         root.addProperty("id", recipeId);
         root.addProperty("scale", layoutScale());
         root.add("panel", panel);

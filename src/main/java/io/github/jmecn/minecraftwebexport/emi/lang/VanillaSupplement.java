@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 final class VanillaSupplement {
 
@@ -55,14 +55,14 @@ final class VanillaSupplement {
 
         if (!missing.isEmpty()) {
             String sample = missing.stream().limit(5).reduce((a, b) -> a + ", " + b).orElse("");
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} {} - {} minecraft registry lang keys still missing after vanilla supplement (e.g. {})",
                     Log.LANG,
                     langCode,
                     missing.size(),
                     sample);
         } else if (added > 0) {
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} {} - supplemented {} minecraft registry lang keys from vanilla pack",
                     Log.LANG,
                     langCode,

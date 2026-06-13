@@ -6,7 +6,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Optional;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 final class GtMaterialFacts {
 
@@ -97,7 +97,7 @@ final class GtMaterialFacts {
             }
             return Optional.of(material);
         } catch (ReflectiveOperationException e) {
-            MinecraftWebExportMod.LOGGER.debug("{} material lookup failed for {}: {}", Log.ITEMS_LANG, key, e.toString());
+            MweMod.LOGGER.debug("{} material lookup failed for {}: {}", Log.ITEMS_LANG, key, e.toString());
             return Optional.empty();
         }
     }
@@ -138,7 +138,7 @@ final class GtMaterialFacts {
             String key = (String) FLUID_STORAGE_KEY_GET_TRANSLATION.invoke(fluidKey, material);
             return key == null || key.isEmpty() ? Optional.empty() : Optional.of(key);
         } catch (ReflectiveOperationException e) {
-            MinecraftWebExportMod.LOGGER.debug(
+            MweMod.LOGGER.debug(
                     "{} fluid template for {} {}: {}",
                     Log.ITEMS_LANG,
                     namespace,
@@ -179,7 +179,7 @@ final class GtMaterialFacts {
             Class.forName(MANAGER_CLASS, false, GtMaterialFacts.class.getClassLoader());
             return true;
         } catch (ClassNotFoundException e) {
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} GregTech not on classpath — label export uses lang-only fallbacks (expected in unit tests)",
                     Log.ITEMS_LANG);
             return false;

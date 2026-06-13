@@ -1,5 +1,4 @@
 package io.github.jmecn.minecraftwebexport.runtime;
-import io.github.jmecn.minecraftwebexport.runtime.CiProperties;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.RegistryAccess;
@@ -17,7 +16,7 @@ import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorPresets;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class WorldCreator {
 
@@ -31,18 +30,18 @@ public final class WorldCreator {
         try {
             return mc.getLevelSource().levelExists(saveName());
         } catch (Exception e) {
-            MinecraftWebExportMod.LOGGER.warn("levelExists({}) threw; assuming missing", saveName(), e);
+            MweMod.LOGGER.warn("levelExists({}) threw; assuming missing", saveName(), e);
             return false;
         }
     }
 
     public static void openExisting(Minecraft mc) {
-        MinecraftWebExportMod.LOGGER.info("opening existing world '{}'", saveName());
+        MweMod.LOGGER.info("opening existing world '{}'", saveName());
         mc.createWorldOpenFlows().loadLevel(mc.screen, saveName());
     }
 
     public static void createAndLoad(Minecraft mc) {
-        MinecraftWebExportMod.LOGGER.info("creating fresh void creative world '{}' (seed=0, peaceful, cheats=on)", saveName());
+        MweMod.LOGGER.info("creating fresh void creative world '{}' (seed=0, peaceful, cheats=on)", saveName());
 
         GameRules rules = buildHeadlessGameRules();
 

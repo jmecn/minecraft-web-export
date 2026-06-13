@@ -1,8 +1,5 @@
-package io.github.jmecn.minecraftwebexport.pipeline;
+package io.github.jmecn.minecraftwebexport.model.pipeline;
 import io.github.jmecn.minecraftwebexport.emi.lang.ClosureKeys;
-import io.github.jmecn.minecraftwebexport.pipeline.Hints;
-import io.github.jmecn.minecraftwebexport.pipeline.Mode;
-import io.github.jmecn.minecraftwebexport.pipeline.Seeds;
 
 
 import java.util.Objects;

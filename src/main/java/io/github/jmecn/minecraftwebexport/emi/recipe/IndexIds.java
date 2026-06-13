@@ -1,4 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
 import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutLookup;
@@ -29,7 +31,7 @@ public final class IndexIds {
             return Collections.emptyList();
         }
         List<String> ids = new ArrayList<>();
-        for (Map.Entry<String, BundleMods.ModEntry> entry : mods.mods().entrySet()) {
+        for (Map.Entry<String, ModEntry> entry : mods.mods().entrySet()) {
             String namespace = entry.getKey();
             for (String routeFile : entry.getValue().routes()) {
                 ids.addAll(readRouteShardPaths(outputDir, namespace, routeFile));
@@ -46,7 +48,7 @@ public final class IndexIds {
             throws IOException {
         Path routePath = Paths.resolve(
                 outputDir,
-                Paths.RECIPES_ROUTES_DIR + "/" + namespace + "/" + routeFile + ".json");
+                Constants.RECIPES_ROUTES_DIR + "/" + namespace + "/" + routeFile + ".json");
         if (!Files.isRegularFile(routePath)) {
             throw new IOException("missing route shard file: " + routePath);
         }

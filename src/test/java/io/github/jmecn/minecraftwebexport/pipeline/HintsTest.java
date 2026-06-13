@@ -1,5 +1,5 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
-import io.github.jmecn.minecraftwebexport.pipeline.Hints;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 
 import org.junit.jupiter.api.Test;
 

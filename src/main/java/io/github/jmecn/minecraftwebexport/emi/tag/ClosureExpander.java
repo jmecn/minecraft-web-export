@@ -1,4 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.tag;
+import io.github.jmecn.minecraftwebexport.model.emi.tag.TagExpansion;
+import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembers;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import net.minecraft.core.Holder;
@@ -17,22 +19,14 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class ClosureExpander {
 
     private ClosureExpander() {
     }
 
-    public record Expansion(
-            Set<String> items,
-            Set<String> blocks,
-            Set<String> fluids,
-            Set<String> tags) {
-    }
 
-    public record TagMembers(Set<String> items, Set<String> blocks, Set<String> fluids) {
-    }
 
     public static TagMembers expandTagMembers(MinecraftServer server, String tagRef) {
         ResourceLocation tagId = parseTagId(tagRef);
@@ -53,7 +47,7 @@ public final class ClosureExpander {
         return new TagMembers(outItems, outBlocks, outFluids);
     }
 
-    public static Expansion expand(MinecraftServer server, Set<String> seedTagRefs) {
+    public static TagExpansion expand(MinecraftServer server, Set<String> seedTagRefs) {
         var access = server.registryAccess();
         Registry<Item> items = access.registryOrThrow(Registries.ITEM);
         Registry<Block> blocks = access.registryOrThrow(Registries.BLOCK);
@@ -77,8 +71,8 @@ public final class ClosureExpander {
             expandFluidTag(fluids, tagId, visitedFluidTags, outFluids, outTags);
         }
 
-        if (MinecraftWebExportMod.LOGGER.isDebugEnabled()) {
-            MinecraftWebExportMod.LOGGER.debug(
+        if (MweMod.LOGGER.isDebugEnabled()) {
+            MweMod.LOGGER.debug(
                     "{} expand: {} seed tags -> {} items, {} blocks, {} fluids ({} tag keys)",
                     Log.TAGS,
                     seedTagRefs.size(),
@@ -88,7 +82,7 @@ public final class ClosureExpander {
                     outTags.size());
         }
 
-        return new Expansion(outItems, outBlocks, outFluids, outTags);
+        return new TagExpansion(outItems, outBlocks, outFluids, outTags);
     }
 
     private static void expandItemTag(

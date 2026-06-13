@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.item.NameKeysWriter;
 import io.github.jmecn.minecraftwebexport.emi.lang.ClosureKeys;
@@ -17,8 +18,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class UsedKeysCollector {
-
-    private static final Pattern FLUID_NBT_NAME = Pattern.compile("FluidName:\"([^\"]+)\"");
 
     private final Set<String> keys = new TreeSet<>();
 
@@ -50,7 +49,7 @@ public final class UsedKeysCollector {
     }
 
     public void collectFromCategoriesIndex(Path outputDir) throws IOException {
-        Path indexFile = Paths.resolve(outputDir, Paths.CATEGORIES_INDEX_FILE);
+        Path indexFile = Paths.resolve(outputDir, Constants.CATEGORIES_INDEX_FILE);
         if (!Files.isRegularFile(indexFile)) {
             return;
         }
@@ -85,7 +84,7 @@ public final class UsedKeysCollector {
     }
 
     public void collectFromItemsIndex(Path outputDir) throws IOException {
-        Path indexFile = Paths.resolve(outputDir, Paths.ITEMS_INDEX_FILE);
+        Path indexFile = Paths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexFile)) {
             return;
         }
@@ -121,7 +120,7 @@ public final class UsedKeysCollector {
     }
 
     public void collectFromTagsIndex(Path outputDir) throws IOException {
-        Path indexFile = Paths.resolve(outputDir, Paths.TAGS_INDEX_FILE);
+        Path indexFile = Paths.resolve(outputDir, Constants.TAGS_INDEX_FILE);
         if (!Files.isRegularFile(indexFile)) {
             return;
         }
@@ -179,7 +178,7 @@ public final class UsedKeysCollector {
 
     private void collectFluidFromNbt(JsonElement nbt) {
         String raw = nbt.isJsonPrimitive() ? nbt.getAsString() : nbt.toString();
-        Matcher matcher = FLUID_NBT_NAME.matcher(raw);
+        Matcher matcher = Constants.FLUID_NBT_NAME_PATTERN.matcher(raw);
         if (matcher.find()) {
             addRegistryFluid(matcher.group(1));
         }

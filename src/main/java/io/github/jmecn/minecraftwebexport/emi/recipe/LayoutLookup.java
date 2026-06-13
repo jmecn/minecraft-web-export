@@ -1,4 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.PackRef;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
 import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
@@ -30,7 +33,7 @@ final class LayoutLookup {
         if (parts == null || mods == null) {
             return null;
         }
-        BundleMods.ModEntry mod = mods.mods().get(parts.namespace());
+        ModEntry mod = mods.mods().get(parts.namespace());
         if (mod == null) {
             return null;
         }
@@ -38,13 +41,13 @@ final class LayoutLookup {
         if (packIndex == null || packIndex < 0 || packIndex >= mod.packs().size()) {
             return null;
         }
-        BundleMods.PackRef packRef = mod.packs().get(packIndex);
+        PackRef packRef = mod.packs().get(packIndex);
         JsonObject pack = loadLayoutPack(parts.namespace(), packRef.file());
         JsonElement layout = pack.getAsJsonObject("layouts").get(parts.path());
         return layout != null && layout.isJsonObject() ? layout.getAsJsonObject() : null;
     }
 
-    private Integer findPackIndex(String namespace, BundleMods.ModEntry mod, String path)
+    private Integer findPackIndex(String namespace, ModEntry mod, String path)
             throws IOException {
         for (String routeFile : mod.routes()) {
             JsonObject routeShard = loadRouteShard(namespace, routeFile);
@@ -64,7 +67,7 @@ final class LayoutLookup {
         }
         Path routePath = Paths.resolve(
                 outputDir,
-                Paths.RECIPES_ROUTES_DIR + "/" + namespace + "/" + routeFile + ".json");
+                Constants.RECIPES_ROUTES_DIR + "/" + namespace + "/" + routeFile + ".json");
         if (!Files.isRegularFile(routePath)) {
             throw new IOException("missing route shard file: " + routePath);
         }
@@ -81,7 +84,7 @@ final class LayoutLookup {
         }
         Path packPath = Paths.resolve(
                 outputDir,
-                Paths.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace + "/" + packFile + ".json");
+                Constants.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace + "/" + packFile + ".json");
         if (!Files.isRegularFile(packPath)) {
             throw new IOException("missing layout pack file: " + packPath);
         }

@@ -1,9 +1,10 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
-import com.google.gson.Gson;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
@@ -18,19 +19,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class TextureWriter {
-    private static final com.google.gson.Gson GSON = io.github.jmecn.minecraftwebexport.emi.bundle.Gson.GSON;
 
     private TextureWriter() {
     }
 
-    public record Result(int requested, int written, int missing, long pngBytes) {
-    }
 
-    public static Result export(Path outputDir, Minecraft client, Set<String> textureIds) throws IOException {
-        Path texRoot = Paths.resolve(outputDir, LayoutPaths.TEXTURES_DIR);
+    public static TextureWriteResult export(Path outputDir, Minecraft client, Set<String> textureIds) throws IOException {
+        Path texRoot = Paths.resolve(outputDir, Constants.TEXTURES_DIR);
         if (Files.exists(texRoot)) {
             Files.walk(texRoot)
                     .sorted(java.util.Comparator.reverseOrder())
@@ -62,7 +60,7 @@ public final class TextureWriter {
             var resourceOpt = resourceManager.getResource(id);
             if (resourceOpt.isEmpty()) {
                 missing++;
-                MinecraftWebExportMod.LOGGER.debug("{} missing {}", Log.RECIPE_TEXTURES, idString);
+                MweMod.LOGGER.debug("{} missing {}", Log.RECIPE_TEXTURES, idString);
                 continue;
             }
             try {
@@ -80,23 +78,23 @@ public final class TextureWriter {
                 }
             } catch (Exception e) {
                 missing++;
-                MinecraftWebExportMod.LOGGER.debug("{} failed {}: {}", Log.RECIPE_TEXTURES, idString, e);
+                MweMod.LOGGER.debug("{} failed {}: {}", Log.RECIPE_TEXTURES, idString, e);
             }
         }
 
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("schema", 1);
         root.put("textures", manifest);
-        Files.writeString(texRoot.resolve(LayoutPaths.TEXTURE_MANIFEST_FILE), GSON.toJson(root));
+        Files.writeString(texRoot.resolve(Constants.TEXTURE_MANIFEST_FILE), Json.GSON.toJson(root));
 
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "{} {}/{} written ({} bytes), {} missing",
                 Log.RECIPE_TEXTURES,
                 written,
                 all.size(),
                 bytes,
                 missing);
-        return new Result(all.size(), written, missing, bytes);
+        return new TextureWriteResult(all.size(), written, missing, bytes);
     }
 
     static String textureRelativePath(ResourceLocation id) {

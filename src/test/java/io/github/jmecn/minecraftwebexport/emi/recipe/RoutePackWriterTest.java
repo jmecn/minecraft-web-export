@@ -1,8 +1,9 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
 import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
-import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutPaths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RoutePackWriter;
 
 import com.google.gson.JsonArray;
@@ -34,8 +35,8 @@ class RoutePackWriterTest {
         BundleMods mods = writer.finish();
 
         assertEquals(2, mods.mods().size());
-        BundleMods.ModEntry minecraft = mods.mods().get("minecraft");
-        BundleMods.ModEntry emi = mods.mods().get("emi");
+        ModEntry minecraft = mods.mods().get("minecraft");
+        ModEntry emi = mods.mods().get("emi");
         assertEquals(1, minecraft.routes().size());
         assertEquals(1, emi.routes().size());
         assertEquals(1, minecraft.packs().size());
@@ -43,10 +44,10 @@ class RoutePackWriterTest {
 
         Path minecraftRoute = Paths.resolve(
                 tempDir,
-                Paths.RECIPES_ROUTES_DIR + "/minecraft/" + minecraft.routes().get(0) + ".json");
+                Constants.RECIPES_ROUTES_DIR + "/minecraft/" + minecraft.routes().get(0) + ".json");
         Path emiRoute = Paths.resolve(
                 tempDir,
-                Paths.RECIPES_ROUTES_DIR + "/emi/" + emi.routes().get(0) + ".json");
+                Constants.RECIPES_ROUTES_DIR + "/emi/" + emi.routes().get(0) + ".json");
         assertTrue(Files.isRegularFile(minecraftRoute));
         assertTrue(Files.isRegularFile(emiRoute));
 
@@ -60,7 +61,7 @@ class RoutePackWriterTest {
 
         Path minecraftPack = Paths.resolve(
                 tempDir,
-                Paths.RECIPES_LAYOUT_PACKS_DIR + "/minecraft/" + minecraft.packs().get(0).file() + ".json");
+                Constants.RECIPES_LAYOUT_PACKS_DIR + "/minecraft/" + minecraft.packs().get(0).file() + ".json");
         JsonObject packBody = JsonParser.parseString(Files.readString(minecraftPack)).getAsJsonObject();
         assertFalse(packBody.has("id"), "layout pack must not contain top-level id");
 
@@ -70,7 +71,7 @@ class RoutePackWriterTest {
 
     private static JsonObject layout(String id) {
         JsonObject layout = new JsonObject();
-        layout.addProperty("schema", LayoutPaths.SCHEMA_VERSION);
+        layout.addProperty("schema", Constants.LAYOUT_PACK_SCHEMA);
         layout.addProperty("id", id);
         layout.add("widgets", new JsonArray());
         return layout;

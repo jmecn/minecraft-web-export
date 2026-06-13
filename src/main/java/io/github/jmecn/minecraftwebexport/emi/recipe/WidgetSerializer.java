@@ -1,6 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
 import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
-import io.github.jmecn.minecraftwebexport.emi.recipe.ChromeRasterizer;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import com.google.gson.JsonArray;
@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 final class WidgetSerializer {
 
@@ -159,7 +158,7 @@ final class WidgetSerializer {
         if (ctx.chromeRoot() == null) {
             return;
         }
-        ChromeRasterizer.ChromeAsset asset = ChromeRasterizer.rasterizeWidget(
+        ChromeAsset asset = ChromeRasterizer.rasterizeWidget(
                 ctx.client(), widget, ctx.chromeRoot(), ctx.chromeHashToRelative());
         object.addProperty("chrome", asset.exportPath());
         ctx.chromeWritten()[0]++;

@@ -1,12 +1,12 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.lang.Languages;
-import io.github.jmecn.minecraftwebexport.emi.lang.VanillaSupplement;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ResourceFilter;
-import io.github.jmecn.minecraftwebexport.pipeline.Hints;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
@@ -27,22 +27,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Merger {
-    private static final com.google.gson.Gson GSON = io.github.jmecn.minecraftwebexport.emi.bundle.Gson.GSON;
 
     private Merger() {
     }
 
-    public record Result(
-            int languagesWritten,
-            long totalBytes,
-            int duplicateKeyWarnings,
-            int closureKeysRequested,
-            int keysSkipped,
-            int keysPerLanguage) {
-    }
 
     static final class MergeStats {
         int keysSkipped;
@@ -51,11 +42,11 @@ public final class Merger {
     }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean("minecraftWebExport.skipLangExport");
+        return !Boolean.getBoolean(Constants.PROP_SKIP_LANG_EXPORT);
     }
 
     public static boolean isLangPruneEnabled() {
-        return isEnabled() && !Boolean.getBoolean("minecraftWebExport.skipLangPruneExport");
+        return isEnabled() && !Boolean.getBoolean(Constants.PROP_SKIP_LANG_PRUNE_EXPORT);
     }
 
     static boolean shouldMergeLangKey(String key, Set<String> onlyKeys) {
@@ -114,22 +105,22 @@ public final class Merger {
         return key.startsWith("emi.category.");
     }
 
-    public static Result exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys, Hints hints)
+    public static LangMergeResult exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys, Hints hints)
             throws IOException {
-        return exportTo(Paths.resolve(outputDir, Paths.LANG_DIR), client, null, onlyKeys, hints);
+        return exportTo(Paths.resolve(outputDir, Constants.LANG_DIR), client, null, onlyKeys, hints);
     }
 
     @Deprecated
-    public static Result exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys) throws IOException {
+    public static LangMergeResult exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys) throws IOException {
         return exportEmiLang(outputDir, client, onlyKeys, Hints.defaults());
     }
 
-    public static Result exportTo(Path langRoot, Minecraft client, Set<String> onlyNamespaces, Set<String> onlyKeys)
+    public static LangMergeResult exportTo(Path langRoot, Minecraft client, Set<String> onlyNamespaces, Set<String> onlyKeys)
             throws IOException {
         return exportTo(langRoot, client, onlyNamespaces, onlyKeys, Hints.defaults());
     }
 
-    public static Result exportTo(
+    public static LangMergeResult exportTo(
             Path langRoot,
             Minecraft client,
             Set<String> onlyNamespaces,
@@ -156,7 +147,7 @@ public final class Merger {
             MergeStats stats = new MergeStats();
 
             if (stacks.isEmpty()) {
-                MinecraftWebExportMod.LOGGER.warn(
+                MweMod.LOGGER.warn(
                         "{} {} - no mod lang files matched (namespaces={})",
                         Log.LANG,
                         langCode,
@@ -171,7 +162,7 @@ public final class Merger {
             }
 
             if (merged.isEmpty()) {
-                MinecraftWebExportMod.LOGGER.warn(
+                MweMod.LOGGER.warn(
                         "{} {} - 0 keys after merge ({}, {} lang file stacks, {} pack layers)",
                         Log.LANG,
                         langCode,
@@ -182,14 +173,14 @@ public final class Merger {
             }
 
             Path out = langRoot.resolve(langFile);
-            String json = GSON.toJson(merged);
+            String json = Json.GSON.toJson(merged);
             Files.writeString(out, json);
             languagesWritten++;
             totalBytes += json.length();
             keysPerLanguage = merged.size();
             keysSkipped += stats.keysSkipped;
             duplicateWarnings += stats.duplicateKeyWarnings;
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} {} - {} keys from {} lang file stacks ({} pack layers, {})",
                     Log.LANG,
                     langCode,
@@ -200,7 +191,7 @@ public final class Merger {
         }
 
         if (onlyKeys != null) {
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} closure key filter: {} requested, ~{} keys per language file, {} entries skipped while scanning",
                     Log.LANG,
                     onlyKeys.size(),
@@ -208,14 +199,14 @@ public final class Merger {
                     keysSkipped);
         }
         if (duplicateWarnings > Log.DETAIL_FAILURE_LIMIT) {
-            MinecraftWebExportMod.LOGGER.warn(
+            MweMod.LOGGER.warn(
                     "{} {} duplicate-key warnings while merging (first {} at DEBUG)",
                     Log.LANG,
                     duplicateWarnings,
                     Log.DETAIL_FAILURE_LIMIT);
         }
 
-        return new Result(
+        return new LangMergeResult(
                 languagesWritten,
                 totalBytes,
                 duplicateWarnings,
@@ -271,7 +262,7 @@ public final class Merger {
                         keyOrigin.put(key, location);
                     }
                 } catch (Exception e) {
-                    MinecraftWebExportMod.LOGGER.warn("{} failed to read {}: {}", Log.LANG, location, e.getMessage());
+                    MweMod.LOGGER.warn("{} failed to read {}: {}", Log.LANG, location, e.getMessage());
                 }
             }
         }
@@ -326,14 +317,14 @@ public final class Merger {
             sample.append(location);
         }
         if (shown > 0) {
-            MinecraftWebExportMod.LOGGER.warn(
+            MweMod.LOGGER.warn(
                     "{} client has {} lang file stack(s) for {} but none passed namespace filter; sample: {}",
                     Log.LANG,
                     shown,
                     langFile,
                     sample);
         } else {
-            MinecraftWebExportMod.LOGGER.warn(
+            MweMod.LOGGER.warn(
                     "{} client ResourceManager has no resources under lang/ for {} (assets not loaded?)",
                     Log.LANG,
                     langFile);

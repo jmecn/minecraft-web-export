@@ -1,14 +1,11 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.CategoryIconResult;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.category.IconRenderer;
 import io.github.jmecn.minecraftwebexport.emi.category.IndexWriter;
 import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
-import io.github.jmecn.minecraftwebexport.emi.icon.AtlasBuilder;
-import io.github.jmecn.minecraftwebexport.emi.icon.AtlasLayout;
-import io.github.jmecn.minecraftwebexport.emi.icon.ExportSizes;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
-import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
-import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
 import dev.emi.emi.api.EmiApi;
@@ -24,30 +21,23 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class CategoryIconWriter {
 
     private CategoryIconWriter() {
     }
 
-    public record Result(
-            int categoryCount,
-            int iconsPlaced,
-            int iconFailures,
-            long categoriesIndexBytes,
-            long atlasIndexBytes) {
-    }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean("minecraftWebExport.skipCategoryIconExport");
+        return !Boolean.getBoolean(Constants.PROP_SKIP_CATEGORY_ICON_EXPORT);
     }
 
-    public static Result export(Path outputRoot, Minecraft client) throws IOException {
+    public static CategoryIconResult export(Path outputRoot, Minecraft client) throws IOException {
         var manager = EmiApi.getRecipeManager();
         if (manager == null) {
-            MinecraftWebExportMod.LOGGER.warn("{} EMI recipe manager unavailable - skipping category icons", Log.EMI);
-            return new Result(0, 0, 0, 0, 0);
+            MweMod.LOGGER.warn("{} EMI recipe manager unavailable - skipping category icons", Log.EMI);
+            return new CategoryIconResult(0, 0, 0, 0, 0);
         }
 
         List<EmiRecipeCategory> registered = manager.getCategories();
@@ -64,8 +54,8 @@ public final class CategoryIconWriter {
         if (isEnabled() && !categories.isEmpty()) {
             int cell = ExportSizes.categoryIconCellSize();
             int atlasMax = ExportSizes.atlasMaxSize();
-            Path iconsRoot = Paths.resolve(outputRoot, Paths.CATEGORY_ICONS_DIR);
-            List<AtlasLayout.PagePlan> layout = AtlasLayout.plan(categories.size(), cell, atlasMax);
+            Path iconsRoot = Paths.resolve(outputRoot, Constants.CATEGORY_ICONS_DIR);
+            List<AtlasPagePlan> layout = AtlasLayout.plan(categories.size(), cell, atlasMax);
 
             var bufferSource = client.renderBuffers().bufferSource();
             try (var renderer = new OffScreenRenderer(cell, cell);
@@ -117,19 +107,19 @@ public final class CategoryIconWriter {
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("schema", 2);
         root.put("iconCellSize", ExportSizes.categoryIconCellSize());
-        root.put("iconsDir", Paths.CATEGORY_ICONS_DIR);
+        root.put("iconsDir", Constants.CATEGORY_ICONS_DIR);
         root.put("categories", categories);
 
         long indexBytes = IndexWriter.writeCategoriesIndex(outputRoot, root);
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "{} {} categories, {} icons placed, {} failed -> {}",
                 Log.EMI,
                 categories.size(),
                 placed,
                 failures,
-                Paths.CATEGORIES_INDEX_FILE);
+                Constants.CATEGORIES_INDEX_FILE);
 
-        return new Result(categories.size(), placed, failures, indexBytes, atlasIndexBytes);
+        return new CategoryIconResult(categories.size(), placed, failures, indexBytes, atlasIndexBytes);
     }
 
     private static Map<String, Object> buildCategoryEntry(EmiRecipeCategory category, int order) {

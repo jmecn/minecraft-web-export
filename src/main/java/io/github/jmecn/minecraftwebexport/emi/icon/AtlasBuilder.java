@@ -1,9 +1,8 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.emi.icon.AtlasLayout;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
+import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
-import com.google.gson.Gson;
 import com.mojang.blaze3d.platform.NativeImage;
 
 import java.io.IOException;
@@ -14,17 +13,16 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 final class AtlasBuilder implements AutoCloseable {
-    private static final com.google.gson.Gson GSON = io.github.jmecn.minecraftwebexport.emi.bundle.Gson.GSON;
 
     private final int cellSize;
     private final int maxAtlasSize;
     private final Path outputDir;
     private final String cssClass;
     private final String cssFileName;
-    private final List<AtlasLayout.PagePlan> pagePlans;
+    private final List<AtlasPagePlan> pagePlans;
     private final Map<String, Integer> usageWeights;
 
     private final List<PageInfo> pages = new ArrayList<>();
@@ -50,7 +48,7 @@ final class AtlasBuilder implements AutoCloseable {
             int cellSize,
             int maxAtlasSize,
             String atlasKind,
-            List<AtlasLayout.PagePlan> pagePlans,
+            List<AtlasPagePlan> pagePlans,
             Map<String, Integer> usageWeights) {
         this.outputDir = outputDir;
         this.cellSize = cellSize;
@@ -136,14 +134,14 @@ final class AtlasBuilder implements AutoCloseable {
         indexRoot.put("items", items);
 
         Path indexPath = outputDir.resolve("index.json");
-        String indexJson = GSON.toJson(indexRoot);
+        String indexJson = Json.GSON.toJson(indexRoot);
         Files.writeString(indexPath, indexJson);
 
         Path cssPath = outputDir.resolve(cssFileName);
         String css = buildCss();
         Files.writeString(cssPath, css, StandardCharsets.UTF_8);
 
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "{} atlas: {} items, {} pages, index {} bytes, png {} bytes, css {} bytes",
                 Log.ICONS,
                 items.size(),
@@ -173,7 +171,7 @@ final class AtlasBuilder implements AutoCloseable {
 
     private void startNewPage() {
         if (pagePlanIndex < pagePlans.size()) {
-            AtlasLayout.PagePlan plan = pagePlans.get(pagePlanIndex);
+            AtlasPagePlan plan = pagePlans.get(pagePlanIndex);
             pageWidth = plan.widthPx(cellSize);
             pageHeight = plan.heightPx(cellSize);
             pagePlanIndex++;

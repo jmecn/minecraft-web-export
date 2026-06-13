@@ -1,5 +1,4 @@
-package io.github.jmecn.minecraftwebexport.pipeline;
-import io.github.jmecn.minecraftwebexport.pipeline.Mode;
+package io.github.jmecn.minecraftwebexport.model.pipeline;
 
 import java.nio.file.Path;
 import java.util.Objects;

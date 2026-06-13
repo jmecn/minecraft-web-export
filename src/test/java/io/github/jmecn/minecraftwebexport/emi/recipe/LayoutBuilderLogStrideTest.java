@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutBuilder;
 
 import org.junit.jupiter.api.AfterEach;
@@ -11,7 +12,7 @@ class LayoutBuilderLogStrideTest {
 
     @AfterEach
     void clearProperty() {
-        System.clearProperty("minecraftWebExport.layoutLogStride");
+        System.clearProperty(Constants.PROP_LAYOUT_LOG_STRIDE);
     }
 
     @Test
@@ -25,7 +26,7 @@ class LayoutBuilderLogStrideTest {
 
     @Test
     void propertyOverride() {
-        System.setProperty("minecraftWebExport.layoutLogStride", "10000");
+        System.setProperty(Constants.PROP_LAYOUT_LOG_STRIDE, "10000");
         assertEquals(10_000, LayoutBuilder.progressLogStride(135_317));
     }
 }

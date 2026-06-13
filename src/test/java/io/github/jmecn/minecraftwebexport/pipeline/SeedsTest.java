@@ -1,6 +1,6 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 import io.github.jmecn.minecraftwebexport.pipeline.ModuleRegistry;
-import io.github.jmecn.minecraftwebexport.pipeline.Seeds;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
 
+import io.github.jmecn.minecraftwebexport.Constants;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.ItemEmiStack;
 import net.minecraft.nbt.CompoundTag;
@@ -17,7 +18,7 @@ import java.util.HexFormat;
 public final class StackKey {
 
     private static final HexFormat HEX = HexFormat.of();
-    public static final int HASH_LEN = 16;
+    public static final int HASH_LEN = Constants.ICON_HASH_LEN;
 
     private StackKey() {
     }

@@ -1,10 +1,13 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.PackRef;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleDigest;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
 import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import java.io.IOException;
@@ -18,10 +21,6 @@ import java.util.TreeMap;
 
 public final class RoutePackWriter {
 
-    public static final int CONTAINER_SCHEMA = 1;
-
-    private static final com.google.gson.Gson GSON = io.github.jmecn.minecraftwebexport.emi.bundle.Gson.GSON;
-
     private final Path outputDir;
     private final int packMaxBytes;
     private final Map<String, NamespaceWriter> namespaces = new TreeMap<>();
@@ -32,7 +31,7 @@ public final class RoutePackWriter {
     }
 
     public static int defaultPackMaxBytes() {
-        return Math.max(1, Integer.getInteger("minecraftWebExport.packMaxBytes", 262144));
+        return Math.max(1, Integer.getInteger(Constants.PROP_PACK_MAX_BYTES, Constants.DEFAULT_PACK_MAX_BYTES));
     }
 
     public void addLayout(String recipeId, JsonObject layout) throws IOException {
@@ -56,7 +55,7 @@ public final class RoutePackWriter {
     private final class NamespaceWriter {
         private final String namespace;
         private final List<String> routeFiles = new ArrayList<>();
-        private final List<BundleMods.PackRef> packRefs = new ArrayList<>();
+        private final List<PackRef> packRefs = new ArrayList<>();
         private final LinkedHashMap<String, JsonObject> pendingLayouts = new LinkedHashMap<>();
         private final LinkedHashMap<String, Integer> pendingRoutes = new LinkedHashMap<>();
         private int pendingPackIndex = -1;
@@ -86,14 +85,14 @@ public final class RoutePackWriter {
             }
         }
 
-        BundleMods.ModEntry finish() throws IOException {
+        ModEntry finish() throws IOException {
             if (!pendingLayouts.isEmpty()) {
                 flushPack();
             }
             if (!pendingRoutes.isEmpty()) {
                 flushRouteShard();
             }
-            return new BundleMods.ModEntry(List.copyOf(routeFiles), List.copyOf(packRefs));
+            return new ModEntry(List.copyOf(routeFiles), List.copyOf(packRefs));
         }
 
         private void flushPack() throws IOException {
@@ -102,21 +101,21 @@ public final class RoutePackWriter {
             }
             int width = BundleDigest.sequenceWidth(packSequence + 1);
             JsonObject root = new JsonObject();
-            root.addProperty("schema", CONTAINER_SCHEMA);
+            root.addProperty("schema", Constants.CONTAINER_SCHEMA);
             root.addProperty("namespace", namespace);
             JsonObject layouts = new JsonObject();
             for (Map.Entry<String, JsonObject> entry : pendingLayouts.entrySet()) {
                 layouts.add(entry.getKey(), entry.getValue());
             }
             root.add("layouts", layouts);
-            String json = GSON.toJson(root);
+            String json = Json.GSON.toJson(root);
             byte[] bytes = BundleDigest.utf8(json);
             String stem = BundleDigest.stem(packSequence, bytes, width);
 
-            Path packDir = Paths.resolve(outputDir, Paths.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace);
+            Path packDir = Paths.resolve(outputDir, Constants.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace);
             Files.createDirectories(packDir);
             Files.writeString(packDir.resolve(stem + ".json"), json);
-            packRefs.add(new BundleMods.PackRef(stem, bytes.length));
+            packRefs.add(new PackRef(stem, bytes.length));
             packSequence++;
             pendingLayouts.clear();
             pendingPackIndex = -1;
@@ -128,18 +127,18 @@ public final class RoutePackWriter {
             }
             int width = BundleDigest.sequenceWidth(routeSequence + 1);
             JsonObject root = new JsonObject();
-            root.addProperty("schema", CONTAINER_SCHEMA);
+            root.addProperty("schema", Constants.CONTAINER_SCHEMA);
             root.addProperty("namespace", namespace);
             JsonObject routes = new JsonObject();
             for (Map.Entry<String, Integer> entry : pendingRoutes.entrySet()) {
                 routes.addProperty(entry.getKey(), entry.getValue());
             }
             root.add("routes", routes);
-            String json = GSON.toJson(root);
+            String json = Json.GSON.toJson(root);
             byte[] bytes = BundleDigest.utf8(json);
             String stem = BundleDigest.stem(routeSequence, bytes, width);
 
-            Path routeDir = Paths.resolve(outputDir, Paths.RECIPES_ROUTES_DIR + "/" + namespace);
+            Path routeDir = Paths.resolve(outputDir, Constants.RECIPES_ROUTES_DIR + "/" + namespace);
             Files.createDirectories(routeDir);
             Files.writeString(routeDir.resolve(stem + ".json"), json);
             routeFiles.add(stem);
@@ -149,26 +148,26 @@ public final class RoutePackWriter {
 
         private int estimatePackBytes() {
             JsonObject root = new JsonObject();
-            root.addProperty("schema", CONTAINER_SCHEMA);
+            root.addProperty("schema", Constants.CONTAINER_SCHEMA);
             root.addProperty("namespace", namespace);
             JsonObject layouts = new JsonObject();
             for (Map.Entry<String, JsonObject> entry : pendingLayouts.entrySet()) {
                 layouts.add(entry.getKey(), entry.getValue());
             }
             root.add("layouts", layouts);
-            return BundleDigest.utf8(GSON.toJson(root)).length;
+            return BundleDigest.utf8(Json.GSON.toJson(root)).length;
         }
 
         private int estimateRouteShardBytes() {
             JsonObject root = new JsonObject();
-            root.addProperty("schema", CONTAINER_SCHEMA);
+            root.addProperty("schema", Constants.CONTAINER_SCHEMA);
             root.addProperty("namespace", namespace);
             JsonObject routes = new JsonObject();
             for (Map.Entry<String, Integer> entry : pendingRoutes.entrySet()) {
                 routes.addProperty(entry.getKey(), entry.getValue());
             }
             root.add("routes", routes);
-            return BundleDigest.utf8(GSON.toJson(root)).length;
+            return BundleDigest.utf8(Json.GSON.toJson(root)).length;
         }
     }
 }

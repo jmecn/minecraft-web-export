@@ -1,7 +1,8 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutBuilder;
-import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutPaths;
 
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.Widget;
@@ -20,8 +21,6 @@ public final class ChromeRasterizer {
     private ChromeRasterizer() {
     }
 
-    public record ChromeAsset(String exportPath, boolean deduplicated) {
-    }
 
     public static ChromeAsset rasterizeWidget(
             Minecraft client,
@@ -58,7 +57,7 @@ public final class ChromeRasterizer {
                 Files.write(out, png);
                 hashToRelative.put(hash, relative);
             }
-            String exportPath = LayoutPaths.CHROME_DIR + "/" + relative.replace('\\', '/');
+            String exportPath = Constants.CHROME_DIR + "/" + relative.replace('\\', '/');
             return new ChromeAsset(exportPath, deduped);
         }
     }

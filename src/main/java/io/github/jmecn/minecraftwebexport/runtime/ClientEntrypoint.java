@@ -1,11 +1,11 @@
 package io.github.jmecn.minecraftwebexport.runtime;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.pipeline.Coordinator;
-import io.github.jmecn.minecraftwebexport.pipeline.Result;
-import io.github.jmecn.minecraftwebexport.runtime.CiProperties;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
@@ -15,9 +15,6 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 public final class ClientEntrypoint {
-
-    private static final int DEFAULT_WARMUP_TICKS = 100;
-    private static final int HEARTBEAT_TICKS = 200;
 
     private final Coordinator coordinator;
 
@@ -30,7 +27,7 @@ public final class ClientEntrypoint {
     }
 
     public void armIfEnabled(Path gameDirectory) {
-        if (!Boolean.getBoolean(ExportProperties.ENABLE_PROPERTY)) {
+        if (!Boolean.getBoolean(Constants.PROP_EXPORT_ENABLED)) {
             return;
         }
         if (CiProperties.runExportAndExit()) {
@@ -38,12 +35,12 @@ public final class ClientEntrypoint {
         }
         MinecraftForge.EVENT_BUS.register(new AutoExportWhenWorldReady(
                 gameDirectory,
-                System.getProperty(ExportProperties.OUTPUT_ROOT_PROPERTY),
+                System.getProperty(Constants.PROP_EXPORT_OUTPUT_DIR),
                 coordinator));
     }
 
     private static int warmupTicks() {
-        return Math.max(0, Integer.getInteger("minecraftWebExport.exportWarmupTicks", DEFAULT_WARMUP_TICKS));
+        return Math.max(0, Integer.getInteger(Constants.PROP_EXPORT_WARMUP_TICKS, Constants.CLIENT_DEFAULT_WARMUP_TICKS));
     }
 
     private static final class AutoExportWhenWorldReady {
@@ -77,8 +74,8 @@ public final class ClientEntrypoint {
             }
 
             readyTicks++;
-            if (readyTicks == 1 || readyTicks % HEARTBEAT_TICKS == 0) {
-                MinecraftWebExportMod.LOGGER.info(
+            if (readyTicks == 1 || readyTicks % Constants.HEARTBEAT_TICKS == 0) {
+                MweMod.LOGGER.info(
                         "{} world ready, warmup {}/{}",
                         Log.EMI,
                         readyTicks,
@@ -90,9 +87,9 @@ public final class ClientEntrypoint {
 
             Path outputRoot = OutputPaths.resolve(gameDirectory, outputRootOverride).rootDir();
             try {
-                Result result = coordinator.run(outputRoot, gameDirectory, client);
+                ExportResult result = coordinator.run(outputRoot, gameDirectory, client);
                 finished = true;
-                MinecraftWebExportMod.LOGGER.info(
+                MweMod.LOGGER.info(
                         "{} wrote {} (recipes={}, items={}, tags={}, langs={}, icons={})",
                         Log.EMI,
                         result.outputRoot().toAbsolutePath(),
@@ -104,7 +101,7 @@ public final class ClientEntrypoint {
             } catch (Exception e) {
                 failureCount++;
                 readyTicks = 0;
-                MinecraftWebExportMod.LOGGER.error(
+                MweMod.LOGGER.error(
                         "{} export attempt #{} failed for {}",
                         Log.EMI,
                         failureCount,

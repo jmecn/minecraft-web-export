@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.runtime;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.pipeline.ModuleRegistry;
 
 import java.nio.file.Path;
@@ -6,16 +7,13 @@ import java.util.Objects;
 
 public record OutputPaths(Path rootDir) {
 
-    private static final String EXPORT_DIR = "export";
-    private static final String EXPORT_NAME = "minecraft-web-export";
-
     public OutputPaths {
         rootDir = Objects.requireNonNull(rootDir, "rootDir").toAbsolutePath().normalize();
     }
 
     public static OutputPaths resolve(Path gameDirectory, String explicitOutputRoot) {
         Path root = isBlank(explicitOutputRoot)
-                ? gameDirectory.resolve(EXPORT_DIR).resolve(EXPORT_NAME)
+                ? gameDirectory.resolve(Constants.EXPORT_DIR).resolve(Constants.EXPORT_NAME)
                 : Path.of(explicitOutputRoot);
         return pathsForRoot(root);
     }
@@ -25,7 +23,7 @@ public record OutputPaths(Path rootDir) {
             return resolve(gameDirectory, explicitOutputRoot);
         }
         if (!ModuleRegistry.modules().isEmpty()) {
-            return pathsForRoot(gameDirectory.resolve(EXPORT_DIR));
+            return pathsForRoot(gameDirectory.resolve(Constants.EXPORT_DIR));
         }
         return resolve(gameDirectory, null);
     }

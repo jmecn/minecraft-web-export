@@ -1,15 +1,11 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
+
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
+import io.github.jmecn.minecraftwebexport.Constants;
 
 import java.nio.file.Path;
 
 public final class CardPaths {
-
-    public static final int META_SCHEMA = 1;
-    public static final int BUNDLE_SCHEMA = 2;
-    public static final String RECIPES_DIR = "recipes";
-    private static final int EMI_RECIPE_MARGIN = 8;
 
     private CardPaths() {
     }
@@ -37,17 +33,17 @@ public final class CardPaths {
         IndexIds.RecipeIdParts parts = requireParts(recipeId);
         return Paths.resolve(
                 exportRoot,
-                RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".png");
+                Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".png");
     }
 
     public static Path metaPath(Path exportRoot, String recipeId) {
         IndexIds.RecipeIdParts parts = requireParts(recipeId);
         return Paths.resolve(
                 exportRoot,
-                RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".json");
+                Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".json");
     }
 
     public static int recipeMargin() {
-        return EMI_RECIPE_MARGIN;
+        return Constants.RECIPE_MARGIN;
     }
 }

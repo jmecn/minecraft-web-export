@@ -39,7 +39,7 @@ public final class LangKeys {
         }
         if (component.getContents() instanceof TranslatableContents translatable) {
             String key = translatable.getKey();
-            if (key != null && !key.isBlank()) {
+            if (!key.isBlank()) {
                 return key;
             }
         }

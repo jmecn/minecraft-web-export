@@ -1,12 +1,8 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.ItemIconResult;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.icon.AtlasBuilder;
-import io.github.jmecn.minecraftwebexport.emi.icon.AtlasLayout;
-import io.github.jmecn.minecraftwebexport.emi.icon.ExportSizes;
-import io.github.jmecn.minecraftwebexport.emi.icon.FluidStillRenderer;
-import io.github.jmecn.minecraftwebexport.emi.icon.ItemOrdering;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
-import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 
@@ -38,52 +34,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class ItemIconWriter {
-    private static final String ICON_LOG_STRIDE_PROPERTY = "minecraftWebExport.iconLogStride";
-    private static final int FLUSH_RENDER_EVERY = 256;
 
     private ItemIconWriter() {
     }
 
-    public record Result(
-            int itemsWritten,
-            int fluidsWritten,
-            int atlasPages,
-            int itemFailures,
-            int fluidFailures,
-            int fluidsSkippedNoStack,
-            long atlasPngBytes,
-            long indexBytes,
-            long cssBytes) {
-
-        public int totalSpritesWritten() {
-            return itemsWritten + fluidsWritten;
-        }
-
-        public int failures() {
-            return itemFailures + fluidFailures;
-        }
-    }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean("minecraftWebExport.skipItemIconExport");
+        return !Boolean.getBoolean(Constants.PROP_SKIP_ITEM_ICON_EXPORT);
     }
 
     public static boolean fluidsEnabled() {
-        return !Boolean.getBoolean("minecraftWebExport.skipFluidIconExport");
+        return !Boolean.getBoolean(Constants.PROP_SKIP_FLUID_ICON_EXPORT);
     }
 
-    public static Result export(Path outputDir, Minecraft client) {
+    public static ItemIconResult export(Path outputDir, Minecraft client) {
         return export(outputDir, client, null, null, null);
     }
 
-    public static Result export(Path outputDir, Minecraft client, Set<String> onlyItemIds) {
+    public static ItemIconResult export(Path outputDir, Minecraft client, Set<String> onlyItemIds) {
         return export(outputDir, client, onlyItemIds, null, null);
     }
 
-    public static Result export(
+    public static ItemIconResult export(
             Path outputDir,
             Minecraft client,
             Set<String> onlyItemIds,
@@ -91,7 +66,7 @@ public final class ItemIconWriter {
         return export(outputDir, client, onlyItemIds, null, usageWeights);
     }
 
-    public static Result export(
+    public static ItemIconResult export(
             Path outputDir,
             Minecraft client,
             Set<String> onlyItemIds,
@@ -100,20 +75,20 @@ public final class ItemIconWriter {
         return export(outputDir, client, onlyItemIds, onlyFluidIds, usageWeights, Map.of());
     }
 
-    public static Result export(
+    public static ItemIconResult export(
             Path outputDir,
             Minecraft client,
             Set<String> onlyItemIds,
             Set<String> onlyFluidIds,
             Map<String, Integer> usageWeights,
             Map<String, ItemStack> iconVariants) {
-        Path iconsRoot = Paths.resolve(outputDir, Paths.ICONS_DIR);
+        Path iconsRoot = Paths.resolve(outputDir, Constants.ICONS_DIR);
         clearLegacyDirs(outputDir);
         clearDir(iconsRoot);
         return exportImpl(iconsRoot, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants);
     }
 
-    public static Result exportAtRoot(
+    public static ItemIconResult exportAtRoot(
             Path iconsRoot,
             Minecraft client,
             Set<String> onlyItemIds,
@@ -122,7 +97,7 @@ public final class ItemIconWriter {
         return exportImpl(iconsRoot, client, onlyItemIds, null, usageWeights, Map.of());
     }
 
-    private static Result exportImpl(
+    private static ItemIconResult exportImpl(
             Path iconsRoot,
             Minecraft client,
             Set<String> onlyItemIds,
@@ -138,7 +113,7 @@ public final class ItemIconWriter {
         Map<String, ItemStack> variants = iconVariants != null ? iconVariants : Map.of();
 
         if (onlyItemIds != null) {
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} closure: {} items, {} fluids, {} nbt variants at {}px -> {}",
                     Log.ICONS,
                     onlyItemIds.size(),
@@ -151,7 +126,7 @@ public final class ItemIconWriter {
             for (Item ignored : ForgeRegistries.ITEMS) {
                 totalItems++;
             }
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} full export: {} registry items, {} fluids at {}px (max atlas {}px) -> {}",
                     Log.ICONS,
                     totalItems,
@@ -163,10 +138,10 @@ public final class ItemIconWriter {
         }
 
         int totalSprites = itemOrder.size() + fluidOrder.size() + variants.size() + 1;
-        List<AtlasLayout.PagePlan> layout = AtlasLayout.plan(totalSprites, cell, atlasMax);
+        List<AtlasPagePlan> layout = AtlasLayout.plan(totalSprites, cell, atlasMax);
         if (!layout.isEmpty()) {
-            AtlasLayout.PagePlan first = layout.get(0);
-            MinecraftWebExportMod.LOGGER.info(
+            AtlasPagePlan first = layout.get(0);
+            MweMod.LOGGER.info(
                     "{} {} sprites, planned {} page(s), first page {}x{} cells ({}x{}px)",
                     Log.ICONS,
                     totalSprites,
@@ -177,8 +152,8 @@ public final class ItemIconWriter {
                     first.heightPx(cell));
         }
 
-        int itemLogStride = ProgressLog.stride(itemOrder.size(), ICON_LOG_STRIDE_PROPERTY, 50, 500);
-        int variantLogStride = ProgressLog.stride(variants.size(), ICON_LOG_STRIDE_PROPERTY, 20, 200);
+        int itemLogStride = ProgressLog.stride(itemOrder.size(), Constants.PROP_ICON_LOG_STRIDE, 50, 500);
+        int variantLogStride = ProgressLog.stride(variants.size(), Constants.PROP_ICON_LOG_STRIDE, 20, 200);
 
         int itemsPlaced = 0;
         int itemFailures = 0;
@@ -211,11 +186,11 @@ public final class ItemIconWriter {
                     renderItemIcon(client, guiGraphics, renderer, item);
                     atlas.place(itemId.toString(), renderer);
                     itemsPlaced++;
-                    if (index % FLUSH_RENDER_EVERY == 0) {
+                    if (index % Constants.ICON_FLUSH_RENDER_EVERY == 0) {
                         bufferSource.endBatch();
                     }
                     if (ProgressLog.shouldLog(index, itemTotal, itemLogStride)) {
-                        MinecraftWebExportMod.LOGGER.info(
+                        MweMod.LOGGER.info(
                                 "{} items: {}% {}/{} ({} ok, {} fail)",
                                 Log.ICONS,
                                 ProgressLog.percent(index, itemTotal),
@@ -273,7 +248,7 @@ public final class ItemIconWriter {
                         atlas.place(entry.getKey(), renderer);
                         variantsPlaced++;
                         if (ProgressLog.shouldLog(variantIndex, variantTotal, variantLogStride)) {
-                            MinecraftWebExportMod.LOGGER.info(
+                            MweMod.LOGGER.info(
                                     "{} nbt variants: {}% {}/{} ({} ok, {} fail)",
                                     Log.ICONS,
                                     ProgressLog.percent(variantIndex, variantTotal),
@@ -301,7 +276,7 @@ public final class ItemIconWriter {
         }
 
         int totalFailures = itemFailures + fluidFailures + variantFailures;
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "{} done: {} items, {} nbt variants, {} fluids ({} skipped no still), {} pages, {} failures at {}",
                 Log.ICONS,
                 itemsPlaced,
@@ -312,15 +287,15 @@ public final class ItemIconWriter {
                 totalFailures,
                 iconsRoot);
         if (totalFailures > Log.DETAIL_FAILURE_LIMIT) {
-            MinecraftWebExportMod.LOGGER.warn(
+            MweMod.LOGGER.warn(
                     "{} {} icon failures (first {} at DEBUG; -D{}=true or enable DEBUG on export.emi)",
                     Log.ICONS,
                     totalFailures,
                     Log.DETAIL_FAILURE_LIMIT,
-                    "minecraftWebExport.export.logDetailFailures");
+                    Constants.PROP_LOG_DETAIL_FAILURES);
         }
 
-        return new Result(
+        return new ItemIconResult(
                 itemsPlaced + variantsPlaced,
                 fluidsPlaced,
                 atlasResult.pageCount(),
@@ -367,7 +342,7 @@ public final class ItemIconWriter {
         try {
             MoreFiles.deleteRecursively(dir, RecursiveDeleteOption.ALLOW_INSECURE);
         } catch (IOException e) {
-            MinecraftWebExportMod.LOGGER.warn("{} could not clear {}: {}", Log.ICONS, dir, e.getMessage());
+            MweMod.LOGGER.warn("{} could not clear {}: {}", Log.ICONS, dir, e.getMessage());
         }
     }
 
@@ -387,9 +362,9 @@ public final class ItemIconWriter {
             }
             byNs.merge(id.getNamespace(), 1, Integer::sum);
         }
-        MinecraftWebExportMod.LOGGER.debug("{} block-items in registry: {}", Log.ICONS, blockItems);
+        MweMod.LOGGER.debug("{} block-items in registry: {}", Log.ICONS, blockItems);
         for (String ns : new String[]{"minecraft_web_export", "minecraft"}) {
-            MinecraftWebExportMod.LOGGER.debug("{} {}: {} items in registry", Log.ICONS, ns, byNs.getOrDefault(ns, 0));
+            MweMod.LOGGER.debug("{} {}: {} items in registry", Log.ICONS, ns, byNs.getOrDefault(ns, 0));
         }
     }
 

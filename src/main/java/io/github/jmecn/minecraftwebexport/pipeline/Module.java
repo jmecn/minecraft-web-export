@@ -1,8 +1,8 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
-import io.github.jmecn.minecraftwebexport.pipeline.Hints;
-import io.github.jmecn.minecraftwebexport.pipeline.Result;
-import io.github.jmecn.minecraftwebexport.pipeline.Scope;
-import io.github.jmecn.minecraftwebexport.pipeline.Seeds;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
 
 import net.minecraft.client.Minecraft;
 
@@ -21,6 +21,6 @@ public interface Module {
         return Hints.defaults();
     }
 
-    default void exportExtras(Scope scope, Result result) throws IOException {
+    default void exportExtras(Scope scope, ExportResult result) throws IOException {
     }
 }

@@ -1,8 +1,8 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
-import io.github.jmecn.minecraftwebexport.pipeline.Hints;
-import io.github.jmecn.minecraftwebexport.pipeline.Mode;
-import io.github.jmecn.minecraftwebexport.pipeline.Plan;
-import io.github.jmecn.minecraftwebexport.pipeline.Seeds;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
 
 import org.junit.jupiter.api.Test;
 

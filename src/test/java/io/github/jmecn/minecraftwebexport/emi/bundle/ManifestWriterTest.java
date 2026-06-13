@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.bundle;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.bundle.ManifestWriter;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
@@ -27,7 +28,7 @@ class ManifestWriterTest {
     void writesCurrentBundleContract() throws IOException {
         ManifestWriter.write(tempDir, List.of("en_us", "zh_cn"), 2, 42);
 
-        Path bundleFile = Paths.resolve(tempDir, Paths.BUNDLE_FILE);
+        Path bundleFile = Paths.resolve(tempDir, Constants.BUNDLE_FILE);
         JsonObject json = JsonParser.parseString(Files.readString(bundleFile)).getAsJsonObject();
 
         assertTrue(Files.isRegularFile(bundleFile));

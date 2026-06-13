@@ -1,24 +1,22 @@
 package io.github.jmecn.minecraftwebexport.emi.support;
 
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Log {
 
-    public static final String EMI = "[emi]";
-    public static final String EMI_LAYOUT = "[emi-layout]";
-    public static final String EMI_ITEMS = "[emi-items]";
-    public static final String ICONS = "[icons]";
-    public static final String LANG = "[lang]";
-    public static final String TAGS = "[tags]";
-    public static final String INDEX_TAGS = "[index]";
-    public static final String RECIPE_TEXTURES = "[recipe-textures]";
-    public static final String ITEMS_LANG = "[items-lang]";
-    public static final String ITEM_NAME_KEYS = "[item-name-keys]";
+    public static final String EMI = Constants.LOG_TAG_EMI;
+    public static final String EMI_LAYOUT = Constants.LOG_TAG_EMI_LAYOUT;
+    public static final String EMI_ITEMS = Constants.LOG_TAG_EMI_ITEMS;
+    public static final String ICONS = Constants.LOG_TAG_ICONS;
+    public static final String LANG = Constants.LOG_TAG_LANG;
+    public static final String TAGS = Constants.LOG_TAG_TAGS;
+    public static final String INDEX_TAGS = Constants.LOG_TAG_INDEX;
+    public static final String RECIPE_TEXTURES = Constants.LOG_TAG_RECIPE_TEXTURES;
+    public static final String ITEMS_LANG = Constants.LOG_TAG_ITEMS_LANG;
+    public static final String ITEM_NAME_KEYS = Constants.LOG_TAG_ITEM_NAME_KEYS;
 
-    public static final int DETAIL_FAILURE_LIMIT = 20;
-
-    private static final boolean DETAIL_FAILURES_ENABLED =
-            Boolean.getBoolean("minecraftWebExport.export.logDetailFailures");
+    public static final int DETAIL_FAILURE_LIMIT = Constants.DETAIL_FAILURE_LIMIT;
 
     private Log() {}
 
@@ -26,10 +24,10 @@ public final class Log {
         if (failureCount > DETAIL_FAILURE_LIMIT) {
             return;
         }
-        if (DETAIL_FAILURES_ENABLED) {
-            MinecraftWebExportMod.LOGGER.warn(message, args);
-        } else if (MinecraftWebExportMod.LOGGER.isDebugEnabled()) {
-            MinecraftWebExportMod.LOGGER.debug(message, args);
+        if (Boolean.getBoolean(Constants.PROP_LOG_DETAIL_FAILURES)) {
+            MweMod.LOGGER.warn(message, args);
+        } else if (MweMod.LOGGER.isDebugEnabled()) {
+            MweMod.LOGGER.debug(message, args);
         }
     }
 }

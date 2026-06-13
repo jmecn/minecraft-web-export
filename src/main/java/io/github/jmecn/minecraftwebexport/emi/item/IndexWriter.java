@@ -1,6 +1,8 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.model.Json;
+import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.item.SearchIndexWriter;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
 import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
@@ -8,7 +10,6 @@ import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.emi.tag.ClosureExpander;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -36,31 +37,26 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class IndexWriter {
-    private static final com.google.gson.Gson GSON = io.github.jmecn.minecraftwebexport.emi.bundle.Gson.GSON;
-    private static final String SCAN_LOG_STRIDE_PROPERTY = "minecraftWebExport.itemsIndexScanLogStride";
-    private static final String WRITE_LOG_STRIDE_PROPERTY = "minecraftWebExport.itemsIndexWriteLogStride";
 
     private IndexWriter() {
     }
 
-    public record Result(int itemCount, int inputsIndexed, int outputsIndexed, long indexBytes) {
-    }
 
-    public static Result export(Path outputDir) throws IOException {
+    public static ItemIndexResult export(Path outputDir) throws IOException {
         return export(outputDir, null, BundleMods.empty());
     }
 
-    public static Result export(Path outputDir, MinecraftServer server) throws IOException {
+    public static ItemIndexResult export(Path outputDir, MinecraftServer server) throws IOException {
         return export(outputDir, server, BundleMods.empty());
     }
 
-    public static Result export(Path outputDir, MinecraftServer server, BundleMods mods) throws IOException {
+    public static ItemIndexResult export(Path outputDir, MinecraftServer server, BundleMods mods) throws IOException {
         if (mods == null || mods.isEmpty()) {
-            MinecraftWebExportMod.LOGGER.warn("{} no recipe mods in bundle - skipping items index", Log.EMI_ITEMS);
-            return new Result(0, 0, 0, 0);
+            MweMod.LOGGER.warn("{} no recipe mods in bundle - skipping items index", Log.EMI_ITEMS);
+            return new ItemIndexResult(0, 0, 0, 0);
         }
         List<String> recipeIds = IndexIds.allRecipeIds(outputDir, mods);
         return exportWithLayouts(outputDir, server, recipeIds, recipeId -> {
@@ -72,7 +68,7 @@ public final class IndexWriter {
         }, Set.of());
     }
 
-    public static Result export(
+    public static ItemIndexResult export(
             Path outputDir,
             MinecraftServer server,
             Map<String, JsonObject> layoutsByRecipeId) throws IOException {
@@ -166,14 +162,14 @@ public final class IndexWriter {
         }
     }
 
-    public static Result export(
+    public static ItemIndexResult export(
             Path outputDir,
             MinecraftServer server,
             Map<String, JsonObject> layoutsByRecipeId,
             Set<String> seedItemIds) throws IOException {
         if (layoutsByRecipeId == null || layoutsByRecipeId.isEmpty()) {
-            MinecraftWebExportMod.LOGGER.warn("{} no in-memory layouts - skipping items index", Log.EMI_ITEMS);
-            return new Result(0, 0, 0, 0);
+            MweMod.LOGGER.warn("{} no in-memory layouts - skipping items index", Log.EMI_ITEMS);
+            return new ItemIndexResult(0, 0, 0, 0);
         }
         List<String> recipeIds = new ArrayList<>(layoutsByRecipeId.keySet());
         Collections.sort(recipeIds);
@@ -185,13 +181,13 @@ public final class IndexWriter {
         JsonObject load(String recipeId);
     }
 
-    private static Result exportWithLayouts(
+    private static ItemIndexResult exportWithLayouts(
             Path outputDir,
             MinecraftServer server,
             List<String> recipeIds,
             LayoutLoader layoutLookup,
             Set<String> seedItemIds) throws IOException {
-        Path itemsIndexFile = Paths.resolve(outputDir, Paths.ITEMS_INDEX_FILE);
+        Path itemsIndexFile = Paths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
         Map<String, Set<String>> tagItems = loadTagItems(outputDir);
         ExportedTagSets exportedTagSets = loadExportedTagSets(outputDir);
 
@@ -199,9 +195,9 @@ public final class IndexWriter {
         Map<String, Map<String, Set<String>>> outputs = new TreeMap<>();
         Set<String> fluidRegistryIds = new TreeSet<>();
         int scanTotal = recipeIds.size();
-        int scanStride = ProgressLog.stride(scanTotal, SCAN_LOG_STRIDE_PROPERTY, 20, 200);
+        int scanStride = ProgressLog.stride(scanTotal, Constants.PROP_ITEMS_INDEX_SCAN_LOG_STRIDE, 20, 200);
         int scanProgress = 0;
-        MinecraftWebExportMod.LOGGER.info("{} scanning {} recipes for item refs", Log.EMI_ITEMS, scanTotal);
+        MweMod.LOGGER.info("{} scanning {} recipes for item refs", Log.EMI_ITEMS, scanTotal);
 
         for (String recipeId : recipeIds) {
             scanProgress++;
@@ -243,17 +239,17 @@ public final class IndexWriter {
         allItemIds.addAll(inputs.keySet());
         allItemIds.addAll(outputs.keySet());
         mergeSeedItemIds(allItemIds, seedItemIds);
-        MinecraftWebExportMod.LOGGER.info("{} resolving registry tags for {} items", Log.EMI_ITEMS, allItemIds.size());
+        MweMod.LOGGER.info("{} resolving registry tags for {} items", Log.EMI_ITEMS, allItemIds.size());
         Map<String, RegistryTagSets> registryTagSetsByItem = resolveRegistryTags(allItemIds, server);
 
         int inputRefs = 0;
         int outputRefs = 0;
         Map<String, Set<String>> indexBuckets = new TreeMap<>();
         int writeTotal = allItemIds.size();
-        int writeStride = ProgressLog.stride(writeTotal, WRITE_LOG_STRIDE_PROPERTY, 20, 200);
+        int writeStride = ProgressLog.stride(writeTotal, Constants.PROP_ITEMS_INDEX_WRITE_LOG_STRIDE, 20, 200);
         int writeProgress = 0;
         int skippedHiddenItems = 0;
-        MinecraftWebExportMod.LOGGER.info("{} writing {} item detail files", Log.EMI_ITEMS, writeTotal);
+        MweMod.LOGGER.info("{} writing {} item detail files", Log.EMI_ITEMS, writeTotal);
 
         for (String itemId : allItemIds) {
             writeProgress++;
@@ -288,10 +284,10 @@ public final class IndexWriter {
                 detail.put("tagsInBundle", tagSets.intersection(exportedTagSets).asJsonMap());
             }
 
-            Files.writeString(itemFile, GSON.toJson(detail));
+            Files.writeString(itemFile, Json.GSON.toJson(detail));
             if (ProgressLog.shouldLog(writeProgress, writeTotal, writeStride)) {
                 int pct = ProgressLog.percent(writeProgress, writeTotal);
-                MinecraftWebExportMod.LOGGER.info(
+                MweMod.LOGGER.info(
                         "{} write {}% {}/{} item files",
                         Log.EMI_ITEMS,
                         pct,
@@ -306,20 +302,20 @@ public final class IndexWriter {
             root.put(entry.getKey(), new ArrayList<>(entry.getValue()));
         }
         if (!fluidRegistryIds.isEmpty()) {
-            root.put(SearchIndexWriter.FLUID_REGISTRY_IDS_KEY, new ArrayList<>(fluidRegistryIds));
+            root.put(Constants.FLUID_REGISTRY_IDS_KEY, new ArrayList<>(fluidRegistryIds));
         }
 
-        String json = GSON.toJson(root);
+        String json = Json.GSON.toJson(root);
         Files.createDirectories(itemsIndexFile.getParent());
         Files.writeString(itemsIndexFile, json);
         if (skippedHiddenItems > 0) {
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} item visibility: {} indexed, {} skipped (hidden_from_recipe_viewers)",
                     Log.EMI_ITEMS,
                     indexBuckets.values().stream().mapToInt(Set::size).sum(),
                     skippedHiddenItems);
         }
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "{} {} items ({} input refs, {} output refs) -> {}",
                 Log.EMI_ITEMS,
                 allItemIds.size() - skippedHiddenItems,
@@ -327,7 +323,7 @@ public final class IndexWriter {
                 outputRefs,
                 itemsIndexFile);
         int indexedCount = indexBuckets.values().stream().mapToInt(Set::size).sum();
-        return new Result(indexedCount, inputRefs, outputRefs, json.length());
+        return new ItemIndexResult(indexedCount, inputRefs, outputRefs, json.length());
     }
 
     private static void mergeSeedItemIds(Set<String> allItemIds, Set<String> seedItemIds) {
@@ -340,14 +336,14 @@ public final class IndexWriter {
         }
         int added = allItemIds.size() - before;
         if (added > 0) {
-            MinecraftWebExportMod.LOGGER.info("{} merged {} seed/closure items ({} new)", Log.EMI_ITEMS, seedItemIds.size(), added);
+            MweMod.LOGGER.info("{} merged {} seed/closure items ({} new)", Log.EMI_ITEMS, seedItemIds.size(), added);
         }
     }
 
     private static void logScanProgress(int progress, int total, int stride) {
         if (ProgressLog.shouldLog(progress, total, stride)) {
             int pct = ProgressLog.percent(progress, total);
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "{} scan {}% {}/{} recipes",
                     Log.EMI_ITEMS,
                     pct,
@@ -357,7 +353,7 @@ public final class IndexWriter {
     }
 
     private static Map<String, Set<String>> loadTagItems(Path outputDir) throws IOException {
-        Path tagsRoot = Paths.resolve(outputDir, Paths.TAGS_DIR);
+        Path tagsRoot = Paths.resolve(outputDir, Constants.TAGS_DIR);
         if (!Files.isDirectory(tagsRoot)) {
             return Map.of();
         }
@@ -392,7 +388,7 @@ public final class IndexWriter {
     }
 
     private static ExportedTagSets loadExportedTagSets(Path outputDir) throws IOException {
-        Path tagsRoot = Paths.resolve(outputDir, Paths.TAGS_DIR);
+        Path tagsRoot = Paths.resolve(outputDir, Constants.TAGS_DIR);
         if (!Files.isDirectory(tagsRoot)) {
             return ExportedTagSets.empty();
         }

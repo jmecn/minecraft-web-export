@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.support;
 
+import io.github.jmecn.minecraftwebexport.Constants;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Arrays;
@@ -9,17 +10,14 @@ import java.util.Set;
 
 public final class ResourceFilter {
 
-    private static final Set<String> DEFAULT_EXCLUDED = Set.of("additionalplacements");
-
-    private ResourceFilter() {
-    }
+    private ResourceFilter() {}
 
     public static Set<String> excludedNamespaces() {
-        String extra = System.getProperty("minecraftWebExport.exportExcludedNamespaces", "").trim();
+        String extra = System.getProperty(Constants.PROP_EXPORT_EXCLUDED_NAMESPACES, "").trim();
         if (extra.isEmpty()) {
-            return DEFAULT_EXCLUDED;
+            return Constants.DEFAULT_EXCLUDED_NAMESPACES;
         }
-        var merged = new LinkedHashSet<>(DEFAULT_EXCLUDED);
+        var merged = new LinkedHashSet<>(Constants.DEFAULT_EXCLUDED_NAMESPACES);
         Arrays.stream(extra.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())

@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.tag;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
 import io.github.jmecn.minecraftwebexport.emi.tag.MembersIndexWriter;
 
@@ -29,7 +30,7 @@ class MembersIndexWriterTest {
         long bytes = MembersIndexWriter.writeTagsCatalog(tempDir, items, blocks, Set.of());
 
         assertTrue(bytes > 0);
-        Path indexFile = Paths.resolve(tempDir, Paths.TAGS_INDEX_FILE);
+        Path indexFile = Paths.resolve(tempDir, Constants.TAGS_INDEX_FILE);
         assertTrue(Files.isRegularFile(indexFile));
 
         JsonObject root = JsonParser.parseString(Files.readString(indexFile)).getAsJsonObject();
@@ -44,6 +45,6 @@ class MembersIndexWriterTest {
     void skipsTagsCatalogWhenNoTags() throws Exception {
         long bytes = MembersIndexWriter.writeTagsCatalog(tempDir, Set.of(), Set.of(), Set.of());
         assertEquals(0, bytes);
-        assertFalse(Files.exists(Paths.resolve(tempDir, Paths.TAGS_INDEX_FILE)));
+        assertFalse(Files.exists(Paths.resolve(tempDir, Constants.TAGS_INDEX_FILE)));
     }
 }

@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.runtime;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.runtime.CiProperties;
 
 import org.junit.jupiter.api.AfterEach;
@@ -12,11 +13,11 @@ class CiPropertiesTest {
 
     @AfterEach
     void clearProperties() {
-        System.clearProperty(CiProperties.RUN_EXPORT_AND_EXIT_PROPERTY);
-        System.clearProperty(CiProperties.EXPORT_WARMUP_TICKS_PROPERTY);
-        System.clearProperty(CiProperties.EXPORT_WORLD_DELAY_TICKS_PROPERTY);
-        System.clearProperty(CiProperties.EXPORT_TIMEOUT_SECONDS_PROPERTY);
-        System.clearProperty(CiProperties.EXPORT_WORLD_NAME_PROPERTY);
+        System.clearProperty(Constants.PROP_RUN_EXPORT_AND_EXIT);
+        System.clearProperty(Constants.PROP_EXPORT_WARMUP_TICKS);
+        System.clearProperty(Constants.PROP_EXPORT_WORLD_DELAY_TICKS);
+        System.clearProperty(Constants.PROP_EXPORT_TIMEOUT_SECONDS);
+        System.clearProperty(Constants.PROP_EXPORT_WORLD_NAME);
     }
 
     @Test
@@ -30,11 +31,11 @@ class CiPropertiesTest {
 
     @Test
     void readsOverrides() {
-        System.setProperty(CiProperties.RUN_EXPORT_AND_EXIT_PROPERTY, "true");
-        System.setProperty(CiProperties.EXPORT_WARMUP_TICKS_PROPERTY, "120");
-        System.setProperty(CiProperties.EXPORT_WORLD_DELAY_TICKS_PROPERTY, "30");
-        System.setProperty(CiProperties.EXPORT_TIMEOUT_SECONDS_PROPERTY, "90");
-        System.setProperty(CiProperties.EXPORT_WORLD_NAME_PROPERTY, "custom-save");
+        System.setProperty(Constants.PROP_RUN_EXPORT_AND_EXIT, "true");
+        System.setProperty(Constants.PROP_EXPORT_WARMUP_TICKS, "120");
+        System.setProperty(Constants.PROP_EXPORT_WORLD_DELAY_TICKS, "30");
+        System.setProperty(Constants.PROP_EXPORT_TIMEOUT_SECONDS, "90");
+        System.setProperty(Constants.PROP_EXPORT_WORLD_NAME, "custom-save");
 
         assertTrue(CiProperties.runExportAndExit());
         assertEquals(120, CiProperties.exportWarmupTicks());
@@ -51,11 +52,11 @@ class CiPropertiesTest {
 
     @Test
     void timedOutWhenElapsed() {
-        System.setProperty(CiProperties.EXPORT_TIMEOUT_SECONDS_PROPERTY, "0");
+        System.setProperty(Constants.PROP_EXPORT_TIMEOUT_SECONDS, "0");
         long start = System.nanoTime() - 2_000_000_000L;
         assertFalse(CiProperties.timedOut(start));
 
-        System.setProperty(CiProperties.EXPORT_TIMEOUT_SECONDS_PROPERTY, "1");
+        System.setProperty(Constants.PROP_EXPORT_TIMEOUT_SECONDS, "1");
         assertTrue(CiProperties.timedOut(start));
     }
 }

@@ -1,11 +1,11 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
-import io.github.jmecn.minecraftwebexport.pipeline.Hints;
-import io.github.jmecn.minecraftwebexport.pipeline.Mode;
-import io.github.jmecn.minecraftwebexport.pipeline.Module;
-import io.github.jmecn.minecraftwebexport.pipeline.Plan;
-import io.github.jmecn.minecraftwebexport.pipeline.Scope;
-import io.github.jmecn.minecraftwebexport.pipeline.Seeds;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ClosureResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
 
 import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.recipe.EmiRecipe;
@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Planner {
 
@@ -32,7 +32,7 @@ public final class Planner {
         if (mode == Mode.FULL) {
             Set<String> allRecipes = collectExportableRecipeIds(client);
             Hints hints = mergeModuleHints(modules, scope, Seeds.empty());
-            MinecraftWebExportMod.LOGGER.info("[export] mode=full, recipes={}", allRecipes.size());
+            MweMod.LOGGER.info("[export] mode=full, recipes={}", allRecipes.size());
             return new Plan(
                     Mode.FULL,
                     allRecipes,
@@ -58,10 +58,10 @@ public final class Planner {
         Set<String> recipeIds = resolveRecipeIds(mode, merged.recipeIds(), availableRecipes);
 
         MinecraftServer server = client.getSingleplayerServer();
-        ClosureExpander.ClosureResult closure = ClosureExpander.expand(server, merged);
+        ClosureResult closure = ClosureExpander.expand(server, merged);
 
         if (mode == Mode.SCOPED && merged.recipeIds().size() != recipeIds.size()) {
-            MinecraftWebExportMod.LOGGER.warn("[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
+            MweMod.LOGGER.warn("[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
                     merged.recipeIds().size(), recipeIds.size());
         }
         if (mode == Mode.SCOPED && !availableRecipes.containsAll(recipeIds)) {
@@ -71,12 +71,12 @@ public final class Planner {
                     hiddenFromEmi++;
                 }
             }
-            MinecraftWebExportMod.LOGGER.info(
+            MweMod.LOGGER.info(
                     "[export] scoped handbook recipes include {} EMI-hidden ids (exported anyway)",
                     hiddenFromEmi);
         }
 
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "[export] mode=scoped, modules={}, seedRecipes={}, resolvedRecipes={}, seedTags={}, closureItems={}, closureTags={}",
                 modules.size(),
                 merged.recipeIds().size(),
@@ -86,7 +86,7 @@ public final class Planner {
                 closure.tagIds().size());
 
         if (server == null && !merged.tagIds().isEmpty()) {
-            MinecraftWebExportMod.LOGGER.warn("[export] tag closure skipped: no integrated server (seedTags={})", merged.tagIds().size());
+            MweMod.LOGGER.warn("[export] tag closure skipped: no integrated server (seedTags={})", merged.tagIds().size());
         }
 
         return new Plan(

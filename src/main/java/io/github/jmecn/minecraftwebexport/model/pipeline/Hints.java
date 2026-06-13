@@ -1,4 +1,4 @@
-package io.github.jmecn.minecraftwebexport.pipeline;
+package io.github.jmecn.minecraftwebexport.model.pipeline;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

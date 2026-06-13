@@ -1,8 +1,8 @@
 package io.github.jmecn.minecraftwebexport.emi.support;
 
-public final class ProgressLog {
+import io.github.jmecn.minecraftwebexport.Constants;
 
-    private static final int TARGET_LINES = 30;
+public final class ProgressLog {
 
     private ProgressLog() {}
 
@@ -20,7 +20,7 @@ public final class ProgressLog {
         if (total <= 2_000) {
             return mediumBatch;
         }
-        return Math.max(2_000, (total + TARGET_LINES - 1) / TARGET_LINES);
+        return Math.max(2_000, (total + Constants.PROGRESS_LOG_TARGET_LINES - 1) / Constants.PROGRESS_LOG_TARGET_LINES);
     }
 
     public static boolean shouldLog(int progress, int total, int stride) {

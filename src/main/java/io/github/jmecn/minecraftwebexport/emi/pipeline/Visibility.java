@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.pipeline;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
@@ -18,7 +19,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Visibility {
 
@@ -29,7 +30,7 @@ public final class Visibility {
     }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean("minecraftWebExport.skipEmiVisibilityFilter");
+        return !Boolean.getBoolean(Constants.PROP_SKIP_EMI_VISIBILITY_FILTER);
     }
 
     public static java.util.Set<String> filterExportableRecipeIds(MinecraftServer server, Iterable<EmiRecipe> recipes) {
@@ -57,7 +58,7 @@ public final class Visibility {
                 ids.add(recipe.getId().toString());
             }
         }
-        MinecraftWebExportMod.LOGGER.info(
+        MweMod.LOGGER.info(
                 "{} recipe visibility: {} exportable, {} skipped ({} emi-disabled ingredient, {} hidden-tag ingredient)",
                 Log.EMI,
                 ids.size(),

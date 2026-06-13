@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 
-import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
+import io.github.jmecn.minecraftwebexport.MweMod;
 import net.sourceforge.pinyin4j.PinyinHelper;
 import net.sourceforge.pinyin4j.format.HanyuPinyinCaseType;
 import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
@@ -33,7 +33,7 @@ public final class SearchPinyin {
         } catch (Throwable t) {
             if (!warnedUnavailable) {
                 warnedUnavailable = true;
-                MinecraftWebExportMod.LOGGER.warn(
+                MweMod.LOGGER.warn(
                         "{} pinyin4j unavailable — Chinese search haystack will omit pinyin tokens: {}",
                         Log.ITEMS_LANG,
                         t.toString());
