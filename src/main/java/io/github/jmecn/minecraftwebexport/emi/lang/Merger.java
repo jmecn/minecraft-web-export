@@ -4,10 +4,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ResourceFilter;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.Objects;
 import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
@@ -44,11 +47,7 @@ public final class Merger {
     }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean(Constants.PROP_SKIP_LANG_EXPORT);
-    }
-
-    public static boolean isLangPruneEnabled() {
-        return isEnabled() && !Boolean.getBoolean(Constants.PROP_SKIP_LANG_PRUNE_EXPORT);
+        return !MweConfig.skipLangExport();
     }
 
     static boolean shouldMergeLangKey(String key, Set<String> onlyKeys) {
@@ -61,65 +60,28 @@ public final class Merger {
         return isEmiCategoryLangKey(key);
     }
 
-    public static Set<String> filterWebDeployKeys(Set<String> keys) {
-        if (keys == null || keys.isEmpty()) {
-            return keys;
-        }
-        TreeSet<String> out = new TreeSet<>();
-        for (String key : keys) {
-            if (isWebDeployLangKey(key)) {
-                out.add(key);
-            }
-        }
-        return out;
-    }
-
-    static boolean isWebDeployLangKey(String key) {
-        if (key == null || key.isEmpty()) {
-            return false;
-        }
-        if (key.startsWith("tag.item.")
-                || key.startsWith("tag.block.")
-                || key.startsWith("tag.fluid.")) {
-            return true;
-        }
-        if (key.startsWith("emi.category.")) {
-            return true;
-        }
-        if (key.startsWith("material.")
-                || key.startsWith("tagprefix.")
-                || key.startsWith("gtceu.fluid.")) {
-            return false;
-        }
-        return !key.startsWith("item.") && !key.startsWith("block.") && !key.startsWith("fluid.");
-    }
-
-    private static boolean isGtceuTranslationKey(String key) {
-        return key.startsWith("material.gtceu.")
-                || key.startsWith("material.tfg.")
-                || key.startsWith("tagprefix.")
-                || key.startsWith("gtceu.fluid.")
-                || key.equals("item.gtceu.bucket")
-                || key.equals("item.tfg.bucket");
-    }
-
     private static boolean isEmiCategoryLangKey(String key) {
         return key.startsWith("emi.category.");
     }
 
+    public static LangMergeResult exportEmiLang(
+            Path outputDir, Minecraft client, Set<String> onlyKeys, Hints hints, ExportWriteQueue writes)
+            throws IOException {
+        return exportTo(EmiPaths.resolve(outputDir, Constants.LANG_DIR), client, null, onlyKeys, hints, writes);
+    }
+
     public static LangMergeResult exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys, Hints hints)
             throws IOException {
-        return exportTo(EmiPaths.resolve(outputDir, Constants.LANG_DIR), client, null, onlyKeys, hints);
+        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            LangMergeResult result = exportEmiLang(outputDir, client, onlyKeys, hints, writes);
+            writes.awaitIdle();
+            return result;
+        }
     }
 
     @Deprecated
     public static LangMergeResult exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys) throws IOException {
         return exportEmiLang(outputDir, client, onlyKeys, Hints.defaults());
-    }
-
-    public static LangMergeResult exportTo(Path langRoot, Minecraft client, Set<String> onlyNamespaces, Set<String> onlyKeys)
-            throws IOException {
-        return exportTo(langRoot, client, onlyNamespaces, onlyKeys, Hints.defaults());
     }
 
     public static LangMergeResult exportTo(
@@ -128,6 +90,29 @@ public final class Merger {
             Set<String> onlyNamespaces,
             Set<String> onlyKeys,
             Hints hints) throws IOException {
+        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            LangMergeResult result = exportTo(langRoot, client, onlyNamespaces, onlyKeys, hints, writes);
+            writes.awaitIdle();
+            return result;
+        }
+    }
+
+    public static LangMergeResult exportTo(
+            Path langRoot,
+            Minecraft client,
+            Set<String> onlyNamespaces,
+            Set<String> onlyKeys) throws IOException {
+        return exportTo(langRoot, client, onlyNamespaces, onlyKeys, Hints.defaults());
+    }
+
+    public static LangMergeResult exportTo(
+            Path langRoot,
+            Minecraft client,
+            Set<String> onlyNamespaces,
+            Set<String> onlyKeys,
+            Hints hints,
+            ExportWriteQueue writes) throws IOException {
+        Objects.requireNonNull(writes, "writes");
         Files.createDirectories(langRoot);
 
         Set<String> languages = Languages.resolve(hints);
@@ -175,7 +160,7 @@ public final class Merger {
             }
 
             Path out = langRoot.resolve(langFile);
-            JsonIO.write(out, merged);
+            writes.submitJson(out, merged);
             languagesWritten++;
             totalBytes += JsonIO.toUtf8Bytes(merged).length;
             keysPerLanguage = merged.size();

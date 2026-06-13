@@ -5,64 +5,71 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
-public record Plan(
-        Mode mode,
-        Set<String> recipeIds,
-        Set<String> closureItemIds,
-        Set<String> closureFluidIds,
-        Set<String> closureTagIds,
-        Set<String> closureLangKeys,
-        Hints hints,
-        Seeds sourceSeeds) {
+public record Plan(ExportContext context, Hints hints, Seeds sourceSeeds) {
 
     public Plan {
-        mode = Objects.requireNonNull(mode, "mode");
-        recipeIds = copy(recipeIds);
-        closureItemIds = copy(closureItemIds);
-        closureFluidIds = copy(closureFluidIds);
-        closureTagIds = copy(closureTagIds);
-        closureLangKeys = copy(closureLangKeys);
+        context = Objects.requireNonNull(context, "context");
         hints = Objects.requireNonNull(hints, "hints");
         sourceSeeds = Objects.requireNonNull(sourceSeeds, "sourceSeeds");
     }
 
+    public Mode mode() {
+        return context.mode();
+    }
+
+    public Set<String> recipeIds() {
+        return context.recipeIds();
+    }
+
+    public Set<String> closureItemIds() {
+        return context.itemIds();
+    }
+
+    public Set<String> closureFluidIds() {
+        return context.fluidIds();
+    }
+
+    public Set<String> closureTagIds() {
+        return context.tagIds();
+    }
+
+    public Set<String> closureLangKeys() {
+        return context.seedLangKeys();
+    }
+
     public static Plan full(Set<String> allRecipeIds) {
         return new Plan(
-                Mode.FULL,
-                allRecipeIds,
-                Set.of(),
-                Set.of(),
-                Set.of(),
-                Set.of(),
+                ExportContext.builder(Mode.FULL).recipeIds(allRecipeIds).build(),
                 Hints.defaults(),
                 Seeds.empty());
     }
 
     public Set<String> itemsForIcons(Set<String> layoutReferencedItems) {
-        return union(layoutReferencedItems, closureItemIds);
+        return union(layoutReferencedItems, context.itemIds());
     }
 
     public Set<String> seedItemsForIndex() {
-        return closureItemIds;
+        return context.itemIds();
     }
 
     public Set<String> fluidsForIcons(Set<String> layoutReferencedFluids) {
-        return union(layoutReferencedFluids, closureFluidIds);
+        return union(layoutReferencedFluids, context.fluidIds());
     }
 
     public Set<String> tagsForExport(Set<String> layoutReferencedTags) {
-        if (mode == Mode.FULL) {
+        if (mode() == Mode.FULL) {
             return copy(layoutReferencedTags);
         }
-        return union(layoutReferencedTags, closureTagIds);
+        return union(layoutReferencedTags, context.tagIds());
     }
 
     public Set<String> langKeysForExport() {
-        if (mode == Mode.FULL) {
+        if (mode() == Mode.FULL) {
             return null;
         }
-        Set<String> merged = ClosureKeys.mergeClosureLangKeys(closureLangKeys, closureItemIds, closureFluidIds);
-        merged = ClosureKeys.mergeTagLangKeys(merged, closureTagIds);
+        Set<String> merged = ClosureKeys.mergeClosureLangKeys(
+                context.seedLangKeys(), context.itemIds(), context.fluidIds());
+        merged = ClosureKeys.mergeTagLangKeys(merged, context.tagIds());
         return merged.isEmpty() ? null : merged;
     }
 

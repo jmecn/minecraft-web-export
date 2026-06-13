@@ -15,16 +15,16 @@ public final class RegistryResolver {
     private final Map<String, String> nameKeysByRegistryId;
 
     public RegistryResolver(Map<String, String> current, Map<String, String> fallback) {
-        this(current, fallback, Map.of());
+        this(current, fallback, new HashMap<>());
     }
 
     public RegistryResolver(
             Map<String, String> current,
             Map<String, String> fallback,
             Map<String, String> nameKeysByRegistryId) {
-        this.current = current == null ? Map.of() : current;
-        this.fallback = fallback == null ? Map.of() : fallback;
-        this.nameKeysByRegistryId = nameKeysByRegistryId == null ? Map.of() : nameKeysByRegistryId;
+        this.current = current == null ? new HashMap<>() : current;
+        this.fallback = fallback == null ? new HashMap<>() : fallback;
+        this.nameKeysByRegistryId = nameKeysByRegistryId == null ? new HashMap<>() : nameKeysByRegistryId;
         this.merged = new HashMap<>(this.fallback);
         this.merged.putAll(this.current);
     }

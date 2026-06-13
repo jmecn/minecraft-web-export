@@ -1,21 +1,13 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
-import io.github.jmecn.minecraftwebexport.emi.item.NameKeysExporter;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
 import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Map;
+import com.google.gson.JsonElement;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
+import io.github.jmecn.minecraftwebexport.Constants;
 
 public final class UsedKeysCollector {
 
@@ -35,96 +27,6 @@ public final class UsedKeysCollector {
         }
         for (RecipeWidget widget : meta.widgets()) {
             collectInteraction(widget.interaction());
-        }
-    }
-
-    public void collectFromCategoriesIndex(Path outputDir) throws IOException {
-        Path indexFile = EmiPaths.resolve(outputDir, Constants.CATEGORIES_INDEX_FILE);
-        if (!Files.isRegularFile(indexFile)) {
-            return;
-        }
-        JsonObject manifest = JsonParser.parseString(Files.readString(indexFile)).getAsJsonObject();
-        JsonElement categories = manifest.get("categories");
-        if (categories == null || !categories.isJsonArray()) {
-            return;
-        }
-        for (JsonElement element : categories.getAsJsonArray()) {
-            if (!element.isJsonObject()) {
-                continue;
-            }
-            JsonObject entry = element.getAsJsonObject();
-            if (entry.has("nameKey") && entry.get("nameKey").isJsonPrimitive()) {
-                keys.add(entry.get("nameKey").getAsString());
-            }
-            if (entry.has("iconItem") && entry.get("iconItem").isJsonPrimitive()) {
-                addRegistryItem(entry.get("iconItem").getAsString());
-            }
-            if (entry.has("iconKey") && entry.get("iconKey").isJsonPrimitive()) {
-                addRegistryItem(entry.get("iconKey").getAsString());
-            }
-        }
-    }
-
-    public void collectFromItemNameKeys(Path outputDir) throws IOException {
-        for (String key : NameKeysExporter.readNameKeys(outputDir).values()) {
-            if (key != null && !key.isBlank()) {
-                keys.add(key);
-            }
-        }
-    }
-
-    public void collectFromItemsIndex(Path outputDir) throws IOException {
-        Path indexFile = EmiPaths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
-        if (!Files.isRegularFile(indexFile)) {
-            return;
-        }
-        JsonObject index = JsonParser.parseString(Files.readString(indexFile)).getAsJsonObject();
-        for (Map.Entry<String, JsonElement> entry : index.entrySet()) {
-            String ns = entry.getKey();
-            if ("schema".equals(ns)) {
-                continue;
-            }
-            if ("fluid".equals(ns) && entry.getValue().isJsonArray()) {
-                for (JsonElement fluidEl : entry.getValue().getAsJsonArray()) {
-                    if (fluidEl.isJsonPrimitive()) {
-                        String fluidPath = fluidEl.getAsString();
-                        if (!fluidPath.isEmpty()) {
-                            addRegistryFluid(fluidPath.contains(":") ? fluidPath : "minecraft:" + fluidPath);
-                        }
-                    }
-                }
-                continue;
-            }
-            if (!entry.getValue().isJsonArray()) {
-                continue;
-            }
-            for (JsonElement pathEl : entry.getValue().getAsJsonArray()) {
-                if (pathEl.isJsonPrimitive()) {
-                    String path = pathEl.getAsString();
-                    if (!path.isEmpty()) {
-                        addRegistryItem(path.contains(":") ? path : ns + ":" + path);
-                    }
-                }
-            }
-        }
-    }
-
-    public void collectFromTagsIndex(Path outputDir) throws IOException {
-        Path indexFile = EmiPaths.resolve(outputDir, Constants.TAGS_INDEX_FILE);
-        if (!Files.isRegularFile(indexFile)) {
-            return;
-        }
-        JsonObject tagsIndex = JsonParser.parseString(Files.readString(indexFile)).getAsJsonObject();
-        for (String bucket : new String[] { "items", "blocks", "fluids" }) {
-            JsonElement array = tagsIndex.get(bucket);
-            if (array == null || !array.isJsonArray()) {
-                continue;
-            }
-            for (JsonElement tagEl : array.getAsJsonArray()) {
-                if (tagEl.isJsonPrimitive()) {
-                    addTag(tagEl.getAsString());
-                }
-            }
         }
     }
 

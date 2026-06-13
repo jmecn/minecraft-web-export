@@ -1,6 +1,5 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 
-import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -47,21 +46,10 @@ class PlannerTest {
     }
 
     @Test
-    void exportModeReadsSystemProperty() {
-        String previous = System.getProperty(Constants.PROP_EXPORT_MODE);
-        try {
-            System.setProperty(Constants.PROP_EXPORT_MODE, "scoped");
-            assertEquals(Mode.SCOPED, Mode.current());
-            System.setProperty(Constants.PROP_EXPORT_MODE, "closure");
-            assertEquals(Mode.SCOPED, Mode.current());
-            System.setProperty(Constants.PROP_EXPORT_MODE, "full");
-            assertEquals(Mode.FULL, Mode.current());
-        } finally {
-            if (previous == null) {
-                System.clearProperty(Constants.PROP_EXPORT_MODE);
-            } else {
-                System.setProperty(Constants.PROP_EXPORT_MODE, previous);
-            }
-        }
+    void exportModeParsesAliases() {
+        assertEquals(Mode.SCOPED, Mode.parse("scoped"));
+        assertEquals(Mode.SCOPED, Mode.parse("closure"));
+        assertEquals(Mode.FULL, Mode.parse("full"));
+        assertEquals(Mode.FULL, Mode.parse("unknown"));
     }
 }

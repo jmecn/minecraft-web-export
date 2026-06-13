@@ -7,11 +7,13 @@ import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.data.EmiRecipeCategoryProperties;
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.category.IconRenderer;
 import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.category.CategoriesIndex;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryEntry;
@@ -22,6 +24,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -33,10 +37,26 @@ public final class CategoryIconWriter {
     }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean(Constants.PROP_SKIP_CATEGORY_ICON_EXPORT);
+        return !MweConfig.skipCategoryIconExport();
     }
 
     public static CategoryIconResult export(Path outputRoot, Minecraft client) throws IOException {
+        return export(outputRoot, client, Set.of());
+    }
+
+    public static CategoryIconResult export(Path outputRoot, Minecraft client, Set<String> categoryIds)
+            throws IOException {
+        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            CategoryIconResult result = export(outputRoot, client, categoryIds, writes);
+            writes.awaitIdle();
+            return result;
+        }
+    }
+
+    public static CategoryIconResult export(
+            Path outputRoot, Minecraft client, Set<String> categoryIds, ExportWriteQueue writes)
+            throws IOException {
+        Objects.requireNonNull(writes, "writes");
         EmiRecipeManager manager = EmiApi.getRecipeManager();
         if (manager == null) {
             MweMod.LOGGER.warn("{} EMI recipe manager unavailable - skipping category icons", Log.EMI);
@@ -45,9 +65,15 @@ public final class CategoryIconWriter {
 
         List<EmiRecipeCategory> registered = manager.getCategories();
         List<CategoryEntry> categories = new ArrayList<>();
+        List<EmiRecipeCategory> categoriesToRender = new ArrayList<>();
         int order = 0;
         for (EmiRecipeCategory category : registered) {
+            String categoryId = category.getId().toString();
+            if (categoryIds != null && !categoryIds.isEmpty() && !categoryIds.contains(categoryId)) {
+                continue;
+            }
             categories.add(buildCategoryEntry(category, order++));
+            categoriesToRender.add(category);
         }
 
         int placed = 0;
@@ -62,15 +88,15 @@ public final class CategoryIconWriter {
 
             MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
             try (OffScreenRenderer renderer = new OffScreenRenderer(cell, cell);
-                 AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "category", layout, null)) {
+                 AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "category", layout, null, writes)) {
                 GuiGraphics guiGraphics = new GuiGraphics(client, bufferSource);
                 PlaceholderRenderer.render(guiGraphics, renderer);
                 atlas.place(PlaceholderRenderer.REGISTRY_ID, renderer);
 
                 int index = 0;
-                int total = registered.size();
-                for (int i = 0; i < registered.size(); i++) {
-                    EmiRecipeCategory category = registered.get(i);
+                int total = categories.size();
+                for (int i = 0; i < categoriesToRender.size(); i++) {
+                    EmiRecipeCategory category = categoriesToRender.get(i);
                     String categoryId = category.getId().toString();
                     index++;
                     boolean ok;
@@ -109,7 +135,7 @@ public final class CategoryIconWriter {
         int cellSize = ExportSizes.categoryIconCellSize();
         CategoriesIndex index = CategoriesIndex.of(cellSize, Constants.CATEGORY_ICONS_DIR, categories);
         Path indexFile = EmiPaths.resolve(outputRoot, Constants.CATEGORIES_INDEX_FILE);
-        JsonIO.write(indexFile, index);
+        writes.submitJson(indexFile, index);
         long indexBytes = JsonIO.toUtf8Bytes(index).length;
 
         MweMod.LOGGER.info(

@@ -47,6 +47,12 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.register('prepareExportCiClientConfig', Copy) {
+    from project.file('gradle/config/export-ci-client.toml')
+    into project.file('run/config')
+    rename { 'minecraft_web_export-client.toml' }
+}
+
 legacyForge {
     version = "${minecraft_version}-${forge_version}"
 
@@ -65,21 +71,10 @@ legacyForge {
         client {
             client()
         }
-        exportClient {
-            client()
-            ideName = 'Export Client'
-            systemProperty 'minecraftWebExport.export.enabled', 'true'
-            systemProperty 'minecraftWebExport.exportLanguages', 'en_us,zh_cn'
-        }
         exportCiClient {
             client()
             ideName = 'Export CI Client'
-            systemProperty 'minecraftWebExport.export.enabled', 'true'
-            systemProperty 'minecraftWebExport.exportLanguages', 'en_us,zh_cn'
-            systemProperty 'minecraftWebExport.runExportAndExit', 'true'
-            systemProperty 'minecraftWebExport.exportWarmupTicks', '100'
-            systemProperty 'minecraftWebExport.exportWorldDelayTicks', '60'
-            systemProperty 'minecraftWebExport.exportTimeoutSeconds', '7200'
+            taskBefore tasks.named('prepareExportCiClientConfig')
         }
     }
 

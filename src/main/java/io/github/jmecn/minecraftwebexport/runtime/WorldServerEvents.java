@@ -20,7 +20,7 @@ public final class WorldServerEvents {
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
-        if (!CiProperties.runExportAndExit()) {
+        if (!CiProperties.exportEnabled()) {
             return;
         }
         ServerLevel overworld = event.getServer().overworld();
@@ -37,7 +37,7 @@ public final class WorldServerEvents {
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!CiProperties.runExportAndExit()) {
+        if (!CiProperties.exportEnabled()) {
             return;
         }
         if (!(event.getEntity() instanceof ServerPlayer player)) {

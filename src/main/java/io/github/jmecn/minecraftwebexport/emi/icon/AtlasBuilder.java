@@ -3,14 +3,15 @@ package io.github.jmecn.minecraftwebexport.emi.icon;
 import com.mojang.blaze3d.platform.NativeImage;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryIconSprite;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasIndex;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasPage;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasSpriteEntry;
+import java.util.Objects;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ final class AtlasBuilder implements AutoCloseable {
     private final List<AtlasPagePlan> pagePlans;
     private final Map<String, Integer> usageWeights;
 
+    private final ExportWriteQueue writes;
     private final List<PageInfo> pages = new ArrayList<>();
     private final Map<String, SpriteRef> items = new LinkedHashMap<>();
 
@@ -42,13 +44,17 @@ final class AtlasBuilder implements AutoCloseable {
     private int extentY;
     private int pagePlanIndex;
 
+    private long pendingPngBytes;
+
     AtlasBuilder(
             Path outputDir,
             int cellSize,
             int maxAtlasSize,
             String atlasKind,
             List<AtlasPagePlan> pagePlans,
-            Map<String, Integer> usageWeights) {
+            Map<String, Integer> usageWeights,
+            ExportWriteQueue writes) {
+        this.writes = Objects.requireNonNull(writes, "writes");
         this.outputDir = outputDir;
         this.cellSize = cellSize;
         this.maxAtlasSize = maxAtlasSize;
@@ -105,10 +111,12 @@ final class AtlasBuilder implements AutoCloseable {
 
         Files.createDirectories(outputDir);
 
-        long pngBytes = 0;
+        long pngBytes = pendingPngBytes;
         for (PageInfo page : pages) {
             Path out = outputDir.resolve(page.fileName());
-            pngBytes += Files.size(out);
+            if (Files.exists(out)) {
+                pngBytes += Files.size(out);
+            }
         }
 
         List<AtlasPage> pageList = new ArrayList<>();
@@ -127,12 +135,12 @@ final class AtlasBuilder implements AutoCloseable {
         AtlasIndex indexRoot = AtlasIndex.of(cellSize, sort, pageList, spriteEntries);
 
         Path indexPath = outputDir.resolve("index.json");
-        JsonIO.write(indexPath, indexRoot);
+        writes.submitJson(indexPath, indexRoot);
         long indexJsonBytes = JsonIO.toUtf8Bytes(indexRoot).length;
 
         Path cssPath = outputDir.resolve(cssFileName);
         String css = buildCss();
-        Files.writeString(cssPath, css, StandardCharsets.UTF_8);
+        writes.submitString(cssPath, css);
 
         MweMod.LOGGER.info(
                 "{} atlas: {} items, {} pages, index {} bytes, png {} bytes, css {} bytes",
@@ -200,13 +208,15 @@ final class AtlasBuilder implements AutoCloseable {
         currentPage.close();
         currentPage = null;
         try {
-            Files.createDirectories(outputDir);
-            trimmed.writeToFile(outputDir.resolve(fileName));
+            byte[] png = trimmed.asByteArray();
+            Path out = outputDir.resolve(fileName);
+            writes.submitBytes(out, png);
+            pendingPngBytes += png.length;
         } catch (IOException e) {
+            throw new RuntimeException("failed to encode atlas page " + fileName, e);
+        } finally {
             trimmed.close();
-            throw new RuntimeException("failed to write atlas page " + fileName, e);
         }
-        trimmed.close();
         pages.add(new PageInfo(pageIndex, fileName, usedWidth, usedHeight));
         pageIndex++;
     }

@@ -1,30 +1,25 @@
 package io.github.jmecn.minecraftwebexport.emi.support;
 
-import io.github.jmecn.minecraftwebexport.Constants;
-import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ResourceFilterTest {
 
     @Test
-    void excludesDefaultNamespaces() {
-        System.clearProperty(Constants.PROP_EXPORT_EXCLUDED_NAMESPACES);
-
-        assertTrue(ResourceFilter.isExcluded(ResourceLocation.parse("additionalplacements:test")));
-        assertFalse(ResourceFilter.isExcluded(ResourceLocation.parse("minecraft:test")));
+    void includesDefaultExcludedNamespaces() {
+        assertTrue(ResourceFilter.excludedNamespaces().contains("additionalplacements"));
     }
 
     @Test
     void mergesConfiguredNamespaces() {
-        System.setProperty(Constants.PROP_EXPORT_EXCLUDED_NAMESPACES, "emi, kubejs");
-        try {
-            assertTrue(ResourceFilter.isExcluded(ResourceLocation.parse("emi:test")));
-            assertTrue(ResourceFilter.isExcluded(ResourceLocation.parse("kubejs:test")));
-        } finally {
-            System.clearProperty(Constants.PROP_EXPORT_EXCLUDED_NAMESPACES);
-        }
+        Set<String> merged = ResourceFilter.mergeExcludedNamespaces("emi, kubejs");
+        assertTrue(merged.contains("additionalplacements"));
+        assertTrue(merged.contains("emi"));
+        assertTrue(merged.contains("kubejs"));
+        assertEquals(3, merged.size());
     }
 }

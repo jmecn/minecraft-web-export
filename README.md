@@ -86,11 +86,9 @@ Writes an EMI bundle under `<outputDir>/emi/`:
 
 | Property | Example | Description |
 |----------|---------|-------------|
-| `minecraftWebExport.export.enabled` | `true` | Enable export |
-| `minecraftWebExport.runExportAndExit` | `true` | World → export → exit |
+| `minecraftWebExport.export.enabled` | `true` | CI mode: auto open world, export, exit. `false` = command-only |
 | `minecraftWebExport.export.outputDir` | absolute path | Output root |
-| `minecraftWebExport.exportWarmupTicks` | `40` | Ticks after EMI reload |
 | `minecraftWebExport.exportWorldDelayTicks` | `600` | Menu delay before new world |
-| `minecraftWebExport.exportTimeoutSeconds` | `7200` | Hard timeout (`<=0` off) |
+| `minecraftWebExport.exportTimeoutSeconds` | `3600` | Hard timeout (`<=0` off) |
 
-Large modpacks: use **≥12G** heap. Do not pass `--quickPlaySingleplayer` with `runExportAndExit`.
+Large modpacks: use **≥12G** heap. Do not pass `--quickPlaySingleplayer` with CI export enabled.

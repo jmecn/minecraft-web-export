@@ -1,22 +1,19 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 
-import dev.emi.emi.api.EmiApi;
-import dev.emi.emi.api.recipe.EmiRecipe;
-import dev.emi.emi.api.recipe.EmiRecipeManager;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
-import io.github.jmecn.minecraftwebexport.model.pipeline.ClosureResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
+import io.github.jmecn.minecraftwebexport.pipeline.strategy.ExportStrategy;
+import io.github.jmecn.minecraftwebexport.pipeline.strategy.FullExportStrategy;
+import io.github.jmecn.minecraftwebexport.pipeline.strategy.ScopedExportStrategy;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import net.minecraft.client.Minecraft;
-import net.minecraft.server.MinecraftServer;
 
 public final class Planner {
 
@@ -29,82 +26,58 @@ public final class Planner {
         Objects.requireNonNull(modules, "modules");
         Objects.requireNonNull(scope, "scope");
 
-        if (mode == Mode.FULL) {
-            Set<String> allRecipes = collectExportableRecipeIds(client);
-            Hints hints = mergeModuleHints(modules, scope, Seeds.empty());
-            MweMod.LOGGER.info("[export] mode=full, recipes={}", allRecipes.size());
-            return new Plan(
-                    Mode.FULL,
-                    allRecipes,
-                    Set.of(),
-                    Set.of(),
-                    Set.of(),
-                    Set.of(),
-                    hints,
-                    Seeds.empty());
-        }
-
         Seeds merged = Seeds.empty();
-        for (Module module : modules) {
-            Seeds seeds = module.collectSeeds(scope);
-            if (seeds != null && !seeds.isEmpty()) {
-                merged = merged.merge(seeds);
+        if (mode == Mode.SCOPED) {
+            for (Module module : modules) {
+                Seeds seeds = module.collectSeeds(scope);
+                if (seeds != null && !seeds.isEmpty()) {
+                    merged = merged.merge(seeds);
+                }
             }
         }
 
         Hints hints = mergeModuleHints(modules, scope, merged);
+        ExportStrategy strategy = mode == Mode.FULL ? new FullExportStrategy() : new ScopedExportStrategy();
+        ExportContext context = strategy.planScope(client, merged);
 
-        Set<String> availableRecipes = collectExportableRecipeIds(client);
-        Set<String> recipeIds = resolveRecipeIds(mode, merged.recipeIds(), availableRecipes);
-
-        MinecraftServer server = client.getSingleplayerServer();
-        ClosureResult closure = SeedClosureExpander.expand(server, merged);
-
-        if (mode == Mode.SCOPED && merged.recipeIds().size() != recipeIds.size()) {
-            MweMod.LOGGER.warn("[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
-                    merged.recipeIds().size(), recipeIds.size());
-        }
-        if (mode == Mode.SCOPED && !availableRecipes.containsAll(recipeIds)) {
-            int hiddenFromEmi = 0;
-            for (String id : recipeIds) {
-                if (!availableRecipes.contains(id)) {
-                    hiddenFromEmi++;
+        if (mode == Mode.SCOPED) {
+            Set<String> availableRecipes = collectExportableRecipeIds(client);
+            if (merged.recipeIds().size() != context.recipeIds().size()) {
+                MweMod.LOGGER.warn(
+                        "[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
+                        merged.recipeIds().size(),
+                        context.recipeIds().size());
+            }
+            if (!availableRecipes.containsAll(context.recipeIds())) {
+                int hiddenFromEmi = 0;
+                for (String id : context.recipeIds()) {
+                    if (!availableRecipes.contains(id)) {
+                        hiddenFromEmi++;
+                    }
                 }
+                MweMod.LOGGER.info(
+                        "[export] scoped recipes include {} EMI-hidden ids (exported anyway)",
+                        hiddenFromEmi);
             }
             MweMod.LOGGER.info(
-                    "[export] scoped recipes include {} EMI-hidden ids (exported anyway)",
-                    hiddenFromEmi);
+                    "[export] mode=scoped, modules={}, seedRecipes={}, resolvedRecipes={}, items={}, tags={}",
+                    modules.size(),
+                    merged.recipeIds().size(),
+                    context.recipeIds().size(),
+                    context.itemIds().size(),
+                    context.tagIds().size());
+        } else {
+            MweMod.LOGGER.info("[export] mode=full, recipes={}", context.recipeIds().size());
         }
 
-        MweMod.LOGGER.info(
-                "[export] mode=scoped, modules={}, seedRecipes={}, resolvedRecipes={}, seedTags={}, closureItems={}, closureTags={}",
-                modules.size(),
-                merged.recipeIds().size(),
-                recipeIds.size(),
-                merged.tagIds().size(),
-                closure.itemIds().size(),
-                closure.tagIds().size());
-
-        if (server == null && !merged.tagIds().isEmpty()) {
-            MweMod.LOGGER.warn("[export] tag closure skipped: no integrated server (seedTags={})", merged.tagIds().size());
-        }
-
-        return new Plan(
-                Mode.SCOPED,
-                recipeIds,
-                closure.itemIds(),
-                closure.fluidIds(),
-                closure.tagIds(),
-                closure.langKeys(),
-                hints,
-                merged);
+        return new Plan(context, hints, mode == Mode.FULL ? Seeds.empty() : merged);
     }
 
-    static Set<String> filterRecipeIds(Set<String> seedRecipeIds, Set<String> availableRecipeIds) {
+    public static Set<String> filterRecipeIds(Set<String> seedRecipeIds, Set<String> availableRecipeIds) {
         if (seedRecipeIds.isEmpty()) {
             return Set.of();
         }
-        Set<String> filtered = new TreeSet<>();
+        Set<String> filtered = new java.util.TreeSet<>();
         for (String id : seedRecipeIds) {
             if (availableRecipeIds.contains(id)) {
                 filtered.add(id);
@@ -113,9 +86,9 @@ public final class Planner {
         return Set.copyOf(filtered);
     }
 
-    static Set<String> resolveRecipeIds(Mode mode, Set<String> seedRecipeIds, Set<String> availableRecipeIds) {
+    public static Set<String> resolveRecipeIds(Mode mode, Set<String> seedRecipeIds, Set<String> availableRecipeIds) {
         if (mode == Mode.SCOPED) {
-            return seedRecipeIds.isEmpty() ? Set.of() : Set.copyOf(new TreeSet<>(seedRecipeIds));
+            return seedRecipeIds.isEmpty() ? Set.of() : Set.copyOf(new java.util.TreeSet<>(seedRecipeIds));
         }
         return filterRecipeIds(seedRecipeIds, availableRecipeIds);
     }
@@ -128,27 +101,11 @@ public final class Planner {
         return hints;
     }
 
-    @Deprecated
-    public static Set<String> collectAllRecipeIds() {
-        EmiRecipeManager manager = EmiApi.getRecipeManager();
-        if (manager == null) {
-            return Set.of();
-        }
-        Set<String> ids = new TreeSet<>();
-        for (EmiRecipe recipe : manager.getRecipes()) {
-            if (recipe.getId() != null) {
-                ids.add(recipe.getId().toString());
-            }
-        }
-        return Set.copyOf(ids);
-    }
-
     public static Set<String> collectExportableRecipeIds(Minecraft client) {
-        EmiRecipeManager manager = EmiApi.getRecipeManager();
-        if (manager == null) {
-            return Set.of();
-        }
-        MinecraftServer server = client == null ? null : client.getSingleplayerServer();
-        return Visibility.filterExportableRecipeIds(server, manager.getRecipes());
+        return io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility.filterExportableRecipeIds(
+                client == null ? null : client.getSingleplayerServer(),
+                dev.emi.emi.api.EmiApi.getRecipeManager() == null
+                        ? List.of()
+                        : dev.emi.emi.api.EmiApi.getRecipeManager().getRecipes());
     }
 }

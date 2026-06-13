@@ -9,6 +9,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -45,5 +46,26 @@ class MembersIndexWriterTest {
         long bytes = MembersIndexWriter.writeTagsCatalog(tempDir, Set.of(), Set.of(), Set.of());
         assertEquals(0, bytes);
         assertFalse(Files.exists(EmiPaths.resolve(tempDir, Constants.TAGS_INDEX_FILE)));
+    }
+
+    @Test
+    void filterRedundantFlowingFluidsDropsFlowingWhenStillPresent() {
+        LinkedHashSet<String> values = new LinkedHashSet<>();
+        values.add("minecraft:water");
+        values.add("minecraft:flowing_water");
+        values.add("minecraft:lava");
+        values.add("minecraft:flowing_lava");
+
+        Set<String> filtered = MembersIndexWriter.filterRedundantFlowingFluids(values);
+
+        assertEquals(Set.of("minecraft:water", "minecraft:lava"), filtered);
+    }
+
+    @Test
+    void filterRedundantFlowingFluidsKeepsFlowingWhenStillMissing() {
+        Set<String> filtered = MembersIndexWriter.filterRedundantFlowingFluids(
+                Set.of("minecraft:flowing_water"));
+
+        assertEquals(Set.of("minecraft:flowing_water"), filtered);
     }
 }

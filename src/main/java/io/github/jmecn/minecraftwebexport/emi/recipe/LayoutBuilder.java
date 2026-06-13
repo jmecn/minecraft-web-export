@@ -6,11 +6,13 @@ import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.api.widget.WidgetHolder;
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,26 +31,22 @@ public final class LayoutBuilder {
     }
 
     static int progressLogStride(int total) {
-        return ProgressLog.stride(total, Constants.PROP_LAYOUT_LOG_STRIDE, 20, 200);
+        return ProgressLog.stride(total, MweConfig.layoutLogStride(), 20, 200);
     }
 
 
     public static boolean isEnabled() {
-        if (Boolean.getBoolean(Constants.PROP_SKIP_EMI_LAYOUT_EXPORT)) {
+        if (MweConfig.skipEmiLayoutExport()) {
             return false;
         }
-        String prop = System.getProperty(Constants.PROP_EXPORT_EMI_LAYOUT);
-        if (prop != null) {
-            return !"false".equalsIgnoreCase(prop);
-        }
-        return true;
+        return MweConfig.exportEmiLayout();
     }
 
-    public     static int layoutScale() {
-        return Math.max(1, Integer.getInteger(Constants.PROP_RECIPE_LAYOUT_SCALE, Constants.DEFAULT_RECIPE_LAYOUT_SCALE));
+    public static int layoutScale() {
+        return MweConfig.recipeLayoutScale();
     }
 
-    static JsonObject buildLayoutInMemory(
+    public static JsonObject buildLayoutInMemory(
             Minecraft client,
             EmiRecipe recipe,
             String recipeId,
@@ -69,7 +67,7 @@ public final class LayoutBuilder {
                 referencedTags,
                 iconVariants,
                 null,
-                Map.of(),
+                new HashMap<>(),
                 chromeWritten,
                 chromeDedupedCount);
     }
@@ -146,22 +144,5 @@ public final class LayoutBuilder {
 
         root.add("widgets", widgetArray);
         return root;
-    }
-
-    private static long dirSize(Path root) {
-        if (!Files.isDirectory(root)) {
-            return 0;
-        }
-        try (Stream<Path> walk = Files.walk(root)) {
-            return walk.filter(Files::isRegularFile).mapToLong(path -> {
-                try {
-                    return Files.size(path);
-                } catch (IOException e) {
-                    return 0;
-                }
-            }).sum();
-        } catch (IOException e) {
-            return 0;
-        }
     }
 }

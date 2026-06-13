@@ -3,6 +3,7 @@ package io.github.jmecn.minecraftwebexport.emi.item;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,7 +13,7 @@ class ItemsSearchRegistryKindTest {
 
     @Test
     void resolveRegistryKindUsesFluidListWhenPresent() {
-        var resolver = new RegistryResolver(Map.of(), Map.of());
+        RegistryResolver resolver = new RegistryResolver(new HashMap<>(), new HashMap<>());
         assertEquals(
                 "fluid",
                 ItemsLangExporter.resolveRegistryKind(

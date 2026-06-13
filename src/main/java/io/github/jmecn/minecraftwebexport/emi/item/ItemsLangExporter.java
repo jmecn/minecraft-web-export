@@ -4,12 +4,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
 import io.github.jmecn.minecraftwebexport.emi.lang.SearchPinyin;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.item.ItemsLangExportResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
@@ -20,8 +22,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -35,24 +39,46 @@ public final class ItemsLangExporter {
     }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean(Constants.PROP_SKIP_ITEMS_SEARCH_EXPORT);
+        return !MweConfig.skipItemsSearchExport();
     }
 
     public static ItemsLangExportResult export(Path outputDir, List<String> languages) throws IOException {
-        return export(outputDir, languages, false);
+        Path bundleRoot = EmiPaths.resolve(outputDir, "");
+        return export(outputDir, languages, readItemIds(bundleRoot), readFluidRegistryIds(bundleRoot));
     }
 
-    public static ItemsLangExportResult export(Path outputDir, List<String> languages, boolean readComposeLang)
-            throws IOException {
+    public static ItemsLangExportResult export(
+            Path outputDir,
+            List<String> languages,
+            Collection<String> itemIds,
+            Set<String> fluidRegistryIds) throws IOException {
+        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            ItemsLangExportResult result = export(outputDir, languages, itemIds, fluidRegistryIds, writes);
+            writes.awaitIdle();
+            return result;
+        }
+    }
+
+    public static ItemsLangExportResult export(
+            Path outputDir,
+            List<String> languages,
+            Collection<String> itemIds,
+            Set<String> fluidRegistryIds,
+            ExportWriteQueue writes) throws IOException {
+        Objects.requireNonNull(writes, "writes");
         Path bundleRoot = EmiPaths.resolve(outputDir, "");
-        List<String> itemIds = readItemIds(bundleRoot);
-        Set<String> fluidRegistryIds = readFluidRegistryIds(bundleRoot);
+        List<String> sortedItemIds = itemIds.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .sorted()
+                .distinct()
+                .toList();
+        Set<String> fluids = fluidRegistryIds == null ? Set.of() : fluidRegistryIds;
         List<String> locales = resolveLocales(bundleRoot, languages);
-        if (itemIds.isEmpty() || locales.isEmpty()) {
+        if (sortedItemIds.isEmpty() || locales.isEmpty()) {
             MweMod.LOGGER.warn(
                     "{} skipped: {} items, {} locales",
                     Log.ITEMS_LANG,
-                    itemIds.size(),
+                    sortedItemIds.size(),
                     locales.size());
             return ItemsLangExportResult.EMPTY;
         }
@@ -60,7 +86,7 @@ public final class ItemsLangExporter {
         Path searchRoot = bundleRoot.resolve(Constants.ITEMS_LANG_DIR);
         Files.createDirectories(searchRoot);
 
-        Map<String, String> enUs = readLangTable(bundleRoot, Constants.DEFAULT_LANGUAGE, readComposeLang);
+        Map<String, String> enUs = readLangTable(bundleRoot, Constants.DEFAULT_LANGUAGE);
         Map<String, String> nameKeysByRegistryId = NameKeysExporter.readNameKeys(outputDir);
         List<String> writtenLocales = new ArrayList<>();
 
@@ -70,9 +96,9 @@ public final class ItemsLangExporter {
                     "{} {}: building {} items ...",
                     Log.ITEMS_LANG,
                     normalized,
-                    itemIds.size());
+                    sortedItemIds.size());
             long startedAt = System.currentTimeMillis();
-            Map<String, String> current = readLangTable(bundleRoot, normalized, readComposeLang);
+            Map<String, String> current = readLangTable(bundleRoot, normalized);
             Map<String, String> fallback = Constants.DEFAULT_LANGUAGE.equals(normalized)
                     ? Map.of()
                     : enUs;
@@ -81,10 +107,10 @@ public final class ItemsLangExporter {
                     ? new RegistryResolver(enUs, Map.of(), nameKeysByRegistryId)
                     : null;
 
-            List<ItemsLangEntry> entries = new ArrayList<>(itemIds.size());
-            for (int i = 0; i < itemIds.size(); i++) {
-                String id = itemIds.get(i);
-                String kind = resolveRegistryKind(id, fluidRegistryIds, currentResolver);
+            List<ItemsLangEntry> entries = new ArrayList<>(sortedItemIds.size());
+            for (int i = 0; i < sortedItemIds.size(); i++) {
+                String id = sortedItemIds.get(i);
+                String kind = resolveRegistryKind(id, fluids, currentResolver);
                 String label = currentResolver.translateRegistry(id, kind);
                 entries.add(new ItemsLangEntry(
                         id,
@@ -97,7 +123,7 @@ public final class ItemsLangExporter {
                             Log.ITEMS_LANG,
                             normalized,
                             n,
-                            itemIds.size(),
+                            sortedItemIds.size(),
                             System.currentTimeMillis() - startedAt);
                 }
             }
@@ -105,22 +131,22 @@ public final class ItemsLangExporter {
                     "{} {}: {} done ({} ms)",
                     Log.ITEMS_LANG,
                     normalized,
-                    itemIds.size(),
+                    sortedItemIds.size(),
                     System.currentTimeMillis() - startedAt);
 
             ItemsLang payload = ItemsLang.of(normalized, entries);
             Path out = searchRoot.resolve(normalized + ".json");
             MweMod.LOGGER.info("{} {}: writing {} ...", Log.ITEMS_LANG, normalized, out);
-            JsonIO.writeLine(out, payload);
+            writes.submitJsonLine(out, payload);
             writtenLocales.add(normalized);
             MweMod.LOGGER.info(
                     "{} {}: {} items",
                     Log.ITEMS_LANG,
                     normalized,
-                    itemIds.size());
+                    sortedItemIds.size());
         }
 
-        return new ItemsLangExportResult(writtenLocales.size(), itemIds.size(), List.copyOf(writtenLocales));
+        return new ItemsLangExportResult(writtenLocales.size(), sortedItemIds.size(), List.copyOf(writtenLocales));
     }
 
     static String normalizeLocale(String locale) {
@@ -263,10 +289,8 @@ public final class ItemsLangExporter {
         }
     }
 
-    private static Map<String, String> readLangTable(Path bundleRoot, String locale, boolean composeLang)
-            throws IOException {
-        String dir = composeLang ? Constants.COMPOSE_LANG_DIR : Constants.LANG_DIR;
-        Path langPath = bundleRoot.resolve(dir).resolve(locale + ".json");
+    private static Map<String, String> readLangTable(Path bundleRoot, String locale) throws IOException {
+        Path langPath = bundleRoot.resolve(Constants.LANG_DIR).resolve(locale + ".json");
         if (!Files.isRegularFile(langPath)) {
             return Map.of();
         }

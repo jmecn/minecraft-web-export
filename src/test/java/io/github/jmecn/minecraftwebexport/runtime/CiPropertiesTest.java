@@ -1,6 +1,8 @@
 package io.github.jmecn.minecraftwebexport.runtime;
 
-import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
+import io.github.jmecn.minecraftwebexport.config.MweConfigTestSupport;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -11,51 +13,51 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CiPropertiesTest {
 
     @AfterEach
-    void clearProperties() {
-        System.clearProperty(Constants.PROP_RUN_EXPORT_AND_EXIT);
-        System.clearProperty(Constants.PROP_EXPORT_WARMUP_TICKS);
-        System.clearProperty(Constants.PROP_EXPORT_WORLD_DELAY_TICKS);
-        System.clearProperty(Constants.PROP_EXPORT_TIMEOUT_SECONDS);
-        System.clearProperty(Constants.PROP_EXPORT_WORLD_NAME);
+    void clearState() {
+        System.clearProperty("minecraftWebExport.export.enabled");
+        System.clearProperty("minecraftWebExport.exportWorldName");
+        System.clearProperty("minecraftWebExport.exportWorldDelayTicks");
+        System.clearProperty("minecraftWebExport.exportTimeoutSeconds");
+        MweConfig.clearForTests();
     }
 
     @Test
-    void defaultsWhenUnset() {
-        assertFalse(CiProperties.runExportAndExit());
-        assertEquals(40, CiProperties.exportWarmupTicks());
+    void defaultsToCommandOnlyMode() {
+        MweConfig.ensureForTests();
+        assertFalse(CiProperties.exportEnabled());
         assertEquals(600, CiProperties.exportWorldDelayTicks());
-        assertEquals(7200, CiProperties.exportTimeoutSeconds());
+        assertEquals(3600, CiProperties.exportTimeoutSeconds());
         assertEquals("emi-export", CiProperties.exportWorldName());
     }
 
     @Test
-    void readsOverrides() {
-        System.setProperty(Constants.PROP_RUN_EXPORT_AND_EXIT, "true");
-        System.setProperty(Constants.PROP_EXPORT_WARMUP_TICKS, "120");
-        System.setProperty(Constants.PROP_EXPORT_WORLD_DELAY_TICKS, "30");
-        System.setProperty(Constants.PROP_EXPORT_TIMEOUT_SECONDS, "90");
-        System.setProperty(Constants.PROP_EXPORT_WORLD_NAME, "custom-save");
+    void exportEnabledTrueArmsCiMode() {
+        MweConfig.ensureForTests();
+        System.setProperty("minecraftWebExport.export.enabled", "true");
+        System.setProperty("minecraftWebExport.exportWorldName", "custom-save");
+        System.setProperty("minecraftWebExport.exportWorldDelayTicks", "30");
+        System.setProperty("minecraftWebExport.exportTimeoutSeconds", "5400");
 
-        assertTrue(CiProperties.runExportAndExit());
-        assertEquals(120, CiProperties.exportWarmupTicks());
-        assertEquals(30, CiProperties.exportWorldDelayTicks());
-        assertEquals(90, CiProperties.exportTimeoutSeconds());
+        assertTrue(CiProperties.exportEnabled());
         assertEquals("custom-save", CiProperties.exportWorldName());
+        assertEquals(30, CiProperties.exportWorldDelayTicks());
+        assertEquals(5400, CiProperties.exportTimeoutSeconds());
     }
 
     @Test
-    void timedOutRespectsDisabledTimeout() {
-        long start = System.nanoTime();
-        assertFalse(CiProperties.timedOut(start));
+    void readsConfigOverridesWhenJvmUnset() {
+        MweConfigTestSupport.apply(Map.of(
+                "ci.worldDelayTicks", 120,
+                "ci.timeoutSeconds", 1800));
+
+        assertEquals(120, CiProperties.exportWorldDelayTicks());
+        assertEquals(1800, CiProperties.exportTimeoutSeconds());
     }
 
     @Test
-    void timedOutWhenElapsed() {
-        System.setProperty(Constants.PROP_EXPORT_TIMEOUT_SECONDS, "0");
+    void timedOutUsesConfiguredTimeout() {
+        MweConfigTestSupport.apply(Map.of("ci.timeoutSeconds", 1));
         long start = System.nanoTime() - 2_000_000_000L;
-        assertFalse(CiProperties.timedOut(start));
-
-        System.setProperty(Constants.PROP_EXPORT_TIMEOUT_SECONDS, "1");
         assertTrue(CiProperties.timedOut(start));
     }
 }

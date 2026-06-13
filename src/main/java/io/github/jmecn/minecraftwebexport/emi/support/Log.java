@@ -1,6 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.support;
 
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 
 public final class Log {
@@ -24,7 +25,7 @@ public final class Log {
         if (failureCount > DETAIL_FAILURE_LIMIT) {
             return;
         }
-        if (Boolean.getBoolean(Constants.PROP_LOG_DETAIL_FAILURES)) {
+        if (MweConfig.logDetailFailures()) {
             MweMod.LOGGER.warn(message, args);
         } else if (MweMod.LOGGER.isDebugEnabled()) {
             MweMod.LOGGER.debug(message, args);

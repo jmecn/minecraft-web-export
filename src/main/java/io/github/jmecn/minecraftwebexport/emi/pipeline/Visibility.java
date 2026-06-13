@@ -5,7 +5,7 @@ import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.runtime.EmiHidden;
-import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
@@ -33,7 +33,7 @@ public final class Visibility {
     }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean(Constants.PROP_SKIP_EMI_VISIBILITY_FILTER);
+        return !MweConfig.skipEmiVisibilityFilter();
     }
 
     public static Set<String> filterExportableRecipeIds(MinecraftServer server, Iterable<EmiRecipe> recipes) {

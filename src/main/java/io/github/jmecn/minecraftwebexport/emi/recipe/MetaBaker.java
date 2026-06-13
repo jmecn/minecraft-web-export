@@ -15,7 +15,7 @@ public final class MetaBaker {
     private MetaBaker() {
     }
 
-    static RecipeMeta bake(JsonObject layout) {
+    public static RecipeMeta bake(JsonObject layout) {
         JsonObject panel = layout.getAsJsonObject("panel");
         int width = panel != null && panel.has("width") ? panel.get("width").getAsInt() : 1;
         int height = panel != null && panel.has("height") ? panel.get("height").getAsInt() : 1;

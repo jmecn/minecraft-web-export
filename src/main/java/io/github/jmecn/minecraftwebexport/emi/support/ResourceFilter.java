@@ -1,6 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.support;
 
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -12,12 +13,16 @@ public final class ResourceFilter {
     private ResourceFilter() {}
 
     public static Set<String> excludedNamespaces() {
-        String extra = System.getProperty(Constants.PROP_EXPORT_EXCLUDED_NAMESPACES, "").trim();
-        if (extra.isEmpty()) {
+        return mergeExcludedNamespaces(MweConfig.excludedNamespaces());
+    }
+
+    static Set<String> mergeExcludedNamespaces(String extra) {
+        String trimmed = extra == null ? "" : extra.trim();
+        if (trimmed.isEmpty()) {
             return Constants.DEFAULT_EXCLUDED_NAMESPACES;
         }
         LinkedHashSet<String> merged = new LinkedHashSet<>(Constants.DEFAULT_EXCLUDED_NAMESPACES);
-        Arrays.stream(extra.split(","))
+        Arrays.stream(trimmed.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .map(s -> s.toLowerCase(Locale.ROOT))

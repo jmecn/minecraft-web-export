@@ -293,7 +293,7 @@ final class WidgetSerializer {
                     items.add(id.toString());
                 }
                 String iconKey = StackKey.forEmiStack(emiStack);
-                if (StackKey.isVariantKey(iconKey)) {
+                if (iconVariants != null && StackKey.isVariantKey(iconKey)) {
                     ItemStack stack = StackKey.toItemStack(emiStack);
                     if (!stack.isEmpty()) {
                         iconVariants.put(iconKey, stack);
@@ -303,7 +303,15 @@ final class WidgetSerializer {
         }
     }
 
-    private static JsonElement normalizeIngredientJson(JsonElement ingredient) {
+    static void collectReferencedStacks(
+            EmiIngredient ingredient,
+            Set<String> items,
+            Set<String> fluids,
+            Map<String, ItemStack> iconVariants) {
+        collectReferenced(ingredient, items, fluids, iconVariants);
+    }
+
+    static JsonElement normalizeIngredientJson(JsonElement ingredient) {
         if (ingredient == null || !ingredient.isJsonObject()) {
             return ingredient;
         }

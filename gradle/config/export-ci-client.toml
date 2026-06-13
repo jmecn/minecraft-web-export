@@ -1,0 +1,3 @@
+# Minecraft Web Export — headless CI export client
+[export]
+enabled = true

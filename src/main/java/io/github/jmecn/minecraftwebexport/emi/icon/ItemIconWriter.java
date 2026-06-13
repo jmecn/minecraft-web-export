@@ -3,10 +3,12 @@ package io.github.jmecn.minecraftwebexport.emi.icon;
 import com.google.common.io.MoreFiles;
 import com.google.common.io.RecursiveDeleteOption;
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.ItemIconResult;
 import java.io.IOException;
@@ -15,10 +17,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.client.Minecraft;
@@ -45,11 +49,11 @@ public final class ItemIconWriter {
 
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean(Constants.PROP_SKIP_ITEM_ICON_EXPORT);
+        return !MweConfig.skipItemIconExport();
     }
 
     public static boolean fluidsEnabled() {
-        return !Boolean.getBoolean(Constants.PROP_SKIP_FLUID_ICON_EXPORT);
+        return !MweConfig.skipFluidIconExport();
     }
 
     public static ItemIconResult export(Path outputDir, Minecraft client) {
@@ -74,7 +78,7 @@ public final class ItemIconWriter {
             Set<String> onlyItemIds,
             Set<String> onlyFluidIds,
             Map<String, Integer> usageWeights) {
-        return export(outputDir, client, onlyItemIds, onlyFluidIds, usageWeights, Map.of());
+        return export(outputDir, client, onlyItemIds, onlyFluidIds, usageWeights, new HashMap<>());
     }
 
     public static ItemIconResult export(
@@ -84,19 +88,27 @@ public final class ItemIconWriter {
             Set<String> onlyFluidIds,
             Map<String, Integer> usageWeights,
             Map<String, ItemStack> iconVariants) {
+        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            ItemIconResult result = export(
+                    outputDir, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants, writes);
+            writes.awaitIdle();
+            return result;
+        }
+    }
+
+    public static ItemIconResult export(
+            Path outputDir,
+            Minecraft client,
+            Set<String> onlyItemIds,
+            Set<String> onlyFluidIds,
+            Map<String, Integer> usageWeights,
+            Map<String, ItemStack> iconVariants,
+            ExportWriteQueue writes) {
+        Objects.requireNonNull(writes, "writes");
         Path iconsRoot = EmiPaths.resolve(outputDir, Constants.ICONS_DIR);
         clearLegacyDirs(outputDir);
         clearDir(iconsRoot);
-        return exportImpl(iconsRoot, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants);
-    }
-
-    public static ItemIconResult exportAtRoot(
-            Path iconsRoot,
-            Minecraft client,
-            Set<String> onlyItemIds,
-            Map<String, Integer> usageWeights) {
-        clearDir(iconsRoot);
-        return exportImpl(iconsRoot, client, onlyItemIds, null, usageWeights, Map.of());
+        return exportImpl(iconsRoot, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants, writes);
     }
 
     private static ItemIconResult exportImpl(
@@ -105,14 +117,15 @@ public final class ItemIconWriter {
             Set<String> onlyItemIds,
             Set<String> onlyFluidIds,
             Map<String, Integer> usageWeights,
-            Map<String, ItemStack> iconVariants) {
+            Map<String, ItemStack> iconVariants,
+            ExportWriteQueue writes) {
         int cell = ExportSizes.iconCellSize();
         int atlasMax = ExportSizes.atlasMaxSize();
         boolean exportFluids = fluidsEnabled() && (onlyFluidIds == null || !onlyFluidIds.isEmpty());
 
         List<ResourceLocation> itemOrder = ItemOrdering.orderedForPass(onlyItemIds, item -> true, usageWeights);
-        List<String> fluidOrder = exportFluids ? orderedFluidIds(onlyFluidIds) : List.of();
-        Map<String, ItemStack> variants = iconVariants != null ? iconVariants : Map.of();
+        List<String> fluidOrder = exportFluids ? orderedFluidIds(onlyFluidIds) : new ArrayList<>();
+        Map<String, ItemStack> variants = iconVariants != null ? iconVariants : new HashMap<>();
 
         if (onlyItemIds != null) {
             MweMod.LOGGER.info(
@@ -154,8 +167,8 @@ public final class ItemIconWriter {
                     first.heightPx(cell));
         }
 
-        int itemLogStride = ProgressLog.stride(itemOrder.size(), Constants.PROP_ICON_LOG_STRIDE, 50, 500);
-        int variantLogStride = ProgressLog.stride(variants.size(), Constants.PROP_ICON_LOG_STRIDE, 20, 200);
+        int itemLogStride = ProgressLog.stride(itemOrder.size(), MweConfig.iconLogStride(), 50, 500);
+        int variantLogStride = ProgressLog.stride(variants.size(), MweConfig.iconLogStride(), 20, 200);
 
         int itemsPlaced = 0;
         int itemFailures = 0;
@@ -167,7 +180,7 @@ public final class ItemIconWriter {
 
         AtlasBuilder.AtlasResult atlasResult;
         try (OffScreenRenderer renderer = new OffScreenRenderer(cell, cell);
-             AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights)) {
+             AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights, writes)) {
             MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
             GuiGraphics guiGraphics = new GuiGraphics(client, bufferSource);
             PlaceholderRenderer.render(guiGraphics, renderer);
@@ -290,11 +303,10 @@ public final class ItemIconWriter {
                 iconsRoot);
         if (totalFailures > Log.DETAIL_FAILURE_LIMIT) {
             MweMod.LOGGER.warn(
-                    "{} {} icon failures (first {} at DEBUG; -D{}=true or enable DEBUG on export.emi)",
+                    "{} {} icon failures (first {} at DEBUG; set logging.logDetailFailures=true or enable DEBUG on export.emi)",
                     Log.ICONS,
                     totalFailures,
-                    Log.DETAIL_FAILURE_LIMIT,
-                    Constants.PROP_LOG_DETAIL_FAILURES);
+                    Log.DETAIL_FAILURE_LIMIT);
         }
 
         return new ItemIconResult(
@@ -415,7 +427,7 @@ public final class ItemIconWriter {
     }
 
     private static Set<TextureAtlasSprite> guessSprites(Collection<BakedModel> models) {
-        Set<TextureAtlasSprite> result = Collections.newSetFromMap(new IdentityHashMap<TextureAtlasSprite, Boolean>());
+        Set<TextureAtlasSprite> result = Collections.newSetFromMap(new IdentityHashMap<>());
         RandomSource random = RandomSource.create(0);
         for (BakedModel model : models) {
             for (BakedQuad quad : model.getQuads(null, null, random, ModelData.EMPTY, null)) {

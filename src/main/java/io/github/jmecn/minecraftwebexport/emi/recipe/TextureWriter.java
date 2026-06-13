@@ -5,7 +5,7 @@ import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
 import io.github.jmecn.minecraftwebexport.model.recipe.TextureManifest;
 import java.io.IOException;
@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -29,7 +30,9 @@ public final class TextureWriter {
     }
 
 
-    public static TextureWriteResult export(Path outputDir, Minecraft client, Set<String> textureIds) throws IOException {
+    public static TextureWriteResult export(
+            Path outputDir, Minecraft client, Set<String> textureIds, ExportWriteQueue writes) throws IOException {
+        Objects.requireNonNull(writes, "writes");
         Path texRoot = EmiPaths.resolve(outputDir, Constants.TEXTURES_DIR);
         if (Files.exists(texRoot)) {
             Files.walk(texRoot)
@@ -70,8 +73,9 @@ public final class TextureWriter {
                 try (InputStream input = resource.open()) {
                     NativeImage image = NativeImage.read(input);
                     try {
-                        image.writeToFile(out);
-                        bytes += Files.size(out);
+                        byte[] png = image.asByteArray();
+                        writes.submitBytes(out, png);
+                        bytes += png.length;
                         manifest.put(idString, relative.replace('\\', '/'));
                         written++;
                     } finally {
@@ -84,7 +88,7 @@ public final class TextureWriter {
             }
         }
 
-        JsonIO.write(texRoot.resolve(Constants.TEXTURE_MANIFEST_FILE), TextureManifest.of(manifest));
+        writes.submitJson(texRoot.resolve(Constants.TEXTURE_MANIFEST_FILE), TextureManifest.of(manifest));
 
         MweMod.LOGGER.info(
                 "{} {}/{} written ({} bytes), {} missing",

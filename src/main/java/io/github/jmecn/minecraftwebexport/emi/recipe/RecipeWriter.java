@@ -4,29 +4,27 @@ import com.google.gson.JsonObject;
 import dev.emi.emi.EmiRenderHelper;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.runtime.EmiDrawContext;
-import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRendererPool;
-import io.github.jmecn.minecraftwebexport.emi.lang.UsedKeysCollector;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.RecipeWriteResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.item.ItemStack;
 
 public final class RecipeWriter {
 
@@ -42,31 +40,28 @@ public final class RecipeWriter {
     }
 
     public static RecipeWriteResult export(
-            Path outputDir,
-            Minecraft client,
-            Set<String> recipeIds,
-            UsedKeysCollector langKeys) throws IOException {
-        Set<String> textureIds = new TreeSet<>();
-        Set<String> referencedItems = new TreeSet<>();
-        Set<String> referencedFluids = new TreeSet<>();
-        Set<String> referencedTags = new TreeSet<>();
-        Map<String, ItemStack> iconVariants = new LinkedHashMap<>();
-        Map<String, JsonObject> layoutsByRecipeId = new LinkedHashMap<>();
+            Path outputDir, Minecraft client, ExportContext context, ExportWriteQueue writes) throws IOException {
+        Objects.requireNonNull(writes, "writes");
+        if (!isEnabled()) {
+            MweMod.LOGGER.info("{} recipe export disabled by configuration", Log.EMI);
+            return emptyResult(context.recipeIds().size());
+        }
 
         int written = 0;
         int missing = 0;
         int skippedVisibility = 0;
         int failures = 0;
-        MinecraftServer server = client.getSingleplayerServer();
         long pngBytes = 0;
         long metaBytes = 0;
         int scale = imageScale();
-        int total = recipeIds.size();
-        int logStride = ProgressLog.stride(total, Constants.PROP_RECIPE_LOG_STRIDE, 20, 200);
+        int total = context.recipeIds().size();
+        int logStride = ProgressLog.stride(total, MweConfig.recipeCardLogStride(), 20, 200);
         int progress = 0;
+        MinecraftServer server = client.getSingleplayerServer();
+        Set<String> textureIds = new TreeSet<>();
 
         try (OffScreenRendererPool rendererPool = new OffScreenRendererPool()) {
-            for (String recipeId : recipeIds) {
+            for (String recipeId : context.recipeIds()) {
                 progress++;
                 EmiRecipe recipe = Resolver.resolve(recipeId);
                 if (recipe == null) {
@@ -74,7 +69,7 @@ public final class RecipeWriter {
                     logProgress(progress, total, written, missing, failures, logStride);
                     continue;
                 }
-                if (Mode.current() != Mode.SCOPED
+                if (context.mode() != Mode.SCOPED
                         && !Visibility.shouldExportRecipe(recipe, server)) {
                     skippedVisibility++;
                     logProgress(progress, total, written, missing, failures, logStride);
@@ -86,22 +81,19 @@ public final class RecipeWriter {
                             recipe,
                             recipeId,
                             textureIds,
-                            referencedItems,
-                            referencedFluids,
-                            referencedTags,
-                            iconVariants);
-                    layoutsByRecipeId.put(recipeId, layout);
+                            context.referencedItems(),
+                            context.referencedFluids(),
+                            context.referencedTags(),
+                            context.iconVariants());
 
                     RecipeMeta meta = MetaBaker.bake(layout);
-                    if (langKeys != null) {
-                        langKeys.collectMeta(meta);
-                    }
                     Path metaFile = RecipePaths.metaPath(outputDir, recipeId);
                     Path pngFile = RecipePaths.pngPath(outputDir, recipeId);
-                    JsonIO.write(metaFile, meta);
-                    metaBytes += JsonIO.toUtf8Bytes(meta).length;
+                    byte[] metaUtf8 = JsonIO.toUtf8Bytes(meta);
+                    writes.submitBytes(metaFile, metaUtf8);
+                    metaBytes += metaUtf8.length;
 
-                    pngBytes += renderRecipePng(client, recipe, scale, pngFile, rendererPool);
+                    pngBytes += renderRecipePng(client, recipe, scale, pngFile, rendererPool, writes);
                     written++;
                     logProgress(progress, total, written, missing, failures, logStride);
                 } catch (Exception e) {
@@ -126,27 +118,20 @@ public final class RecipeWriter {
                 skippedVisibility,
                 failures);
 
-        return new RecipeWriteResult(
-                total,
-                written,
-                missing,
-                failures,
-                pngBytes,
-                metaBytes,
-                scale,
-                referencedItems,
-                referencedFluids,
-                referencedTags,
-                iconVariants,
-                layoutsByRecipeId);
+        return new RecipeWriteResult(total, written, missing, failures, pngBytes, metaBytes, scale);
     }
 
-    private static long renderRecipePng(
+    private static RecipeWriteResult emptyResult(int requested) {
+        return new RecipeWriteResult(requested, 0, 0, 0, 0, 0, imageScale());
+    }
+
+    private static int renderRecipePng(
             Minecraft client,
             EmiRecipe recipe,
             int scale,
             Path out,
-            OffScreenRendererPool rendererPool) throws IOException {
+            OffScreenRendererPool rendererPool,
+            ExportWriteQueue writes) {
         int w = Math.max(1, recipe.getDisplayWidth());
         int h = Math.max(1, recipe.getDisplayHeight());
         int margin = RecipePaths.recipeMargin();
@@ -157,11 +142,12 @@ public final class RecipeWriter {
 
         OffScreenRenderer off = rendererPool.borrow(pixelW, pixelH);
         GuiGraphics graphics = new GuiGraphics(client, client.renderBuffers().bufferSource());
-        off.captureAsPng(() -> off.runWithEmiRecipeMatrices(logicalW, logicalH, () -> {
+        byte[] png = off.captureAsPng(() -> off.runWithEmiRecipeMatrices(logicalW, logicalH, () -> {
             EmiRenderHelper.renderRecipe(recipe, EmiDrawContext.wrap(graphics), 0, 0, false, -1);
             graphics.flush();
-        }), out);
-        return Files.size(out);
+        }));
+        writes.submitBytes(out, png);
+        return png.length;
     }
 
     private static void logProgress(

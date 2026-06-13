@@ -1,29 +1,34 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
 
-import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
+import io.github.jmecn.minecraftwebexport.config.MweConfigTestSupport;
+import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ExportSizesTest {
 
+    @AfterEach
+    void clearConfig() {
+        MweConfig.clearForTests();
+    }
+
     @Test
     void defaultsToThirtyTwoPixelIcons() {
-        System.clearProperty(Constants.PROP_ICON_SIZE);
-        System.clearProperty(Constants.PROP_ITEM_ICON_SIZE);
-        System.clearProperty(Constants.PROP_BLOCK_ITEM_ICON_SIZE);
-        System.clearProperty(Constants.PROP_FLUID_ICON_SIZE);
-
+        MweConfig.ensureForTests();
         assertEquals(32, ExportSizes.iconCellSize());
     }
 
     @Test
     void respectsUnifiedOverride() {
-        System.setProperty(Constants.PROP_ICON_SIZE, "48");
-        try {
-            assertEquals(48, ExportSizes.iconCellSize());
-        } finally {
-            System.clearProperty(Constants.PROP_ICON_SIZE);
-        }
+        MweConfigTestSupport.apply(Map.of("icons.iconSize", 48));
+        assertEquals(48, ExportSizes.iconCellSize());
+    }
+
+    @Test
+    void resolveIconCellSizePrefersUnifiedSize() {
+        assertEquals(48, ExportSizes.resolveIconCellSize(48, 16, 16, 16));
     }
 }

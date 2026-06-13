@@ -1,4 +1,5 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
@@ -25,12 +26,13 @@ class PlanTest {
     @Test
     void scopedModeUnionsClosureSets() {
         Plan plan = new Plan(
-                Mode.SCOPED,
-                Set.of("minecraft:stick"),
-                Set.of("minecraft:oak_log"),
-                Set.of("minecraft:water"),
-                Set.of("minecraft:logs"),
-                Set.of("item.minecraft.stick"),
+                ExportContext.builder(Mode.SCOPED)
+                        .recipeIds(Set.of("minecraft:stick"))
+                        .itemIds(Set.of("minecraft:oak_log"))
+                        .fluidIds(Set.of("minecraft:water"))
+                        .tagIds(Set.of("minecraft:logs"))
+                        .seedLangKeys(Set.of("item.minecraft.stick"))
+                        .build(),
                 Hints.defaults(),
                 Seeds.empty());
 

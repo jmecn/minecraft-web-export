@@ -1,37 +1,44 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
 
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 
 public final class ExportSizes {
 
     private ExportSizes() {}
 
     public static int iconCellSize() {
-        Integer unified = Integer.getInteger(Constants.PROP_ICON_SIZE);
-        if (unified != null) {
-            return boundedSize(unified, Constants.PROP_ICON_SIZE);
+        return resolveIconCellSize(
+                MweConfig.iconSize(),
+                MweConfig.itemIconSize(),
+                MweConfig.blockItemIconSize(),
+                MweConfig.fluidIconSize());
+    }
+
+    static int resolveIconCellSize(int unified, int item, int block, int fluid) {
+        if (unified > 0) {
+            return boundedSize(unified, "icons.iconSize");
         }
-        if (System.getProperty(Constants.PROP_ITEM_ICON_SIZE) != null) {
-            return boundedSize(Integer.getInteger(Constants.PROP_ITEM_ICON_SIZE), Constants.PROP_ITEM_ICON_SIZE);
+        if (item > 0) {
+            return boundedSize(item, "icons.itemIconSize");
         }
-        if (System.getProperty(Constants.PROP_BLOCK_ITEM_ICON_SIZE) != null) {
-            return boundedSize(Integer.getInteger(Constants.PROP_BLOCK_ITEM_ICON_SIZE), Constants.PROP_BLOCK_ITEM_ICON_SIZE);
+        if (block > 0) {
+            return boundedSize(block, "icons.blockItemIconSize");
         }
-        if (System.getProperty(Constants.PROP_FLUID_ICON_SIZE) != null) {
-            return boundedSize(Integer.getInteger(Constants.PROP_FLUID_ICON_SIZE), Constants.PROP_FLUID_ICON_SIZE);
+        if (fluid > 0) {
+            return boundedSize(fluid, "icons.fluidIconSize");
         }
         return Constants.DEFAULT_ICON_SIZE;
     }
 
     public static int categoryIconCellSize() {
-        int size = Integer.getInteger(Constants.PROP_CATEGORY_ICON_SIZE, Constants.DEFAULT_CATEGORY_ICON_SIZE);
-        return boundedSize(size, Constants.PROP_CATEGORY_ICON_SIZE);
+        return boundedSize(MweConfig.categoryIconSize(), "icons.categoryIconSize");
     }
 
     public static int atlasMaxSize() {
-        int size = Integer.getInteger(Constants.PROP_ITEM_ICON_ATLAS_MAX_SIZE, Constants.DEFAULT_ATLAS_MAX_SIZE);
+        int size = MweConfig.itemIconAtlasMaxSize();
         if (size < 256 || size > 8192) {
-            throw new IllegalArgumentException(Constants.PROP_ITEM_ICON_ATLAS_MAX_SIZE + " must be 256..8192, got " + size);
+            throw new IllegalArgumentException("icons.itemIconAtlasMaxSize must be 256..8192, got " + size);
         }
         return size;
     }

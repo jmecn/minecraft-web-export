@@ -2,6 +2,7 @@ package io.github.jmecn.minecraftwebexport.runtime;
 
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 import io.github.jmecn.minecraftwebexport.pipeline.Pipeline;
@@ -24,10 +25,9 @@ public final class CiDriver {
 
     public void register() {
         MweMod.LOGGER.info(
-                "mode=runExportAndExit, world={}, output={}, warmupTicks={}, timeoutSeconds={}",
+                "mode=ci-export, world={}, output={}, timeoutSeconds={}",
                 WorldCreator.saveName(),
                 OutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir(),
-                CiProperties.exportWarmupTicks(),
                 CiProperties.exportTimeoutSeconds());
         MinecraftForge.EVENT_BUS.register(new AutoExportHandler(gameDirectory, outputRootOverride));
     }
@@ -74,7 +74,7 @@ public final class CiDriver {
 
     private static final class AutoExportHandler {
 
-        private enum Phase {ARMED, WORLD_OPENING, WARMUP, DONE}
+        private enum Phase {ARMED, WORLD_OPENING, WAITING_FOR_EMI, DONE}
 
         private final Path gameDirectory;
         private final String outputRootOverride;
@@ -83,7 +83,6 @@ public final class CiDriver {
         private Phase phase = Phase.ARMED;
         private boolean worldRequestSent;
         private int worldDelayTicks;
-        private int warmupTicks;
         private long startNanos;
 
         AutoExportHandler(Path gameDirectory, String outputRootOverride) {
@@ -97,9 +96,6 @@ public final class CiDriver {
             if (event.phase != TickEvent.Phase.END || phase == Phase.DONE) {
                 return;
             }
-            if (!Boolean.getBoolean(Constants.PROP_EXPORT_ENABLED)) {
-                return;
-            }
 
             Minecraft client = Minecraft.getInstance();
 
@@ -107,7 +103,7 @@ public final class CiDriver {
                 startNanos = System.nanoTime();
                 phase = Phase.WORLD_OPENING;
                 MweMod.LOGGER.info(
-                        "runExportAndExit: armed (timeout={}s), waiting for idle menu...",
+                        "CI export: armed (timeout={}s), waiting for idle menu...",
                         CiProperties.exportTimeoutSeconds());
             }
 
@@ -136,20 +132,18 @@ public final class CiDriver {
 
             switch (phase) {
                 case WORLD_OPENING -> tickWorldOpening(client);
-                case WARMUP -> tickWarmup(client);
+                case WAITING_FOR_EMI -> tickWaitingForEmi(client);
                 default -> {}
             }
         }
 
         private void tickWorldOpening(Minecraft client) {
             if (client.player != null && client.level != null) {
-                phase = Phase.WARMUP;
-                warmupTicks = 0;
+                phase = Phase.WAITING_FOR_EMI;
                 MweMod.LOGGER.info(
-                        "player + level present (player={}, dim={}), warming up {} ticks",
+                        "player + level present (player={}, dim={}), waiting for EMI ready",
                         client.player.getName().getString(),
-                        client.level.dimension().location(),
-                        CiProperties.exportWarmupTicks());
+                        client.level.dimension().location());
                 return;
             }
 
@@ -199,11 +193,12 @@ public final class CiDriver {
             stateLog.tick("waiting: world loading (screen=" + screen + ")");
         }
 
-        private void tickWarmup(Minecraft client) {
+        private void tickWaitingForEmi(Minecraft client) {
             if (client.player == null || client.level == null) {
-                stateLog.tick("warning: lost player/level during warmup");
+                stateLog.tick("warning: lost player/level while waiting for EMI");
                 phase = Phase.WORLD_OPENING;
                 worldRequestSent = true;
+                worldDelayTicks = 0;
                 return;
             }
 
@@ -214,25 +209,15 @@ public final class CiDriver {
                 return;
             }
             if (!isEmiReady(client)) {
-                if (warmupTicks % Constants.HEARTBEAT_TICKS == 0) {
-                    stateLog.tick("waiting: EMI not ready (status=" + Readiness.reloadStatusLabel() + ")");
-                }
-                warmupTicks = 0;
-                return;
-            }
-
-            if (warmupTicks < CiProperties.exportWarmupTicks()) {
-                warmupTicks++;
-                if (warmupTicks % Constants.HEARTBEAT_TICKS == 0 || warmupTicks == CiProperties.exportWarmupTicks()) {
-                    MweMod.LOGGER.info(
-                            "warmup {}/{}",
-                            warmupTicks,
-                            CiProperties.exportWarmupTicks());
-                }
+                stateLog.tick("waiting: EMI not ready (status=" + Readiness.reloadStatusLabel() + ")");
                 return;
             }
 
             phase = Phase.DONE;
+            runCiExport(client);
+        }
+
+        private void runCiExport(Minecraft client) {
             Path outputRoot = OutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir();
             MweMod.LOGGER.info("running EMI export to {} ...", outputRoot.toAbsolutePath());
             try {

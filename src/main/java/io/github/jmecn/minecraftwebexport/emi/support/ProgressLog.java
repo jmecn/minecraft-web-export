@@ -6,10 +6,9 @@ public final class ProgressLog {
 
     private ProgressLog() {}
 
-    public static int stride(int total, String propertyName, int smallBatch, int mediumBatch) {
-        String prop = System.getProperty(propertyName, "").trim();
-        if (!prop.isEmpty()) {
-            return Math.max(1, Integer.parseInt(prop));
+    public static int stride(int total, int configuredStride, int smallBatch, int mediumBatch) {
+        if (configuredStride > 0) {
+            return configuredStride;
         }
         if (total <= 0) {
             return 1;

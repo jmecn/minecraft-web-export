@@ -1,23 +1,24 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
 
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexBuild;
 import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemDetail;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
 import io.github.jmecn.minecraftwebexport.model.item.RegistryTagSet;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -28,7 +29,9 @@ final class ItemIndexPersistence {
     private ItemIndexPersistence() {
     }
 
-    static ItemIndexResult write(Path outputDir, MinecraftServer server, ItemIndexBuild build) throws IOException {
+    static ItemIndexResult write(
+            Path outputDir, MinecraftServer server, ItemIndexBuild build, ExportWriteQueue writes) {
+        Objects.requireNonNull(writes, "writes");
         Path itemsIndexFile = EmiPaths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
         Map<String, Map<String, Set<String>>> inputs = build.inputs();
         Map<String, Map<String, Set<String>>> outputs = build.outputs();
@@ -38,7 +41,7 @@ final class ItemIndexPersistence {
         int outputRefs = 0;
         Map<String, Set<String>> indexBuckets = new TreeMap<>();
         int writeTotal = allItemIds.size();
-        int writeStride = ProgressLog.stride(writeTotal, Constants.PROP_ITEMS_INDEX_WRITE_LOG_STRIDE, 20, 200);
+        int writeStride = ProgressLog.stride(writeTotal, MweConfig.itemsIndexWriteLogStride(), 20, 200);
         int writeProgress = 0;
         int skippedHiddenItems = 0;
         MweMod.LOGGER.info("{} writing {} item detail files", Log.EMI_ITEMS, writeTotal);
@@ -55,7 +58,6 @@ final class ItemIndexPersistence {
             }
             indexBuckets.computeIfAbsent(item.namespace(), ignored -> new TreeSet<>()).add(item.path());
             Path itemFile = item.toItemFile(outputDir);
-            Files.createDirectories(itemFile.getParent());
 
             if (inputs.containsKey(itemId)) {
                 inputRefs += ItemIndexSupport.countRecipeRefs(inputs.get(itemId));
@@ -74,7 +76,7 @@ final class ItemIndexPersistence {
                             : null,
                     tagSets != null && !tagSets.isEmpty() ? tagSets : null,
                     inBundle != null && !inBundle.isEmpty() ? inBundle : null);
-            JsonIO.write(itemFile, detail);
+            writes.submitJson(itemFile, detail);
             if (ProgressLog.shouldLog(writeProgress, writeTotal, writeStride)) {
                 int pct = ProgressLog.percent(writeProgress, writeTotal);
                 MweMod.LOGGER.info(
@@ -91,7 +93,7 @@ final class ItemIndexPersistence {
             namespacePaths.put(entry.getKey(), List.copyOf(entry.getValue()));
         }
         ItemIndex index = new ItemIndex(namespacePaths, List.copyOf(build.fluidRegistryIds()));
-        JsonIO.write(itemsIndexFile, index);
+        writes.submitJson(itemsIndexFile, index);
         if (skippedHiddenItems > 0) {
             MweMod.LOGGER.info(
                     "{} item visibility: {} indexed, {} skipped (hidden_from_recipe_viewers)",

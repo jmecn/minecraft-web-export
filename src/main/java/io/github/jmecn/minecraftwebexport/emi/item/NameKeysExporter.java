@@ -1,10 +1,12 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
 
 import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.item.NameKeysResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
@@ -16,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
 public final class NameKeysExporter {
@@ -24,10 +27,11 @@ public final class NameKeysExporter {
     }
 
     public static boolean isEnabled() {
-        return !Boolean.getBoolean(Constants.PROP_SKIP_ITEM_NAME_KEYS_EXPORT);
+        return !MweConfig.skipItemNameKeysExport();
     }
 
-    public static NameKeysResult export(Path outputDir, Minecraft client) throws IOException {
+    public static NameKeysResult export(Path outputDir, Minecraft client, ExportWriteQueue writes) throws IOException {
+        Objects.requireNonNull(writes, "writes");
         if (client == null || client.level == null) {
             MweMod.LOGGER.warn("{} skipped: no client level", Log.ITEM_NAME_KEYS);
             return NameKeysResult.EMPTY;
@@ -68,8 +72,7 @@ public final class NameKeysExporter {
         }
 
         Path out = bundleRoot.resolve(Constants.ITEM_NAME_KEYS_FILE);
-        Files.createDirectories(out.getParent());
-        JsonIO.writeLine(out, NameKeys.of(items));
+        writes.submitJsonLine(out, NameKeys.of(items));
 
         MweMod.LOGGER.info(
                 "{} {} registry ids ({} fluids) -> {}",

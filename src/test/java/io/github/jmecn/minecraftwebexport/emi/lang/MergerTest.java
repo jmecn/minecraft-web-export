@@ -24,19 +24,12 @@ class MergerTest {
     }
 
     @Test
-    void filterWebDeployKeysOmitsRegistryComposeTables() {
-        Set<String> closure = Set.of(
-                "item.tfg.latex_ingot",
-                "material.tfg.latex",
-                "tagprefix.ingot",
-                "tag.item.c.latex",
-                "gtceu.assembler");
-        Set<String> web = Merger.filterWebDeployKeys(closure);
-        assertFalse(web.contains("material.tfg.latex"));
-        assertFalse(web.contains("tagprefix.ingot"));
-        assertFalse(web.contains("item.tfg.latex_ingot"));
-        assertTrue(web.contains("tag.item.c.latex"));
-        assertTrue(web.contains("gtceu.assembler"));
+    void shouldMergeLangKeyAllowsClosureMaterialKeys() {
+        Set<String> closure = Set.of("material.tfg.latex", "tagprefix.ingot", "tag.item.c.latex");
+        assertTrue(Merger.shouldMergeLangKey("material.tfg.latex", closure));
+        assertTrue(Merger.shouldMergeLangKey("tagprefix.ingot", closure));
+        assertTrue(Merger.shouldMergeLangKey("tag.item.c.latex", closure));
+        assertFalse(Merger.shouldMergeLangKey("item.tfg.unused_ingot", closure));
     }
 
     @Test

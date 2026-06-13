@@ -9,15 +9,14 @@ import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemsLangExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.NameKeysExporter;
-import io.github.jmecn.minecraftwebexport.emi.lang.ClosureKeys;
 import io.github.jmecn.minecraftwebexport.emi.lang.Languages;
 import io.github.jmecn.minecraftwebexport.emi.lang.Merger;
-import io.github.jmecn.minecraftwebexport.emi.lang.UsedKeysCollector;
+import io.github.jmecn.minecraftwebexport.emi.recipe.RecipePaths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RecipeWriter;
 import io.github.jmecn.minecraftwebexport.emi.recipe.TextureWriter;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.tag.MembersIndexWriter;
-import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.model.bundle.Bundle;
 import io.github.jmecn.minecraftwebexport.model.bundle.ItemsLangRef;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.CategoryIconResult;
@@ -27,6 +26,7 @@ import io.github.jmecn.minecraftwebexport.model.emi.item.ItemsLangExportResult;
 import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.RecipeWriteResult;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembersResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
@@ -36,8 +36,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -63,13 +63,14 @@ public final class Pipeline {
         }
 
         Plan plan = Planner.plan(client, mode, modules, scope);
+        ExportContext context = plan.context();
         Seeds mergedSeeds = plan.mode() == Mode.FULL ? Seeds.empty() : plan.sourceSeeds();
 
         if (plan.mode() == Mode.SCOPED) {
             MweMod.LOGGER.info(
                     "[export] scoped export via modules {} (recipes={})",
                     modules.stream().map(Module::moduleId).toList(),
-                    plan.recipeIds().size());
+                    context.recipeIds().size());
         }
 
         EmiRunStats stats = exportEmi(outputRoot, client, plan);
@@ -94,143 +95,127 @@ public final class Pipeline {
     }
 
     private static EmiRunStats exportEmi(Path outputRoot, Minecraft client, Plan plan) throws IOException {
-        Set<String> recipeIds = plan.recipeIds();
-        boolean langPrune = plan.mode() == Mode.FULL && Merger.isLangPruneEnabled();
-        UsedKeysCollector langCollector = langPrune ? new UsedKeysCollector() : null;
+        ExportContext context = plan.context();
+        Set<String> recipeIds = context.recipeIds();
 
-        RecipeWriteResult recipes = exportRecipes(outputRoot, client, recipeIds, langCollector);
-        client.renderBuffers().bufferSource().endBatch();
+        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            RelationPlanner.buildRelations(client, context);
+            RecipePaths.ensureRecipeDirectories(outputRoot, recipeIds);
 
-        MinecraftServer server = client.getSingleplayerServer();
-        Set<String> tagIds = plan.tagsForExport(recipes.referencedTags());
-        if (plan.mode() == Mode.FULL && server != null && recipes.written() > 0) {
-            int layoutTagCount = tagIds.size();
-            tagIds = ItemIndexExporter.planFullModeTagExport(
-                    server,
-                    recipes.layoutsByRecipeId(),
-                    plan.seedItemsForIndex(),
-                    recipes.referencedTags());
-            MweMod.LOGGER.info(
-                    "{} full tag export: {} -> {} tags",
-                    Log.TAGS,
-                    layoutTagCount,
-                    tagIds.size());
-        }
+            RecipeWriteResult recipes = RecipeWriter.export(outputRoot, client, context, writes);
+            client.renderBuffers().bufferSource().endBatch();
 
-        TagMembersResult tags = new TagMembersResult(
-                0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
-        if (server != null && MembersIndexWriter.isEnabled() && !tagIds.isEmpty()) {
-            tags = MembersIndexWriter.export(outputRoot, server, tagIds);
-        } else if (!tagIds.isEmpty() && server == null) {
-            MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
-        }
+            MinecraftServer server = client.getSingleplayerServer();
 
-        CategoryIconResult categories = recipes.written() > 0
-                ? CategoryIconWriter.export(outputRoot, client)
-                : new CategoryIconResult(0, 0, 0, 0, 0);
-        ItemIndexResult items = recipes.written() > 0
-                ? ItemIndexExporter.export(
-                        outputRoot,
-                        server,
-                        recipes.layoutsByRecipeId(),
-                        plan.seedItemsForIndex())
-                : new ItemIndexResult(0, 0, 0, 0);
+            TagMembersResult tags = new TagMembersResult(
+                    0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
+            if (server != null && MembersIndexWriter.isEnabled() && !context.tagIds().isEmpty()) {
+                tags = MembersIndexWriter.export(outputRoot, server, context.tagIds(), writes);
+            } else if (!context.tagIds().isEmpty() && server == null) {
+                MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
+            }
 
-        if (recipes.written() > 0 && NameKeysExporter.isEnabled()) {
-            NameKeysExporter.export(outputRoot, client);
-        }
+            CategoryIconResult categories = recipes.written() > 0
+                    ? CategoryIconWriter.export(outputRoot, client, context.categoryIds(), writes)
+                    : new CategoryIconResult(0, 0, 0, 0, 0);
 
-        if (langCollector != null && recipes.written() > 0) {
-            langCollector.collectFromCategoriesIndex(outputRoot);
-            langCollector.collectFromItemNameKeys(outputRoot);
-            langCollector.collectFromItemsIndex(outputRoot);
-            langCollector.collectFromTagsIndex(outputRoot);
-            MweMod.LOGGER.info("{} lang prune: {} used keys collected", Log.LANG, langCollector.size());
-        }
+            ItemIndexResult items = recipes.written() > 0
+                    ? ItemIndexExporter.export(outputRoot, server, context, writes)
+                    : new ItemIndexResult(0, 0, 0, 0);
+            writes.awaitIdle();
 
-        Set<String> langKeys = resolveLangMergeKeys(plan, langCollector);
-        Path emiRoot = EmiPaths.resolve(outputRoot, "");
-        Path composeDir = emiRoot.resolve(Constants.COMPOSE_LANG_DIR);
-        if (plan.mode() == Mode.SCOPED && items.itemCount() > 0) {
-            langKeys = augmentScopedLangKeys(langKeys, plan, emiRoot);
-        }
-        boolean composeLangForItems = items.itemCount() > 0
-                && Merger.isEnabled()
-                && (langPrune || plan.mode() == Mode.SCOPED);
+            if (recipes.written() > 0 && NameKeysExporter.isEnabled()) {
+                NameKeysExporter.export(outputRoot, client, writes);
+            }
+            writes.awaitIdle();
 
-        if (composeLangForItems) {
-            Merger.exportTo(composeDir, client, null, null, plan.hints());
-        }
+            Set<String> langKeys = LangPlanner.deriveLangKeys(context);
+            LangMergeResult langs = Merger.isEnabled()
+                    ? Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes)
+                    : emptyLangResult();
+            writes.awaitIdle();
 
-        LangMergeResult langs = Merger.isEnabled()
-                ? Merger.exportEmiLang(
-                        outputRoot,
-                        client,
-                        langPrune ? Merger.filterWebDeployKeys(langKeys) : langKeys,
-                        plan.hints())
-                : emptyLangResult();
+            List<String> languages = List.of();
+            ItemsLangExportResult itemsLang = ItemsLangExportResult.EMPTY;
+            if (items.itemCount() > 0 && ItemsLangExporter.isEnabled()) {
+                languages = exportedLanguages(outputRoot);
+                if (languages.isEmpty()) {
+                    languages = Languages.resolve(plan.hints()).stream().sorted().toList();
+                }
+                if (!languages.isEmpty()) {
+                    itemsLang = ItemsLangExporter.export(
+                            outputRoot,
+                            languages,
+                            indexedItemIds(context),
+                            context.fluidRegistryIds(),
+                            writes);
+                }
+            }
+            writes.awaitIdle();
 
-        List<String> languages = List.of();
-        ItemsLangExportResult itemsLang = ItemsLangExportResult.EMPTY;
-        if (items.itemCount() > 0 && ItemsLangExporter.isEnabled()) {
-            languages = exportedLanguages(outputRoot);
             if (languages.isEmpty()) {
-                languages = Languages.resolve(plan.hints()).stream().sorted().toList();
+                languages = exportedLanguages(outputRoot);
             }
-            if (!languages.isEmpty()) {
-                itemsLang = ItemsLangExporter.export(outputRoot, languages, composeLangForItems);
-            }
+
+            ItemIconResult icons = ItemIconWriter.isEnabled()
+                    ? ItemIconWriter.export(
+                            outputRoot,
+                            client,
+                            context.itemIds(),
+                            context.fluidIds(),
+                            null,
+                            context.iconVariants(),
+                            writes)
+                    : emptyIconResult();
+
+            ItemsLangRef itemsLangRef = itemsLang.locales().isEmpty()
+                    ? null
+                    : new ItemsLangRef(Constants.ITEMS_LANG_DIR, List.copyOf(itemsLang.locales()));
+            Bundle bundle = Bundle.of(
+                    recipes.imageScale(),
+                    recipes.written(),
+                    languages,
+                    PlaceholderRenderer.REGISTRY_ID,
+                    itemsLangRef);
+            writes.submitJson(EmiPaths.resolve(outputRoot, Constants.BUNDLE_FILE), bundle);
+
+            TextureWriter.export(outputRoot, client, Set.of(), writes);
+            writes.awaitIdle();
+
+            logCompletion(plan.mode(), recipes, recipeIds.size(), categories, items, tags, langs, icons);
+
+            return new EmiRunStats(
+                    recipeIds.size(),
+                    recipes.written(),
+                    items.itemCount(),
+                    tags.tagsIndexed(),
+                    langs.languagesWritten(),
+                    icons.totalSpritesWritten());
         }
+    }
 
-        if (composeLangForItems && Files.isDirectory(composeDir)) {
-            try (Stream<Path> walk = Files.walk(composeDir)) {
-                walk.sorted(Comparator.reverseOrder()).forEach(path -> {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (IOException e) {
-                        MweMod.LOGGER.warn("{} failed to delete {}: {}", Log.LANG, path, e.toString());
-                    }
-                });
-            }
-        }
+    private static Set<String> indexedItemIds(ExportContext context) {
+        Set<String> ids = new LinkedHashSet<>(context.itemIds());
+        ids.addAll(context.inputs().keySet());
+        ids.addAll(context.outputs().keySet());
+        return Set.copyOf(ids);
+    }
 
-        if (languages.isEmpty()) {
-            languages = exportedLanguages(outputRoot);
-        }
-
-        Set<String> itemsForIcons = plan.itemsForIcons(recipes.referencedItems());
-        Set<String> fluidsForIcons = plan.fluidsForIcons(recipes.referencedFluids());
-
-        ItemIconResult icons = ItemIconWriter.isEnabled()
-                ? ItemIconWriter.export(
-                        outputRoot,
-                        client,
-                        itemsForIcons,
-                        fluidsForIcons,
-                        null,
-                        recipes.iconVariants())
-                : emptyIconResult();
-
-        List<String> itemsLangLocales = itemsLang.locales();
-        ItemsLangRef itemsLangRef = itemsLangLocales.isEmpty()
-                ? null
-                : new ItemsLangRef(Constants.ITEMS_LANG_DIR, List.copyOf(itemsLangLocales));
-        Bundle bundle = Bundle.of(
-                recipes.imageScale(),
-                recipes.written(),
-                languages,
-                PlaceholderRenderer.REGISTRY_ID,
-                itemsLangRef);
-        JsonIO.write(EmiPaths.resolve(outputRoot, Constants.BUNDLE_FILE), bundle);
-
-        TextureWriter.export(outputRoot, client, Set.of());
-
-        if (plan.mode() == Mode.SCOPED) {
+    private static void logCompletion(
+            Mode mode,
+            RecipeWriteResult recipes,
+            int recipesRequested,
+            CategoryIconResult categories,
+            ItemIndexResult items,
+            TagMembersResult tags,
+            LangMergeResult langs,
+            ItemIconResult icons) {
+        if (mode == Mode.SCOPED) {
             MweMod.LOGGER.info(
                     "{} scoped export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     Log.EMI,
                     recipes.written(),
-                    recipeIds.size(),
+                    recipesRequested,
                     categories.categoryCount(),
                     items.itemCount(),
                     tags.tagsIndexed(),
@@ -241,21 +226,13 @@ public final class Pipeline {
                     "{} export complete: {}/{} recipes, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     Log.EMI,
                     recipes.written(),
-                    recipeIds.size(),
+                    recipesRequested,
                     categories.categoryCount(),
                     items.itemCount(),
                     tags.tagsIndexed(),
                     langs.languagesWritten(),
                     icons.totalSpritesWritten());
         }
-
-        return new EmiRunStats(
-                recipeIds.size(),
-                recipes.written(),
-                items.itemCount(),
-                tags.tagsIndexed(),
-                langs.languagesWritten(),
-                icons.totalSpritesWritten());
     }
 
     private record EmiRunStats(
@@ -265,56 +242,6 @@ public final class Pipeline {
             int tagIndexCount,
             int languagesWritten,
             int iconsWritten) {
-    }
-
-    private static Set<String> augmentScopedLangKeys(Set<String> langKeys, Plan plan, Path emiRoot) {
-        Set<String> seed = langKeys == null ? Set.of() : langKeys;
-        try {
-            Set<String> merged = ClosureKeys.mergeClosureLangKeys(
-                    seed,
-                    ItemsLangExporter.readIndexedItemIds(emiRoot),
-                    ItemsLangExporter.readFluidRegistryIds(emiRoot));
-            merged = ClosureKeys.mergeTagLangKeys(merged, plan.closureTagIds());
-            return merged.isEmpty() ? null : merged;
-        } catch (IOException e) {
-            MweMod.LOGGER.warn("{} scoped lang keys: failed to read items index: {}", Log.LANG, e.toString());
-            Set<String> merged = ClosureKeys.mergeTagLangKeys(seed, plan.closureTagIds());
-            return merged.isEmpty() ? langKeys : merged;
-        }
-    }
-
-    private static Set<String> resolveLangMergeKeys(Plan plan, UsedKeysCollector langCollector) {
-        if (plan.mode() == Mode.SCOPED) {
-            return plan.langKeysForExport();
-        }
-        if (langCollector != null && langCollector.size() > 0) {
-            return langCollector.snapshot();
-        }
-        return null;
-    }
-
-    private static RecipeWriteResult exportRecipes(
-            Path outputRoot,
-            Minecraft client,
-            Set<String> recipeIds,
-            UsedKeysCollector langCollector) throws IOException {
-        if (RecipeWriter.isEnabled()) {
-            return RecipeWriter.export(outputRoot, client, recipeIds, langCollector);
-        }
-        MweMod.LOGGER.info("{} recipe export disabled by configuration", Log.EMI);
-        return new RecipeWriteResult(
-                recipeIds.size(),
-                0,
-                0,
-                0,
-                0,
-                0,
-                RecipeWriter.imageScale(),
-                Set.of(),
-                Set.of(),
-                Set.of(),
-                Map.of(),
-                Map.of());
     }
 
     private static LangMergeResult emptyLangResult() {

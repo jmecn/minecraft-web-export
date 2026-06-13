@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,7 @@ final class ItemIndexSupport {
     static Map<String, Set<String>> loadTagItems(Path outputDir) throws IOException {
         Path tagsRoot = EmiPaths.resolve(outputDir, Constants.TAGS_DIR);
         if (!Files.isDirectory(tagsRoot)) {
-            return Map.of();
+            return new HashMap<>();
         }
 
         Map<String, Set<String>> tagItems = new TreeMap<>();
