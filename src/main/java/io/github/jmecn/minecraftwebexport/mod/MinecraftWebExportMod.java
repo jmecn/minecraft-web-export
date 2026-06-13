@@ -1,9 +1,9 @@
 package io.github.jmecn.minecraftwebexport.mod;
+import io.github.jmecn.minecraftwebexport.runtime.CiDriver;
+import io.github.jmecn.minecraftwebexport.runtime.CiProperties;
+import io.github.jmecn.minecraftwebexport.runtime.ClientEntrypoint;
+import io.github.jmecn.minecraftwebexport.runtime.ExportProperties;
 
-import io.github.jmecn.minecraftwebexport.export.RuntimeExportEntrypoint;
-import io.github.jmecn.minecraftwebexport.export.ci.ExportCiDriver;
-import io.github.jmecn.minecraftwebexport.export.ci.ExportCiProperties;
-import net.minecraft.SharedConstants;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLEnvironment;
@@ -16,19 +16,9 @@ public final class MinecraftWebExportMod {
 
     public static final String MOD_ID = "minecraft_web_export";
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
-    private static final RuntimeExportEntrypoint EXPORT_ENTRYPOINT = new RuntimeExportEntrypoint();
 
     public MinecraftWebExportMod() {
         LOGGER.info("Minecraft Web Export mod initialized");
-        boolean ciExport = ExportCiProperties.runExportAndExit();
-        if (!ciExport) {
-            EXPORT_ENTRYPOINT.runIfEnabled(
-                    MOD_ID,
-                    SharedConstants.getCurrentVersion().getName(),
-                    FMLPaths.GAMEDIR.get());
-        } else {
-            LOGGER.info("skipping mod-init stub export; CI driver owns the export lifecycle");
-        }
         if (FMLEnvironment.dist == Dist.CLIENT) {
             ClientBootstrap.arm(FMLPaths.GAMEDIR.get());
         }
@@ -36,15 +26,14 @@ public final class MinecraftWebExportMod {
 
     private static final class ClientBootstrap {
         private static void arm(java.nio.file.Path gameDirectory) {
-            if (ExportCiProperties.runExportAndExit()) {
-                new ExportCiDriver(
+            if (CiProperties.runExportAndExit()) {
+                new CiDriver(
                         gameDirectory,
-                        System.getProperty(RuntimeExportEntrypoint.OUTPUT_ROOT_PROPERTY))
+                        System.getProperty(ExportProperties.OUTPUT_ROOT_PROPERTY))
                         .register();
                 return;
             }
-            io.github.jmecn.minecraftwebexport.export.emi.RuntimeEmiExportEntrypoint entrypoint =
-                    new io.github.jmecn.minecraftwebexport.export.emi.RuntimeEmiExportEntrypoint();
+            ClientEntrypoint entrypoint = new ClientEntrypoint();
             entrypoint.armIfEnabled(gameDirectory);
         }
     }

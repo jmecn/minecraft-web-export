@@ -1,0 +1,53 @@
+package io.github.jmecn.minecraftwebexport.emi.recipe;
+import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
+
+import java.nio.file.Path;
+
+public final class CardPaths {
+
+    public static final int META_SCHEMA = 1;
+    public static final int BUNDLE_SCHEMA = 2;
+    public static final String RECIPES_DIR = "recipes";
+    private static final int EMI_RECIPE_MARGIN = 8;
+
+    private CardPaths() {
+    }
+
+    public static IndexIds.RecipeIdParts requireParts(String recipeId) {
+        IndexIds.RecipeIdParts parts = IndexIds.splitRecipeId(recipeId);
+        if (parts == null) {
+            throw new IllegalArgumentException("invalid recipe id: " + recipeId);
+        }
+        return parts;
+    }
+
+    public static String pathSafe(String path) {
+        if (path == null || path.isEmpty()) {
+            return "unknown";
+        }
+        return path.replace('/', '_');
+    }
+
+    public static String fileStem(String recipeId) {
+        return pathSafe(requireParts(recipeId).path());
+    }
+
+    public static Path pngPath(Path exportRoot, String recipeId) {
+        IndexIds.RecipeIdParts parts = requireParts(recipeId);
+        return Paths.resolve(
+                exportRoot,
+                RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".png");
+    }
+
+    public static Path metaPath(Path exportRoot, String recipeId) {
+        IndexIds.RecipeIdParts parts = requireParts(recipeId);
+        return Paths.resolve(
+                exportRoot,
+                RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".json");
+    }
+
+    public static int recipeMargin() {
+        return EMI_RECIPE_MARGIN;
+    }
+}
