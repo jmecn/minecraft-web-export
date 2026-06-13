@@ -41,11 +41,24 @@ public final class EmiRuntimeExportOrchestrator {
         EmiRecipeCardExporter.Result cards = exportRecipeCards(outputRoot, client, recipeIds, langCollector);
         client.renderBuffers().bufferSource().endBatch();
 
+        MinecraftServer server = client.getSingleplayerServer();
         Set<String> tagIds = plan.tagsForExport(cards.referencedTags());
+        if (plan.mode() == ExportMode.FULL && server != null && cards.written() > 0) {
+            int layoutTagCount = tagIds.size();
+            tagIds = EmiItemsIndexExporter.planFullModeTagExport(
+                    server,
+                    cards.layoutsByRecipeId(),
+                    plan.seedItemsForIndex(),
+                    cards.referencedTags());
+            LOGGER.info(
+                    "{} full tag export: {} -> {} tags",
+                    ExportLog.TAGS,
+                    layoutTagCount,
+                    tagIds.size());
+        }
 
         TagMembersIndexExporter.Result tags = new TagMembersIndexExporter.Result(
                 0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
-        MinecraftServer server = client.getSingleplayerServer();
         if (server != null && TagMembersIndexExporter.isEnabled() && !tagIds.isEmpty()) {
             tags = TagMembersIndexExporter.export(outputRoot, server, tagIds);
         } else if (!tagIds.isEmpty() && server == null) {

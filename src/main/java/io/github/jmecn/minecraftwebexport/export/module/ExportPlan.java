@@ -59,7 +59,6 @@ public record ExportPlan(
         return union(layoutReferencedFluids, closureFluidIds);
     }
 
-    /** Layout-referenced tag ids union seed/closure tags for {@code tags/**} member export. */
     public Set<String> tagsForExport(Set<String> layoutReferencedTags) {
         if (mode == ExportMode.FULL) {
             return copy(layoutReferencedTags);

@@ -181,6 +181,39 @@ class EmiItemsIndexExporterTest {
     }
 
     @Test
+    void collectReferencedItemIdsIncludesLayoutAndSeedItems() {
+        Map<String, JsonObject> layouts = Map.of(
+                "minecraft:stick",
+                layout("""
+                        {
+                          "schema": 2,
+                          "id": "minecraft:stick",
+                          "category": "minecraft:crafting",
+                          "widgets": [
+                            {
+                              "type": "slot",
+                              "role": "output",
+                              "ingredient": "item:minecraft:stick"
+                            }
+                          ]
+                        }
+                        """));
+
+        Set<String> itemIds = EmiItemsIndexExporter.collectReferencedItemIds(
+                null,
+                layouts,
+                Set.of("minecraft:oak_log"),
+                Set.of());
+
+        assertEquals(Set.of("minecraft:oak_log", "minecraft:stick"), itemIds);
+    }
+
+    @Test
+    void collectRegistryTagIdsReturnsEmptyWithoutServer() {
+        assertTrue(EmiItemsIndexExporter.collectRegistryTagIds(null, Set.of("minecraft:stick")).isEmpty());
+    }
+
+    @Test
     void mergesSeedItemIdsWithoutRecipeRefs() throws IOException {
         RecipeBundleMods mods = RecipeBundleMods.empty();
         EmiItemsIndexExporter.export(

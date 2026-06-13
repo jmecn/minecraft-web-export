@@ -75,6 +75,93 @@ public final class EmiItemsIndexExporter {
         return export(outputDir, server, layoutsByRecipeId, Set.of());
     }
 
+    public static Set<String> collectReferencedItemIds(
+            MinecraftServer server,
+            Map<String, JsonObject> layoutsByRecipeId,
+            Set<String> seedItemIds,
+            Set<String> seedTagIds) {
+        Set<String> itemIds = new TreeSet<>();
+        mergeSeedItemIds(itemIds, seedItemIds);
+        if (server != null && seedTagIds != null && !seedTagIds.isEmpty()) {
+            itemIds.addAll(TagClosureExpander.expand(server, seedTagIds).items());
+        }
+        if (layoutsByRecipeId == null || layoutsByRecipeId.isEmpty()) {
+            return Set.copyOf(itemIds);
+        }
+
+        List<String> recipeIds = new ArrayList<>(layoutsByRecipeId.keySet());
+        Collections.sort(recipeIds);
+        Set<String> fluidRegistryIds = new TreeSet<>();
+
+        for (String recipeId : recipeIds) {
+            if (isEmiTagDisplayRecipe(recipeId)) {
+                continue;
+            }
+            JsonObject layout = layoutsByRecipeId.get(recipeId);
+            if (layout == null) {
+                continue;
+            }
+            JsonArray widgets = readWidgets(layout);
+            for (JsonElement widgetElement : widgets) {
+                if (!widgetElement.isJsonObject()) {
+                    continue;
+                }
+                JsonObject widget = widgetElement.getAsJsonObject();
+                Set<String> ids = new TreeSet<>();
+                if (widget.has("tagDisplayItem") && widget.get("tagDisplayItem").isJsonPrimitive()) {
+                    addCanonicalId(widget.get("tagDisplayItem").getAsString(), ids);
+                }
+                if (widget.has("ingredient")) {
+                    collectIngredientIds(widget.get("ingredient"), ids, Map.of(), fluidRegistryIds, server);
+                }
+                itemIds.addAll(ids);
+            }
+        }
+        return Set.copyOf(itemIds);
+    }
+
+    public static Set<String> collectRegistryTagIds(MinecraftServer server, Set<String> itemIds) {
+        if (server == null || itemIds == null || itemIds.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> tags = new TreeSet<>();
+        for (RegistryTagSets tagSets : resolveRegistryTags(itemIds, server).values()) {
+            tags.addAll(tagSets.items());
+            tags.addAll(tagSets.blocks());
+            tags.addAll(tagSets.fluids());
+        }
+        return Set.copyOf(tags);
+    }
+
+    public static Set<String> planFullModeTagExport(
+            MinecraftServer server,
+            Map<String, JsonObject> layoutsByRecipeId,
+            Set<String> seedItemIds,
+            Set<String> layoutReferencedTags) {
+        if (server == null) {
+            return layoutReferencedTags == null ? Set.of() : Set.copyOf(layoutReferencedTags);
+        }
+        Set<String> items = new TreeSet<>(collectReferencedItemIds(
+                server, layoutsByRecipeId, seedItemIds, layoutReferencedTags));
+        Set<String> tags = new TreeSet<>(layoutReferencedTags == null ? Set.of() : layoutReferencedTags);
+
+        while (true) {
+            Set<String> nextTags = new TreeSet<>(tags);
+            nextTags.addAll(collectRegistryTagIds(server, items));
+
+            Set<String> nextItems = new TreeSet<>(items);
+            if (!nextTags.isEmpty()) {
+                nextItems.addAll(TagClosureExpander.expand(server, nextTags).items());
+            }
+
+            if (nextTags.equals(tags) && nextItems.equals(items)) {
+                return Set.copyOf(nextTags);
+            }
+            tags = nextTags;
+            items = nextItems;
+        }
+    }
+
     public static Result export(
             Path outputDir,
             MinecraftServer server,
@@ -141,7 +228,7 @@ public final class EmiItemsIndexExporter {
                     addCanonicalId(widget.get("tagDisplayItem").getAsString(), ids);
                 }
                 if (widget.has("ingredient")) {
-                    collectIngredientIds(widget.get("ingredient"), ids, tagItems, fluidRegistryIds);
+                    collectIngredientIds(widget.get("ingredient"), ids, tagItems, fluidRegistryIds, null);
                 }
                 addRecipeRefs(bucket, categoryId, ids, recipeId);
             }
@@ -490,15 +577,17 @@ public final class EmiItemsIndexExporter {
     private static void collectIngredientIds(
             JsonElement ingredient,
             Set<String> out,
-            Map<String, Set<String>> tagItems) {
-        collectIngredientIds(ingredient, out, tagItems, null);
+            Map<String, Set<String>> tagItems,
+            Set<String> fluidRegistryIds) {
+        collectIngredientIds(ingredient, out, tagItems, fluidRegistryIds, null);
     }
 
     private static void collectIngredientIds(
             JsonElement ingredient,
             Set<String> out,
             Map<String, Set<String>> tagItems,
-            Set<String> fluidRegistryIds) {
+            Set<String> fluidRegistryIds,
+            MinecraftServer server) {
         if (ingredient == null || ingredient.isJsonNull()) {
             return;
         }
@@ -509,7 +598,7 @@ public final class EmiItemsIndexExporter {
             } else if (raw.startsWith("fluid:")) {
                 addFluidRegistryId(raw.substring(6), out, fluidRegistryIds);
             } else if (raw.startsWith("#item:")) {
-                out.addAll(tagItems.getOrDefault(raw.substring(6), Set.of()));
+                expandTagIngredient(raw.substring(6), out, tagItems, server);
             } else if (raw.contains(":") && !raw.startsWith("#")) {
                 addCanonicalId(raw, out);
             }
@@ -517,7 +606,7 @@ public final class EmiItemsIndexExporter {
         }
         if (ingredient.isJsonArray()) {
             for (JsonElement child : ingredient.getAsJsonArray()) {
-                collectIngredientIds(child, out, tagItems, fluidRegistryIds);
+                collectIngredientIds(child, out, tagItems, fluidRegistryIds, server);
             }
             return;
         }
@@ -548,7 +637,7 @@ public final class EmiItemsIndexExporter {
                     }
                 }
                 if (entry.has("tag") && entry.get("tag").isJsonPrimitive()) {
-                    out.addAll(tagItems.getOrDefault(entry.get("tag").getAsString(), Set.of()));
+                    expandTagIngredient(entry.get("tag").getAsString(), out, tagItems, server);
                 }
                 if (entry.has("fluid") && entry.get("fluid").isJsonObject()) {
                     JsonObject fluid = entry.getAsJsonObject("fluid");
@@ -558,6 +647,18 @@ public final class EmiItemsIndexExporter {
                 }
             }
         }
+    }
+
+    private static void expandTagIngredient(
+            String tagId,
+            Set<String> out,
+            Map<String, Set<String>> tagItems,
+            MinecraftServer server) {
+        if (server != null) {
+            out.addAll(TagClosureExpander.expand(server, Set.of(tagId)).items());
+            return;
+        }
+        out.addAll(tagItems.getOrDefault(tagId, Set.of()));
     }
 
     private static void addFluidRegistryId(String raw, Set<String> out, Set<String> fluidRegistryIds) {
