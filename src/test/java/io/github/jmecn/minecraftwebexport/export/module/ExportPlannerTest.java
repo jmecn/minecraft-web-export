@@ -24,6 +24,22 @@ class ExportPlannerTest {
     }
 
     @Test
+    void scopedModeExportsAllSeedRecipesRegardlessOfEmiVisibility() {
+        Set<String> seeds = Set.of("tfc:crafting/wattle", "minecraft:stick", "missing:recipe");
+        Set<String> emiVisible = Set.of("minecraft:stick");
+        Set<String> resolved = ExportPlanner.resolveRecipeIds(ExportMode.SCOPED, seeds, emiVisible);
+        assertEquals(seeds, resolved);
+    }
+
+    @Test
+    void fullModeStillFiltersToEmiVisibleRecipes() {
+        Set<String> seeds = Set.of("tfc:crafting/wattle", "minecraft:stick");
+        Set<String> emiVisible = Set.of("minecraft:stick");
+        Set<String> resolved = ExportPlanner.resolveRecipeIds(ExportMode.FULL, seeds, emiVisible);
+        assertEquals(Set.of("minecraft:stick"), resolved);
+    }
+
+    @Test
     void filterRecipeIdsReturnsEmptyWhenSeedsEmpty() {
         assertTrue(ExportPlanner.filterRecipeIds(Set.of(), Set.of("minecraft:stick")).isEmpty());
     }

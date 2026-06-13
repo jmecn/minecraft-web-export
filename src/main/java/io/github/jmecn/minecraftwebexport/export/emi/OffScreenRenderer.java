@@ -113,6 +113,22 @@ public class OffScreenRenderer implements AutoCloseable {
         FogRenderer.setupNoFog();
     }
 
+    /**
+     * GUI pixel-space matrices for entity previews (Patchouli {@code PageEntity} uses screen coords,
+     * not the 16×16 item grid used by {@link #setupItemRendering()}).
+     */
+    public void setupGuiEntityRendering(int width, int height) {
+        var matrix4f = new Matrix4f().setOrtho(0.0f, width, height, 0.0f, 1000.0f, 21000.0f);
+        RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
+
+        var poseStack = RenderSystem.getModelViewStack();
+        poseStack.setIdentity();
+        poseStack.translate(0.0f, 0.0f, -11000.0f);
+        RenderSystem.applyModelViewMatrix();
+        Lighting.setupForEntityInInventory();
+        FogRenderer.setupNoFog();
+    }
+
     public void runWithEmiRecipeMatrices(int logicalWidth, int logicalHeight, Runnable draw) {
         Matrix4f backupProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         PoseStack view = RenderSystem.getModelViewStack();

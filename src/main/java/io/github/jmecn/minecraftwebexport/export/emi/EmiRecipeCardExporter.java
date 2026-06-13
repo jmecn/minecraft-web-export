@@ -6,6 +6,7 @@ import dev.emi.emi.EmiRenderHelper;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.runtime.EmiDrawContext;
 import io.github.jmecn.minecraftwebexport.export.ExportGson;
+import io.github.jmecn.minecraftwebexport.export.module.ExportMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.client.gui.GuiGraphics;
@@ -85,7 +86,8 @@ public final class EmiRecipeCardExporter {
                 logProgress(progress, total, written, missing, failures, logStride);
                 continue;
             }
-            if (!EmiExportVisibility.shouldExportRecipe(recipe, server)) {
+            if (ExportMode.current() != ExportMode.SCOPED
+                    && !EmiExportVisibility.shouldExportRecipe(recipe, server)) {
                 skippedVisibility++;
                 logProgress(progress, total, written, missing, failures, logStride);
                 continue;

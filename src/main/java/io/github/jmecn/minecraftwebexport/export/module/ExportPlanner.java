@@ -52,10 +52,26 @@ public final class ExportPlanner {
         ExportHints hints = mergeModuleHints(modules, scope, merged);
 
         Set<String> availableRecipes = collectExportableRecipeIds(client);
-        Set<String> recipeIds = filterRecipeIds(merged.recipeIds(), availableRecipes);
+        Set<String> recipeIds = resolveRecipeIds(mode, merged.recipeIds(), availableRecipes);
 
         MinecraftServer server = client.getSingleplayerServer();
         ExportClosureExpander.ClosureResult closure = ExportClosureExpander.expand(server, merged);
+
+        if (mode == ExportMode.SCOPED && merged.recipeIds().size() != recipeIds.size()) {
+            LOGGER.warn("[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
+                    merged.recipeIds().size(), recipeIds.size());
+        }
+        if (mode == ExportMode.SCOPED && !availableRecipes.containsAll(recipeIds)) {
+            int hiddenFromEmi = 0;
+            for (String id : recipeIds) {
+                if (!availableRecipes.contains(id)) {
+                    hiddenFromEmi++;
+                }
+            }
+            LOGGER.info(
+                    "[export] scoped handbook recipes include {} EMI-hidden ids (exported anyway)",
+                    hiddenFromEmi);
+        }
 
         LOGGER.info(
                 "[export] mode=scoped, modules={}, seedRecipes={}, resolvedRecipes={}, seedTags={}, closureItems={}, closureTags={}",
@@ -92,6 +108,13 @@ public final class ExportPlanner {
             }
         }
         return Set.copyOf(filtered);
+    }
+
+    static Set<String> resolveRecipeIds(ExportMode mode, Set<String> seedRecipeIds, Set<String> availableRecipeIds) {
+        if (mode == ExportMode.SCOPED) {
+            return seedRecipeIds.isEmpty() ? Set.of() : Set.copyOf(new TreeSet<>(seedRecipeIds));
+        }
+        return filterRecipeIds(seedRecipeIds, availableRecipeIds);
     }
 
     private static ExportHints mergeModuleHints(List<ExportModule> modules, ExportScope scope, ExportSeeds seeds) {
