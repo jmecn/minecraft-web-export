@@ -3,9 +3,6 @@ package io.github.jmecn.minecraftwebexport.export.module;
 import java.nio.file.Path;
 import java.util.Objects;
 
-/**
- * Context passed to {@link ExportModule} hooks during an export run.
- */
 public record ExportScope(
         Path outputRoot,
         Path gameDirectory,

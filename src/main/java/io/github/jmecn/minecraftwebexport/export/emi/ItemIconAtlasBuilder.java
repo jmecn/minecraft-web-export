@@ -3,8 +3,6 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 import com.google.gson.Gson;
 import com.mojang.blaze3d.platform.NativeImage;
 import io.github.jmecn.minecraftwebexport.export.ExportGson;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -14,10 +12,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 final class ItemIconAtlasBuilder implements AutoCloseable {
-
-    private static final Logger LOGGER = LogManager.getLogger(ItemIconAtlasBuilder.class);
     private static final Gson GSON = ExportGson.GSON;
 
     private final int cellSize;
@@ -144,7 +141,7 @@ final class ItemIconAtlasBuilder implements AutoCloseable {
         String css = buildCss();
         Files.writeString(cssPath, css, StandardCharsets.UTF_8);
 
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} atlas: {} items, {} pages, index {} bytes, png {} bytes, css {} bytes",
                 ExportLog.ICONS,
                 items.size(),

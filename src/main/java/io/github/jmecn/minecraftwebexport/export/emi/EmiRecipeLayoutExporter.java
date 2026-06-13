@@ -10,8 +10,6 @@ import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,8 +23,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class EmiRecipeLayoutExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(EmiRecipeLayoutExporter.class);
     private static final Gson GSON = ExportGson.GSON;
 
     private static final int PANEL_MARGIN = 4;
@@ -35,7 +31,6 @@ public final class EmiRecipeLayoutExporter {
     private EmiRecipeLayoutExporter() {
     }
 
-    /** Per-side inset around EMI recipe display (PNG + meta frame = width + 2×margin). */
     static int panelMargin() {
         return PANEL_MARGIN;
     }
@@ -97,7 +92,6 @@ public final class EmiRecipeLayoutExporter {
                 RecipeBundleMods.empty());
     }
 
-    /** In-memory layout for meta baking (no chrome / route packs). */
     static JsonObject buildLayoutInMemory(
             Minecraft client,
             EmiRecipe recipe,

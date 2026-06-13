@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-/** Per-namespace route file list + layout pack catalog for {@code bundle.json#mods}. */
 public final class RecipeBundleMods {
 
     public record PackRef(String file, long bytes) {

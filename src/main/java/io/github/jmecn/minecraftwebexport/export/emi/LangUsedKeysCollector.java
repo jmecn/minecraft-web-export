@@ -13,10 +13,6 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Collects lang keys referenced by the bundle (recipe meta, item/tag/category indexes).
- * Used for FULL export lang merge — aligned with {@code emi-bundle-optimize} lang prune.
- */
 public final class LangUsedKeysCollector {
 
     private static final Pattern FLUID_NBT_NAME = Pattern.compile("FluidName:\"([^\"]+)\"");

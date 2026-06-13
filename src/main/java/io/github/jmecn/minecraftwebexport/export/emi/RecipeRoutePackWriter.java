@@ -13,9 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-/**
- * Writes {@code recipes/routes/} and {@code recipes/layout-packs/} while building {@link RecipeBundleMods}.
- */
 public final class RecipeRoutePackWriter {
 
     public static final int CONTAINER_SCHEMA = 1;

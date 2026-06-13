@@ -8,10 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
 
-/**
- * Renders EMI category tab icons the same way as {@code RecipeScreen}:
- * {@link EmiRecipeCategoryProperties#getIcon(category)} at 16×16.
- */
 public final class CategoryIconRenderer {
 
     private CategoryIconRenderer() {

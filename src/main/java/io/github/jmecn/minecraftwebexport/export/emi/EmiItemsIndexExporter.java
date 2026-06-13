@@ -16,8 +16,6 @@ import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,10 +29,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 public final class EmiItemsIndexExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(EmiItemsIndexExporter.class);
     private static final Gson GSON = ExportGson.GSON;
     private static final String SCAN_LOG_STRIDE_PROPERTY = "minecraftWebExport.itemsIndexScanLogStride";
     private static final String WRITE_LOG_STRIDE_PROPERTY = "minecraftWebExport.itemsIndexWriteLogStride";
@@ -55,7 +52,7 @@ public final class EmiItemsIndexExporter {
 
     public static Result export(Path outputDir, MinecraftServer server, RecipeBundleMods mods) throws IOException {
         if (mods == null || mods.isEmpty()) {
-            LOGGER.warn("{} no recipe mods in bundle - skipping items index", ExportLog.EMI_ITEMS);
+            MinecraftWebExportMod.LOGGER.warn("{} no recipe mods in bundle - skipping items index", ExportLog.EMI_ITEMS);
             return new Result(0, 0, 0, 0);
         }
         List<String> recipeIds = RecipeIndexIds.allRecipeIds(outputDir, mods);
@@ -168,7 +165,7 @@ public final class EmiItemsIndexExporter {
             Map<String, JsonObject> layoutsByRecipeId,
             Set<String> seedItemIds) throws IOException {
         if (layoutsByRecipeId == null || layoutsByRecipeId.isEmpty()) {
-            LOGGER.warn("{} no in-memory layouts - skipping items index", ExportLog.EMI_ITEMS);
+            MinecraftWebExportMod.LOGGER.warn("{} no in-memory layouts - skipping items index", ExportLog.EMI_ITEMS);
             return new Result(0, 0, 0, 0);
         }
         List<String> recipeIds = new ArrayList<>(layoutsByRecipeId.keySet());
@@ -197,7 +194,7 @@ public final class EmiItemsIndexExporter {
         int scanTotal = recipeIds.size();
         int scanStride = ExportProgressLog.stride(scanTotal, SCAN_LOG_STRIDE_PROPERTY, 20, 200);
         int scanProgress = 0;
-        LOGGER.info("{} scanning {} recipes for item refs", ExportLog.EMI_ITEMS, scanTotal);
+        MinecraftWebExportMod.LOGGER.info("{} scanning {} recipes for item refs", ExportLog.EMI_ITEMS, scanTotal);
 
         for (String recipeId : recipeIds) {
             scanProgress++;
@@ -239,7 +236,7 @@ public final class EmiItemsIndexExporter {
         allItemIds.addAll(inputs.keySet());
         allItemIds.addAll(outputs.keySet());
         mergeSeedItemIds(allItemIds, seedItemIds);
-        LOGGER.info("{} resolving registry tags for {} items", ExportLog.EMI_ITEMS, allItemIds.size());
+        MinecraftWebExportMod.LOGGER.info("{} resolving registry tags for {} items", ExportLog.EMI_ITEMS, allItemIds.size());
         Map<String, RegistryTagSets> registryTagSetsByItem = resolveRegistryTags(allItemIds, server);
 
         int inputRefs = 0;
@@ -249,7 +246,7 @@ public final class EmiItemsIndexExporter {
         int writeStride = ExportProgressLog.stride(writeTotal, WRITE_LOG_STRIDE_PROPERTY, 20, 200);
         int writeProgress = 0;
         int skippedHiddenItems = 0;
-        LOGGER.info("{} writing {} item detail files", ExportLog.EMI_ITEMS, writeTotal);
+        MinecraftWebExportMod.LOGGER.info("{} writing {} item detail files", ExportLog.EMI_ITEMS, writeTotal);
 
         for (String itemId : allItemIds) {
             writeProgress++;
@@ -287,7 +284,7 @@ public final class EmiItemsIndexExporter {
             Files.writeString(itemFile, GSON.toJson(detail));
             if (ExportProgressLog.shouldLog(writeProgress, writeTotal, writeStride)) {
                 int pct = ExportProgressLog.percent(writeProgress, writeTotal);
-                LOGGER.info(
+                MinecraftWebExportMod.LOGGER.info(
                         "{} write {}% {}/{} item files",
                         ExportLog.EMI_ITEMS,
                         pct,
@@ -309,13 +306,13 @@ public final class EmiItemsIndexExporter {
         Files.createDirectories(itemsIndexFile.getParent());
         Files.writeString(itemsIndexFile, json);
         if (skippedHiddenItems > 0) {
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} item visibility: {} indexed, {} skipped (hidden_from_recipe_viewers)",
                     ExportLog.EMI_ITEMS,
                     indexBuckets.values().stream().mapToInt(Set::size).sum(),
                     skippedHiddenItems);
         }
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} {} items ({} input refs, {} output refs) -> {}",
                 ExportLog.EMI_ITEMS,
                 allItemIds.size() - skippedHiddenItems,
@@ -336,14 +333,14 @@ public final class EmiItemsIndexExporter {
         }
         int added = allItemIds.size() - before;
         if (added > 0) {
-            LOGGER.info("{} merged {} seed/closure items ({} new)", ExportLog.EMI_ITEMS, seedItemIds.size(), added);
+            MinecraftWebExportMod.LOGGER.info("{} merged {} seed/closure items ({} new)", ExportLog.EMI_ITEMS, seedItemIds.size(), added);
         }
     }
 
     private static void logScanProgress(int progress, int total, int stride) {
         if (ExportProgressLog.shouldLog(progress, total, stride)) {
             int pct = ExportProgressLog.percent(progress, total);
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} scan {}% {}/{} recipes",
                     ExportLog.EMI_ITEMS,
                     pct,

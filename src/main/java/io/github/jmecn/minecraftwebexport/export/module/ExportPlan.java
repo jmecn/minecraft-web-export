@@ -6,9 +6,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * Resolved export plan consumed by {@link io.github.jmecn.minecraftwebexport.export.emi.EmiRuntimeExportOrchestrator}.
- */
 public record ExportPlan(
         ExportMode mode,
         Set<String> recipeIds,
@@ -42,15 +39,10 @@ public record ExportPlan(
                 ExportSeeds.empty());
     }
 
-    /**
-     * Layout-referenced item ids union seed/closure items (icons and {@code items/index.json}).
-     * Recipe layouts additionally contribute tag-expanded members during index export.
-     */
     public Set<String> itemsForIcons(Set<String> layoutReferencedItems) {
         return union(layoutReferencedItems, closureItemIds);
     }
 
-    /** Seed/closure item registry ids merged into {@code items/index.json} after recipe scan. */
     public Set<String> seedItemsForIndex() {
         return closureItemIds;
     }

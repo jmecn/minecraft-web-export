@@ -15,8 +15,6 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.registries.ForgeRegistries;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,10 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 public final class ItemIconRendererExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(ItemIconRendererExporter.class);
     private static final String ICON_LOG_STRIDE_PROPERTY = "minecraftWebExport.iconLogStride";
     private static final int FLUSH_RENDER_EVERY = 256;
 
@@ -106,7 +103,6 @@ public final class ItemIconRendererExporter {
         return exportImpl(iconsRoot, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants);
     }
 
-    /** Icon atlas at an explicit directory (e.g. {@code guide-export/assets/icons}). */
     public static Result exportAtRoot(
             Path iconsRoot,
             Minecraft client,
@@ -132,7 +128,7 @@ public final class ItemIconRendererExporter {
         Map<String, ItemStack> variants = iconVariants != null ? iconVariants : Map.of();
 
         if (onlyItemIds != null) {
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} closure: {} items, {} fluids, {} nbt variants at {}px -> {}",
                     ExportLog.ICONS,
                     onlyItemIds.size(),
@@ -145,7 +141,7 @@ public final class ItemIconRendererExporter {
             for (Item ignored : ForgeRegistries.ITEMS) {
                 totalItems++;
             }
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} full export: {} registry items, {} fluids at {}px (max atlas {}px) -> {}",
                     ExportLog.ICONS,
                     totalItems,
@@ -160,7 +156,7 @@ public final class ItemIconRendererExporter {
         List<IconAtlasLayout.PagePlan> layout = IconAtlasLayout.plan(totalSprites, cell, atlasMax);
         if (!layout.isEmpty()) {
             IconAtlasLayout.PagePlan first = layout.get(0);
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} {} sprites, planned {} page(s), first page {}x{} cells ({}x{}px)",
                     ExportLog.ICONS,
                     totalSprites,
@@ -209,7 +205,7 @@ public final class ItemIconRendererExporter {
                         bufferSource.endBatch();
                     }
                     if (ExportProgressLog.shouldLog(index, itemTotal, itemLogStride)) {
-                        LOGGER.info(
+                        MinecraftWebExportMod.LOGGER.info(
                                 "{} items: {}% {}/{} ({} ok, {} fail)",
                                 ExportLog.ICONS,
                                 ExportProgressLog.percent(index, itemTotal),
@@ -220,9 +216,7 @@ public final class ItemIconRendererExporter {
                     }
                 } catch (Exception e) {
                     itemFailures++;
-                    ExportLog.detailFailure(
-                            LOGGER,
-                            itemFailures,
+                    ExportLog.detailFailure(itemFailures,
                             "{} item failed {} ({}/{}): {}",
                             ExportLog.ICONS,
                             itemId,
@@ -248,9 +242,7 @@ public final class ItemIconRendererExporter {
                     fluidsPlaced++;
                 } catch (Exception e) {
                     fluidFailures++;
-                    ExportLog.detailFailure(
-                            LOGGER,
-                            fluidFailures,
+                    ExportLog.detailFailure(fluidFailures,
                             "{} fluid failed {}: {}",
                             ExportLog.ICONS,
                             fluidIdStr,
@@ -271,7 +263,7 @@ public final class ItemIconRendererExporter {
                         atlas.place(entry.getKey(), renderer);
                         variantsPlaced++;
                         if (ExportProgressLog.shouldLog(variantIndex, variantTotal, variantLogStride)) {
-                            LOGGER.info(
+                            MinecraftWebExportMod.LOGGER.info(
                                     "{} nbt variants: {}% {}/{} ({} ok, {} fail)",
                                     ExportLog.ICONS,
                                     ExportProgressLog.percent(variantIndex, variantTotal),
@@ -282,9 +274,7 @@ public final class ItemIconRendererExporter {
                         }
                     } catch (Exception e) {
                         variantFailures++;
-                        ExportLog.detailFailure(
-                                LOGGER,
-                                variantFailures,
+                        ExportLog.detailFailure(variantFailures,
                                 "{} nbt variant failed {} ({}/{}): {}",
                                 ExportLog.ICONS,
                                 entry.getKey(),
@@ -301,7 +291,7 @@ public final class ItemIconRendererExporter {
         }
 
         int totalFailures = itemFailures + fluidFailures + variantFailures;
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} done: {} items, {} nbt variants, {} fluids ({} skipped no still), {} pages, {} failures at {}",
                 ExportLog.ICONS,
                 itemsPlaced,
@@ -312,7 +302,7 @@ public final class ItemIconRendererExporter {
                 totalFailures,
                 iconsRoot);
         if (totalFailures > ExportLog.DETAIL_FAILURE_LIMIT) {
-            LOGGER.warn(
+            MinecraftWebExportMod.LOGGER.warn(
                     "{} {} icon failures (first {} at DEBUG; -D{}=true or enable DEBUG on export.emi)",
                     ExportLog.ICONS,
                     totalFailures,
@@ -367,7 +357,7 @@ public final class ItemIconRendererExporter {
         try {
             MoreFiles.deleteRecursively(dir, RecursiveDeleteOption.ALLOW_INSECURE);
         } catch (IOException e) {
-            LOGGER.warn("{} could not clear {}: {}", ExportLog.ICONS, dir, e.getMessage());
+            MinecraftWebExportMod.LOGGER.warn("{} could not clear {}: {}", ExportLog.ICONS, dir, e.getMessage());
         }
     }
 
@@ -387,9 +377,9 @@ public final class ItemIconRendererExporter {
             }
             byNs.merge(id.getNamespace(), 1, Integer::sum);
         }
-        LOGGER.debug("{} block-items in registry: {}", ExportLog.ICONS, blockItems);
+        MinecraftWebExportMod.LOGGER.debug("{} block-items in registry: {}", ExportLog.ICONS, blockItems);
         for (String ns : new String[]{"minecraft_web_export", "minecraft"}) {
-            LOGGER.debug("{} {}: {} items in registry", ExportLog.ICONS, ns, byNs.getOrDefault(ns, 0));
+            MinecraftWebExportMod.LOGGER.debug("{} {}: {} items in registry", ExportLog.ICONS, ns, byNs.getOrDefault(ns, 0));
         }
     }
 

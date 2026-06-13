@@ -5,10 +5,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * Lang keys to request from mod lang files ({@code assets/<mod>/lang/<locale>.json}) for scoped export closure.
- * Aligned with {@code emi-bundle-optimize/gtceu-composed-keys.mjs} and {@code emi-recipe-renderer}.
- */
 public final class LangClosureKeys {
 
     private static final String GTCEU = "gtceu";
@@ -89,7 +85,6 @@ public final class LangClosureKeys {
             Map.entry("hv_screwdriver", "hv_%s_screwdriver"),
             Map.entry("iv_screwdriver", "iv_%s_screwdriver"));
 
-    /** gtmutils UtilToolType — lang keys are {@code item.gtceu.tool.<name>} (see assets/gtmutils/lang). */
     private static final java.util.List<String> GTMUTILS_ELECTRIC_TOOL_NAMES = java.util.List.of(
             "mv_screwdriver", "ev_screwdriver", "luv_screwdriver", "zpm_screwdriver",
             "mv_chainsaw", "ev_chainsaw", "luv_chainsaw", "zpm_chainsaw",
@@ -286,7 +281,6 @@ public final class LangClosureKeys {
         return null;
     }
 
-    /** Merge seed lang keys with closure item/fluid registry lookups. */
     public static Set<String> mergeClosureLangKeys(
             Set<String> seedLangKeys, Set<String> itemIds, Set<String> fluidIds) {
         Set<String> merged = new TreeSet<>(seedLangKeys == null ? Set.of() : seedLangKeys);
@@ -299,7 +293,6 @@ public final class LangClosureKeys {
         return Set.copyOf(merged);
     }
 
-    /** {@code tag.item.*} / {@code tag.block.*} / {@code tag.fluid.*} for scoped {@code emi/lang/}. */
     public static void addForTag(Set<String> into, String tagId) {
         if (tagId == null || tagId.isBlank()) {
             return;

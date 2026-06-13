@@ -3,8 +3,6 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,14 +10,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
-/**
- * After closure merge, fill missing {@code item|block|fluid.minecraft.*} using the same pack-layer
- * lang merge as {@link LangMergerExporter} (not a single winning {@code listResources} file).
- */
 final class VanillaMinecraftLangSupplement {
-
-    private static final Logger LOGGER = LogManager.getLogger(VanillaMinecraftLangSupplement.class);
 
     private VanillaMinecraftLangSupplement() {
     }
@@ -61,14 +54,14 @@ final class VanillaMinecraftLangSupplement {
 
         if (!missing.isEmpty()) {
             String sample = missing.stream().limit(5).reduce((a, b) -> a + ", " + b).orElse("");
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} {} - {} minecraft registry lang keys still missing after vanilla supplement (e.g. {})",
                     ExportLog.LANG,
                     langCode,
                     missing.size(),
                     sample);
         } else if (added > 0) {
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} {} - supplemented {} minecraft registry lang keys from vanilla pack",
                     ExportLog.LANG,
                     langCode,

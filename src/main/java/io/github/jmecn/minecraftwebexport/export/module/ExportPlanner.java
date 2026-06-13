@@ -5,17 +5,14 @@ import dev.emi.emi.api.recipe.EmiRecipe;
 import io.github.jmecn.minecraftwebexport.export.emi.EmiExportVisibility;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 public final class ExportPlanner {
-
-    private static final Logger LOGGER = LogManager.getLogger(ExportPlanner.class);
 
     private ExportPlanner() {
     }
@@ -29,7 +26,7 @@ public final class ExportPlanner {
         if (mode == ExportMode.FULL) {
             Set<String> allRecipes = collectExportableRecipeIds(client);
             ExportHints hints = mergeModuleHints(modules, scope, ExportSeeds.empty());
-            LOGGER.info("[export] mode=full, recipes={}", allRecipes.size());
+            MinecraftWebExportMod.LOGGER.info("[export] mode=full, recipes={}", allRecipes.size());
             return new ExportPlan(
                     ExportMode.FULL,
                     allRecipes,
@@ -58,7 +55,7 @@ public final class ExportPlanner {
         ExportClosureExpander.ClosureResult closure = ExportClosureExpander.expand(server, merged);
 
         if (mode == ExportMode.SCOPED && merged.recipeIds().size() != recipeIds.size()) {
-            LOGGER.warn("[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
+            MinecraftWebExportMod.LOGGER.warn("[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
                     merged.recipeIds().size(), recipeIds.size());
         }
         if (mode == ExportMode.SCOPED && !availableRecipes.containsAll(recipeIds)) {
@@ -68,12 +65,12 @@ public final class ExportPlanner {
                     hiddenFromEmi++;
                 }
             }
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "[export] scoped handbook recipes include {} EMI-hidden ids (exported anyway)",
                     hiddenFromEmi);
         }
 
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "[export] mode=scoped, modules={}, seedRecipes={}, resolvedRecipes={}, seedTags={}, closureItems={}, closureTags={}",
                 modules.size(),
                 merged.recipeIds().size(),
@@ -83,7 +80,7 @@ public final class ExportPlanner {
                 closure.tagIds().size());
 
         if (server == null && !merged.tagIds().isEmpty()) {
-            LOGGER.warn("[export] tag closure skipped: no integrated server (seedTags={})", merged.tagIds().size());
+            MinecraftWebExportMod.LOGGER.warn("[export] tag closure skipped: no integrated server (seedTags={})", merged.tagIds().size());
         }
 
         return new ExportPlan(
@@ -125,7 +122,6 @@ public final class ExportPlanner {
         return hints;
     }
 
-    /** @deprecated use {@link #collectExportableRecipeIds(Minecraft)} */
     @Deprecated
     public static Set<String> collectAllRecipeIds() {
         var manager = EmiApi.getRecipeManager();

@@ -5,11 +5,11 @@ import io.github.jmecn.minecraftwebexport.export.RuntimeExportEntrypoint;
 import io.github.jmecn.minecraftwebexport.export.ci.ExportCiProperties;
 import io.github.jmecn.minecraftwebexport.export.module.ExportCoordinator;
 import io.github.jmecn.minecraftwebexport.export.module.ExportResult;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.util.Objects;
@@ -29,8 +29,7 @@ public final class RuntimeEmiExportEntrypoint {
         this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
     }
 
-    public void armIfEnabled(Path gameDirectory, Logger logger) {
-        Objects.requireNonNull(logger, "logger");
+    public void armIfEnabled(Path gameDirectory) {
         if (!Boolean.getBoolean(RuntimeExportEntrypoint.ENABLE_PROPERTY)) {
             return;
         }
@@ -40,7 +39,6 @@ public final class RuntimeEmiExportEntrypoint {
         MinecraftForge.EVENT_BUS.register(new AutoExportWhenWorldReady(
                 gameDirectory,
                 System.getProperty(RuntimeExportEntrypoint.OUTPUT_ROOT_PROPERTY),
-                logger,
                 coordinator));
     }
 
@@ -52,7 +50,6 @@ public final class RuntimeEmiExportEntrypoint {
 
         private final Path gameDirectory;
         private final String outputRootOverride;
-        private final Logger logger;
         private final ExportCoordinator coordinator;
 
         private boolean finished;
@@ -62,11 +59,9 @@ public final class RuntimeEmiExportEntrypoint {
         private AutoExportWhenWorldReady(
                 Path gameDirectory,
                 String outputRootOverride,
-                Logger logger,
                 ExportCoordinator coordinator) {
             this.gameDirectory = gameDirectory;
             this.outputRootOverride = outputRootOverride;
-            this.logger = logger;
             this.coordinator = coordinator;
         }
 
@@ -83,7 +78,11 @@ public final class RuntimeEmiExportEntrypoint {
 
             readyTicks++;
             if (readyTicks == 1 || readyTicks % HEARTBEAT_TICKS == 0) {
-                logger.info("{} world ready, warmup {}/{}", ExportLog.EMI, readyTicks, warmupTicks());
+                MinecraftWebExportMod.LOGGER.info(
+                        "{} world ready, warmup {}/{}",
+                        ExportLog.EMI,
+                        readyTicks,
+                        warmupTicks());
             }
             if (readyTicks < warmupTicks()) {
                 return;
@@ -93,7 +92,8 @@ public final class RuntimeEmiExportEntrypoint {
             try {
                 ExportResult result = coordinator.run(outputRoot, gameDirectory, client);
                 finished = true;
-                logger.info("{} wrote {} (recipes={}, items={}, tags={}, langs={}, icons={})",
+                MinecraftWebExportMod.LOGGER.info(
+                        "{} wrote {} (recipes={}, items={}, tags={}, langs={}, icons={})",
                         ExportLog.EMI,
                         result.outputRoot().toAbsolutePath(),
                         result.recipesWritten(),
@@ -104,7 +104,12 @@ public final class RuntimeEmiExportEntrypoint {
             } catch (Exception e) {
                 failureCount++;
                 readyTicks = 0;
-                logger.error("{} export attempt #{} failed for {}", ExportLog.EMI, failureCount, outputRoot.toAbsolutePath(), e);
+                MinecraftWebExportMod.LOGGER.error(
+                        "{} export attempt #{} failed for {}",
+                        ExportLog.EMI,
+                        failureCount,
+                        outputRoot.toAbsolutePath(),
+                        e);
             }
         }
 

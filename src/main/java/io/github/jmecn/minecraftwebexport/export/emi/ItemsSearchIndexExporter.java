@@ -6,8 +6,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.export.ExportGson;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,16 +19,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
-/**
- * Precomputes {@code items-lang/<locale>.json} for registry labels and substring item filtering.
- */
 public final class ItemsSearchIndexExporter {
 
-    /** Top-level key in {@code items/index.json} listing registry ids referenced as fluids in recipes. */
     public static final String FLUID_REGISTRY_IDS_KEY = "fluidRegistryIds";
-
-    private static final Logger LOGGER = LogManager.getLogger(ItemsSearchIndexExporter.class);
     private static final Gson GSON = ExportGson.GSON;
     private static final int PROGRESS_EVERY = 5000;
 
@@ -55,7 +48,7 @@ public final class ItemsSearchIndexExporter {
         Set<String> fluidRegistryIds = readFluidRegistryIds(bundleRoot);
         List<String> locales = resolveLocales(bundleRoot, languages);
         if (itemIds.isEmpty() || locales.isEmpty()) {
-            LOGGER.warn(
+            MinecraftWebExportMod.LOGGER.warn(
                     "{} skipped: {} items, {} locales",
                     ExportLog.ITEMS_LANG,
                     itemIds.size(),
@@ -72,7 +65,7 @@ public final class ItemsSearchIndexExporter {
 
         for (String locale : locales) {
             String normalized = normalizeLocale(locale);
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} {}: building {} items ...",
                     ExportLog.ITEMS_LANG,
                     normalized,
@@ -101,7 +94,7 @@ public final class ItemsSearchIndexExporter {
                 items.add(row);
                 int n = i + 1;
                 if (n % PROGRESS_EVERY == 0) {
-                    LOGGER.info(
+                    MinecraftWebExportMod.LOGGER.info(
                             "{} {}: {}/{} ({} ms)",
                             ExportLog.ITEMS_LANG,
                             normalized,
@@ -110,7 +103,7 @@ public final class ItemsSearchIndexExporter {
                             System.currentTimeMillis() - startedAt);
                 }
             }
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} {}: {} done ({} ms)",
                     ExportLog.ITEMS_LANG,
                     normalized,
@@ -124,10 +117,10 @@ public final class ItemsSearchIndexExporter {
             payload.add("items", items);
 
             Path out = searchRoot.resolve(normalized + ".json");
-            LOGGER.info("{} {}: writing {} ...", ExportLog.ITEMS_LANG, normalized, out);
+            MinecraftWebExportMod.LOGGER.info("{} {}: writing {} ...", ExportLog.ITEMS_LANG, normalized, out);
             Files.writeString(out, GSON.toJson(payload) + "\n", StandardCharsets.UTF_8);
             writtenLocales.add(normalized);
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} {}: {} items",
                     ExportLog.ITEMS_LANG,
                     normalized,
@@ -191,10 +184,6 @@ public final class ItemsSearchIndexExporter {
         parts.add(token);
     }
 
-    /**
-     * {@code item} unless listed in {@link #FLUID_REGISTRY_IDS_KEY}, or heuristically a GTCEu/TFG fluid
-     * when the index predates fluid tracking.
-     */
     static String resolveRegistryKind(
             String registryId,
             Set<String> fluidRegistryIds,
@@ -256,7 +245,6 @@ public final class ItemsSearchIndexExporter {
         return List.copyOf(readIndexedItemIds(bundleRoot));
     }
 
-    /** Registry ids listed in {@code items/index.json} (all namespaces). */
     public static Set<String> readIndexedItemIds(Path bundleRoot) throws IOException {
         Path indexPath = bundleRoot.resolve(EmiBundlePaths.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {

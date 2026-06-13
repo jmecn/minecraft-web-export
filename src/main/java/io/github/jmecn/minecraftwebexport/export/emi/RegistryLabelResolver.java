@@ -5,10 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Resolves registry ids to display labels (aligned with emi-recipe-renderer/registry-label.mjs). */
 public final class RegistryLabelResolver {
 
-    /** Namespaces that use GTCEu-style composed labels before flat / exported keys. */
     static final Set<String> COMPOSED_FIRST_NAMESPACES = Set.of("gtceu", "tfg", "greate");
 
     private final Map<String, String> current;
@@ -63,7 +61,6 @@ public final class RegistryLabelResolver {
         return translateDefaultRules(bare, registryId, kind);
     }
 
-    /** Namespace segment before {@code :}, or {@code minecraft} when absent. */
     static String registryNamespace(String bareRegistryId) {
         String bare = RegistryLangKeys.normalizeRegistryId(bareRegistryId);
         String namespace = RegistryLangKeys.namespace(bare);

@@ -9,9 +9,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
-/**
- * GregTech-style composed registry labels (aligned with {@code emi-recipe-renderer/gtceu-translate.js}).
- */
 public final class GtceuRegistryLabels {
 
     static final String GTCEU = "gtceu";
@@ -92,7 +89,6 @@ public final class GtceuRegistryLabels {
             Map.entry("hv_screwdriver", "hv_%s_screwdriver"),
             Map.entry("iv_screwdriver", "iv_%s_screwdriver"));
 
-    /** gtmutils {@code UtilToolType} — lang under {@code assets/gtmutils/lang} as {@code item.gtceu.tool.*}. */
     private static final java.util.List<String> GTMUTILS_ELECTRIC_TOOL_NAMES = java.util.List.of(
             "mv_screwdriver", "ev_screwdriver", "luv_screwdriver", "zpm_screwdriver",
             "mv_chainsaw", "ev_chainsaw", "luv_chainsaw", "zpm_chainsaw",

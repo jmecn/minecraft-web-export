@@ -6,12 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Optional export preferences from {@link ExportModule} implementations.
- *
- * <p>{@link #exportLanguages} supplies locale codes for {@code emi/lang/} and {@code items-lang/}.
- * Empty list means defer to {@code -DminecraftWebExport.exportLanguages} (default {@code en_us}).</p>
- */
 public record ExportHints(
         Map<String, Integer> itemUsageWeights,
         Map<String, Integer> fluidUsageWeights,

@@ -10,18 +10,15 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 public final class TagClosureExpander {
-
-    private static final Logger LOGGER = LogManager.getLogger(TagClosureExpander.class);
 
     private TagClosureExpander() {
     }
@@ -79,8 +76,8 @@ public final class TagClosureExpander {
             expandFluidTag(fluids, tagId, visitedFluidTags, outFluids, outTags);
         }
 
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(
+        if (MinecraftWebExportMod.LOGGER.isDebugEnabled()) {
+            MinecraftWebExportMod.LOGGER.debug(
                     "{} expand: {} seed tags -> {} items, {} blocks, {} fluids ({} tag keys)",
                     ExportLog.TAGS,
                     seedTagRefs.size(),

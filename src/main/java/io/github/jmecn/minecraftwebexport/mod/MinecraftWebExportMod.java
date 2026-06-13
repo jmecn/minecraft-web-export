@@ -25,18 +25,17 @@ public final class MinecraftWebExportMod {
             EXPORT_ENTRYPOINT.runIfEnabled(
                     MOD_ID,
                     SharedConstants.getCurrentVersion().getName(),
-                    FMLPaths.GAMEDIR.get(),
-                    LOGGER);
+                    FMLPaths.GAMEDIR.get());
         } else {
             LOGGER.info("skipping mod-init stub export; CI driver owns the export lifecycle");
         }
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            ClientBootstrap.arm(FMLPaths.GAMEDIR.get(), LOGGER);
+            ClientBootstrap.arm(FMLPaths.GAMEDIR.get());
         }
     }
 
     private static final class ClientBootstrap {
-        private static void arm(java.nio.file.Path gameDirectory, Logger logger) {
+        private static void arm(java.nio.file.Path gameDirectory) {
             if (ExportCiProperties.runExportAndExit()) {
                 new ExportCiDriver(
                         gameDirectory,
@@ -46,7 +45,7 @@ public final class MinecraftWebExportMod {
             }
             io.github.jmecn.minecraftwebexport.export.emi.RuntimeEmiExportEntrypoint entrypoint =
                     new io.github.jmecn.minecraftwebexport.export.emi.RuntimeEmiExportEntrypoint();
-            entrypoint.armIfEnabled(gameDirectory, logger);
+            entrypoint.armIfEnabled(gameDirectory);
         }
     }
 }

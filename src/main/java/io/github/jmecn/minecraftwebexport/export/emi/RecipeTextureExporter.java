@@ -6,8 +6,6 @@ import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,10 +16,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 public final class RecipeTextureExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(RecipeTextureExporter.class);
     private static final Gson GSON = ExportGson.GSON;
 
     private RecipeTextureExporter() {
@@ -63,7 +60,7 @@ public final class RecipeTextureExporter {
             var resourceOpt = resourceManager.getResource(id);
             if (resourceOpt.isEmpty()) {
                 missing++;
-                LOGGER.debug("{} missing {}", ExportLog.RECIPE_TEXTURES, idString);
+                MinecraftWebExportMod.LOGGER.debug("{} missing {}", ExportLog.RECIPE_TEXTURES, idString);
                 continue;
             }
             try {
@@ -81,7 +78,7 @@ public final class RecipeTextureExporter {
                 }
             } catch (Exception e) {
                 missing++;
-                LOGGER.debug("{} failed {}: {}", ExportLog.RECIPE_TEXTURES, idString, e);
+                MinecraftWebExportMod.LOGGER.debug("{} failed {}: {}", ExportLog.RECIPE_TEXTURES, idString, e);
             }
         }
 
@@ -90,7 +87,7 @@ public final class RecipeTextureExporter {
         root.put("textures", manifest);
         Files.writeString(texRoot.resolve(RecipeLayoutPaths.TEXTURE_MANIFEST_FILE), GSON.toJson(root));
 
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} {}/{} written ({} bytes), {} missing",
                 ExportLog.RECIPE_TEXTURES,
                 written,

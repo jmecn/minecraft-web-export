@@ -1,20 +1,13 @@
 package io.github.jmecn.minecraftwebexport.export.emi;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Optional;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
-/**
- * Reads GregTech {@code Material} facts at export time (game classpath).
- * When GT is not loaded (unit tests), methods return empty / false and label code uses safe fallbacks.
- */
 final class GtMaterialFacts {
-
-    private static final Logger LOGGER = LogManager.getLogger(GtMaterialFacts.class);
 
     private static final String MANAGER_CLASS =
             "com.gregtechceu.gtceu.common.unification.material.MaterialRegistryManager";
@@ -90,10 +83,6 @@ final class GtMaterialFacts {
         return AVAILABLE;
     }
 
-    /**
-     * @param namespace mod id ({@code gtceu}, {@code tfg}, …)
-     * @param materialPath material registry name without tag prefix ({@code stainless_steel})
-     */
     static Optional<Object> material(String namespace, String materialPath) {
         if (!AVAILABLE || materialPath == null || materialPath.isEmpty()) {
             return Optional.empty();
@@ -107,7 +96,7 @@ final class GtMaterialFacts {
             }
             return Optional.of(material);
         } catch (ReflectiveOperationException e) {
-            LOGGER.debug("{} material lookup failed for {}: {}", ExportLog.ITEMS_LANG, key, e.toString());
+            MinecraftWebExportMod.LOGGER.debug("{} material lookup failed for {}: {}", ExportLog.ITEMS_LANG, key, e.toString());
             return Optional.empty();
         }
     }
@@ -127,12 +116,6 @@ final class GtMaterialFacts {
         }
     }
 
-    /**
-     * Lang key such as {@code gtceu.fluid.generic} (same rules as {@code FluidStorageKey#getTranslationKeyFor}).
-     *
-     * @param storageKey from {@link GtceuRegistryLabels} fluid path parse: {@code molten}, {@code gas}, {@code liquid},
-     *                     {@code plasma}, {@code primary}
-     */
     static Optional<String> fluidTranslationKey(String namespace, String materialPath, String storageKey) {
         Optional<Object> materialOpt = material(namespace, materialPath);
         if (materialOpt.isEmpty()) {
@@ -154,7 +137,7 @@ final class GtMaterialFacts {
             String key = (String) FLUID_STORAGE_KEY_GET_TRANSLATION.invoke(fluidKey, material);
             return key == null || key.isEmpty() ? Optional.empty() : Optional.of(key);
         } catch (ReflectiveOperationException e) {
-            LOGGER.debug(
+            MinecraftWebExportMod.LOGGER.debug(
                     "{} fluid template for {} {}: {}",
                     ExportLog.ITEMS_LANG,
                     namespace,
@@ -195,7 +178,7 @@ final class GtMaterialFacts {
             Class.forName(MANAGER_CLASS, false, GtMaterialFacts.class.getClassLoader());
             return true;
         } catch (ClassNotFoundException e) {
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} GregTech not on classpath — label export uses lang-only fallbacks (expected in unit tests)",
                     ExportLog.ITEMS_LANG);
             return false;
@@ -233,9 +216,6 @@ final class GtMaterialFacts {
         }
     }
 
-    /**
-     * {@code tagprefix.ingot} vs {@code tagprefix.polymer.ingot} — mirrors GT {@code TagPrefix#getUnlocalizedName(Material)}.
-     */
     static String tagPrefixLangKey(
             String langSuffix, String namespace, String materialPath, java.util.Map<String, String> langTable) {
         String plain = "tagprefix." + langSuffix;
@@ -247,7 +227,7 @@ final class GtMaterialFacts {
             }
             return plain;
         }
-        // No GT: never pick polymer only because the key exists in lang (fixes metal ingot → 「条」).
+
         return plain;
     }
 

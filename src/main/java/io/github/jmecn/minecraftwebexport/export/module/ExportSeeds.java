@@ -5,9 +5,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * Seed ids supplied by {@link ExportModule} implementations before core closure expansion.
- */
 public record ExportSeeds(
         Set<String> recipeIds,
         Set<String> itemIds,

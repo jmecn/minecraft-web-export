@@ -7,8 +7,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import net.minecraft.client.Minecraft;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -17,13 +15,9 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
-/**
- * Writes {@code items/name-keys.json}: registry id → in-game {@code getDescriptionId()} translation key.
- */
 public final class ItemNameKeysExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(ItemNameKeysExporter.class);
     private static final Gson GSON = ExportGson.GSON;
 
     private ItemNameKeysExporter() {
@@ -39,14 +33,14 @@ public final class ItemNameKeysExporter {
 
     public static Result export(Path outputDir, Minecraft client) throws IOException {
         if (client == null || client.level == null) {
-            LOGGER.warn("{} skipped: no client level", ExportLog.ITEM_NAME_KEYS);
+            MinecraftWebExportMod.LOGGER.warn("{} skipped: no client level", ExportLog.ITEM_NAME_KEYS);
             return Result.EMPTY;
         }
 
         Path bundleRoot = EmiBundlePaths.resolve(outputDir, "");
         Path indexPath = bundleRoot.resolve(EmiBundlePaths.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {
-            LOGGER.warn("{} skipped: missing {}", ExportLog.ITEM_NAME_KEYS, EmiBundlePaths.ITEMS_INDEX_FILE);
+            MinecraftWebExportMod.LOGGER.warn("{} skipped: missing {}", ExportLog.ITEM_NAME_KEYS, EmiBundlePaths.ITEMS_INDEX_FILE);
             return Result.EMPTY;
         }
 
@@ -102,7 +96,7 @@ public final class ItemNameKeysExporter {
         Files.createDirectories(out.getParent());
         Files.writeString(out, GSON.toJson(root) + "\n", StandardCharsets.UTF_8);
 
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} {} registry ids ({} fluids) -> {}",
                 ExportLog.ITEM_NAME_KEYS,
                 items.size(),
@@ -111,7 +105,6 @@ public final class ItemNameKeysExporter {
         return new Result(items.size() - fluidCount, fluidCount);
     }
 
-    /** Reads {@code items/name-keys.json} into a map (empty if missing). */
     public static Map<String, String> readNameKeys(Path outputDir) throws IOException {
         Path file = EmiBundlePaths.resolve(outputDir, EmiBundlePaths.ITEM_NAME_KEYS_FILE);
         if (!Files.isRegularFile(file)) {

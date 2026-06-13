@@ -10,8 +10,6 @@ import io.github.jmecn.minecraftwebexport.export.module.ExportMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.client.gui.GuiGraphics;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,10 +18,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 public final class EmiRecipeCardExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(EmiRecipeCardExporter.class);
     private static final Gson GSON = ExportGson.GSON;
     private static final String LOG_STRIDE_PROPERTY = "minecraftWebExport.recipeCardLogStride";
 
@@ -121,9 +118,7 @@ public final class EmiRecipeCardExporter {
                     logProgress(progress, total, written, missing, failures, logStride);
                 } catch (Exception e) {
                     failures++;
-                    ExportLog.detailFailure(
-                            LOGGER,
-                            failures,
+                    ExportLog.detailFailure(failures,
                             "{} card failed for {}: {}",
                             ExportLog.EMI,
                             recipeId,
@@ -132,7 +127,7 @@ public final class EmiRecipeCardExporter {
             }
         }
 
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} cards done: {}/{} written ({} png bytes, {} meta bytes), {} missing, {} skipped (visibility), {} failed",
                 ExportLog.EMI,
                 written,
@@ -190,7 +185,7 @@ public final class EmiRecipeCardExporter {
             int logStride) {
         if (ExportProgressLog.shouldLog(progress, total, logStride)) {
             int pct = ExportProgressLog.percent(progress, total);
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} cards {}% {}/{} - {} ok, {} missing, {} fail",
                     ExportLog.EMI,
                     pct,

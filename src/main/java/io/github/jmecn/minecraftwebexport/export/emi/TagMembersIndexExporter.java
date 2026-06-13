@@ -5,8 +5,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.github.jmecn.minecraftwebexport.export.ExportGson;
 import net.minecraft.server.MinecraftServer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,10 +14,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 public final class TagMembersIndexExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(TagMembersIndexExporter.class);
     private static final Gson GSON = ExportGson.GSON;
 
     private TagMembersIndexExporter() {
@@ -90,7 +87,7 @@ public final class TagMembersIndexExporter {
         long catalogBytes = writeTagsCatalog(outputDir, itemTags, blockTags, fluidTags);
         totalBytes += catalogBytes;
 
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} tags: {} refs -> {} item, {} block, {} fluid files (catalog {} ids, {} member refs, {} bytes)",
                 ExportLog.INDEX_TAGS,
                 tagIds.size(),
@@ -114,9 +111,6 @@ public final class TagMembersIndexExporter {
                 Set.copyOf(fluidTags));
     }
 
-    /**
-     * §5.7.2 catalog for tag list/search; popover still uses per-tag files only.
-     */
     static long writeTagsCatalog(
             Path outputDir,
             Set<String> itemTags,

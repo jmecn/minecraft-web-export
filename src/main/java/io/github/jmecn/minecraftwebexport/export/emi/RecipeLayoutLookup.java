@@ -10,12 +10,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Cached lookup of recipe layouts from on-disk route shards and layout packs.
- *
- * <p>{@link RecipeIndexIds#loadLayout} re-parsed every pack file per recipe; with 100k+ recipes
- * that dominated export time after icons. This class reads each shard/pack at most once.</p>
- */
 final class RecipeLayoutLookup {
 
     private final Path outputDir;

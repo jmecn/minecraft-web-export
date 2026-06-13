@@ -10,9 +10,6 @@ import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/**
- * Server-side setup for the export world: bedrock platform and creative flight.
- */
 @Mod.EventBusSubscriber(modid = MinecraftWebExportMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ExportWorldServerEvents {
 

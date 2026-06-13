@@ -4,14 +4,6 @@ import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.runtime.EmiReloadManager;
 import net.minecraft.client.Minecraft;
 
-/**
- * Gates export on EMI's own reload lifecycle, not merely a non-empty recipe list.
- *
- * <p>During {@code EmiRecipes.bake()}, EMI assigns an interim {@link dev.emi.emi.api.recipe.EmiRecipeManager}
- * while a background worker rebuilds indexes and the {@code EmiReloadManager} thread continues
- * (search bake, "Finishing up", {@code Reloaded EMI in ...ms}). Export must wait for
- * {@link EmiReloadManager#isLoaded()}.</p>
- */
 public final class EmiExportReadiness {
 
     private EmiExportReadiness() {}

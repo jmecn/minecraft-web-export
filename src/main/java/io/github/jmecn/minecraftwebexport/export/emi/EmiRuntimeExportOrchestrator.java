@@ -5,8 +5,6 @@ import io.github.jmecn.minecraftwebexport.export.module.ExportPlan;
 import io.github.jmecn.minecraftwebexport.export.module.ExportPlanner;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,10 +12,9 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 public final class EmiRuntimeExportOrchestrator {
-
-    private static final Logger LOGGER = LogManager.getLogger(EmiRuntimeExportOrchestrator.class);
 
     public record Report(
             Path outputRoot,
@@ -50,7 +47,7 @@ public final class EmiRuntimeExportOrchestrator {
                     cards.layoutsByRecipeId(),
                     plan.seedItemsForIndex(),
                     cards.referencedTags());
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} full tag export: {} -> {} tags",
                     ExportLog.TAGS,
                     layoutTagCount,
@@ -62,7 +59,7 @@ public final class EmiRuntimeExportOrchestrator {
         if (server != null && TagMembersIndexExporter.isEnabled() && !tagIds.isEmpty()) {
             tags = TagMembersIndexExporter.export(outputRoot, server, tagIds);
         } else if (!tagIds.isEmpty() && server == null) {
-            LOGGER.warn("{} tag-members skipped: no integrated server", ExportLog.EMI);
+            MinecraftWebExportMod.LOGGER.warn("{} tag-members skipped: no integrated server", ExportLog.EMI);
         }
 
         EmiRecipeCategoriesExporter.Result categories = cards.written() > 0
@@ -85,7 +82,7 @@ public final class EmiRuntimeExportOrchestrator {
             langCollector.collectFromItemNameKeys(outputRoot);
             langCollector.collectFromItemsIndex(outputRoot);
             langCollector.collectFromTagsIndex(outputRoot);
-            LOGGER.info("{} lang prune: {} used keys collected", ExportLog.LANG, langCollector.size());
+            MinecraftWebExportMod.LOGGER.info("{} lang prune: {} used keys collected", ExportLog.LANG, langCollector.size());
         }
 
         Set<String> langKeys = resolveLangMergeKeys(plan, langCollector);
@@ -99,7 +96,6 @@ public final class EmiRuntimeExportOrchestrator {
                 && LangMergerExporter.isEnabled()
                 && (langPruneForWeb || plan.mode() == ExportMode.SCOPED);
 
-        // items-lang needs full mod lang (compose-lang). SCOPED deploy keeps closure-filtered emi/lang/.
         if (composeLangForItems) {
             LangMergerExporter.exportTo(composeDir, client, null, null, plan.hints());
         }
@@ -130,7 +126,7 @@ public final class EmiRuntimeExportOrchestrator {
                     try {
                         Files.deleteIfExists(path);
                     } catch (IOException e) {
-                        LOGGER.warn("{} failed to delete {}: {}", ExportLog.LANG, path, e.toString());
+                        MinecraftWebExportMod.LOGGER.warn("{} failed to delete {}: {}", ExportLog.LANG, path, e.toString());
                     }
                 });
             }
@@ -160,11 +156,10 @@ public final class EmiRuntimeExportOrchestrator {
                 cards.written(),
                 itemsLang.locales());
 
-        // Tag/list popovers in emi-recipe-renderer need EMI GUI nine-patch + widget sprites.
         RecipeTextureExporter.export(outputRoot, client, java.util.Set.of());
 
         if (plan.mode() == ExportMode.SCOPED) {
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} scoped export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     ExportLog.EMI,
                     cards.written(),
@@ -175,7 +170,7 @@ public final class EmiRuntimeExportOrchestrator {
                     langs.languagesWritten(),
                     icons.totalSpritesWritten());
         } else {
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} export complete: {}/{} recipe cards, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     ExportLog.EMI,
                     cards.written(),
@@ -207,7 +202,7 @@ public final class EmiRuntimeExportOrchestrator {
             merged = LangClosureKeys.mergeTagLangKeys(merged, plan.closureTagIds());
             return merged.isEmpty() ? null : merged;
         } catch (IOException e) {
-            LOGGER.warn("{} scoped lang keys: failed to read items index: {}", ExportLog.LANG, e.toString());
+            MinecraftWebExportMod.LOGGER.warn("{} scoped lang keys: failed to read items index: {}", ExportLog.LANG, e.toString());
             Set<String> merged = LangClosureKeys.mergeTagLangKeys(seed, plan.closureTagIds());
             return merged.isEmpty() ? langKeys : merged;
         }
@@ -231,7 +226,7 @@ public final class EmiRuntimeExportOrchestrator {
         if (EmiRecipeCardExporter.isEnabled()) {
             return EmiRecipeCardExporter.export(outputRoot, client, recipeIds, langCollector);
         }
-        LOGGER.info("{} recipe card export disabled by configuration", ExportLog.EMI);
+        MinecraftWebExportMod.LOGGER.info("{} recipe card export disabled by configuration", ExportLog.EMI);
         return new EmiRecipeCardExporter.Result(
                 recipeIds.size(),
                 0,

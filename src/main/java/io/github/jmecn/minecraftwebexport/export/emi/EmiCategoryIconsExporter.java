@@ -6,8 +6,6 @@ import dev.emi.emi.api.stack.EmiStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -15,14 +13,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
-/**
- * Exports all EMI recipe categories: translation keys + dedicated 16×16 icon atlas
- * under {@link EmiBundlePaths#CATEGORY_ICONS_DIR}.
- */
 public final class EmiCategoryIconsExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(EmiCategoryIconsExporter.class);
 
     private EmiCategoryIconsExporter() {
     }
@@ -42,7 +35,7 @@ public final class EmiCategoryIconsExporter {
     public static Result export(Path outputRoot, Minecraft client) throws IOException {
         var manager = EmiApi.getRecipeManager();
         if (manager == null) {
-            LOGGER.warn("{} EMI recipe manager unavailable - skipping category icons", ExportLog.EMI);
+            MinecraftWebExportMod.LOGGER.warn("{} EMI recipe manager unavailable - skipping category icons", ExportLog.EMI);
             return new Result(0, 0, 0, 0, 0);
         }
 
@@ -92,9 +85,7 @@ public final class EmiCategoryIconsExporter {
                         }
                     } catch (Exception e) {
                         failures++;
-                        ExportLog.detailFailure(
-                                LOGGER,
-                                failures,
+                        ExportLog.detailFailure(failures,
                                 "{} category icon failed {} ({}/{}): {}",
                                 ExportLog.ICONS,
                                 categoryId,
@@ -119,7 +110,7 @@ public final class EmiCategoryIconsExporter {
         root.put("categories", categories);
 
         long indexBytes = EmiRecipeCategoriesExporter.writeCategoriesIndex(outputRoot, root);
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} {} categories, {} icons placed, {} failed -> {}",
                 ExportLog.EMI,
                 categories.size(),

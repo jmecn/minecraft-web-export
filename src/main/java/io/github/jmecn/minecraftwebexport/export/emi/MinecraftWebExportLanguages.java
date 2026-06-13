@@ -15,11 +15,6 @@ public final class MinecraftWebExportLanguages {
     private MinecraftWebExportLanguages() {
     }
 
-    /**
-     * Locale codes for EMI lang merge and {@code items-lang/}.
-     * Prefers {@link ExportHints#exportLanguages()} from registered {@link io.github.jmecn.minecraftwebexport.export.module.ExportModule}s,
-     * then {@code -DminecraftWebExport.exportLanguages}, then {@code en_us} only.
-     */
     public static Set<String> resolve(ExportHints hints) {
         Set<String> fromModules = fromHintLanguages(hints);
         if (!fromModules.isEmpty()) {
@@ -28,7 +23,6 @@ public final class MinecraftWebExportLanguages {
         return resolveFromSystemProperty();
     }
 
-    /** @see #resolve(ExportHints) */
     public static Set<String> resolve() {
         return resolveFromSystemProperty();
     }

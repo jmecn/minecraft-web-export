@@ -9,8 +9,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -25,15 +23,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
-/**
- * Merges mod language files the same way {@link net.minecraft.client.resources.language.ClientLanguage}
- * does at runtime: {@link ResourceManager#listResourceStacks} per {@code assets/<ns>/lang/<locale>.json},
- * lower-priority packs first, later packs override individual keys (KubeJS partial overrides included).
- */
 public final class LangMergerExporter {
-
-    private static final Logger LOGGER = LogManager.getLogger(LangMergerExporter.class);
     private static final Gson GSON = ExportGson.GSON;
 
     private LangMergerExporter() {
@@ -58,7 +50,6 @@ public final class LangMergerExporter {
         return !Boolean.getBoolean("minecraftWebExport.skipLangExport");
     }
 
-    /** FULL export: merge only closure keys (+ GTCEu / emi.category templates). */
     public static boolean isLangPruneEnabled() {
         return isEnabled() && !Boolean.getBoolean("minecraftWebExport.skipLangPruneExport");
     }
@@ -73,10 +64,6 @@ public final class LangMergerExporter {
         return isEmiCategoryLangKey(key);
     }
 
-    /**
-     * Keys kept in CDN {@code lang/} after FULL prune: EMI categories, tags — not registry compose tables
-     * ({@code material.*}, {@code tagprefix.*}, …) which live in {@code items-lang}.
-     */
     public static Set<String> filterWebDeployKeys(Set<String> keys) {
         if (keys == null || keys.isEmpty()) {
             return keys;
@@ -128,7 +115,6 @@ public final class LangMergerExporter {
         return exportTo(EmiBundlePaths.resolve(outputDir, EmiBundlePaths.LANG_DIR), client, null, onlyKeys, hints);
     }
 
-    /** @deprecated use {@link #exportEmiLang(Path, Minecraft, Set, ExportHints)} */
     @Deprecated
     public static Result exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys) throws IOException {
         return exportEmiLang(outputDir, client, onlyKeys, ExportHints.defaults());
@@ -166,7 +152,7 @@ public final class LangMergerExporter {
             MergeStats stats = new MergeStats();
 
             if (stacks.isEmpty()) {
-                LOGGER.warn(
+                MinecraftWebExportMod.LOGGER.warn(
                         "{} {} - no mod lang files matched (namespaces={})",
                         ExportLog.LANG,
                         langCode,
@@ -181,7 +167,7 @@ public final class LangMergerExporter {
             }
 
             if (merged.isEmpty()) {
-                LOGGER.warn(
+                MinecraftWebExportMod.LOGGER.warn(
                         "{} {} - 0 keys after merge ({}, {} lang file stacks, {} pack layers)",
                         ExportLog.LANG,
                         langCode,
@@ -199,7 +185,7 @@ public final class LangMergerExporter {
             keysPerLanguage = merged.size();
             keysSkipped += stats.keysSkipped;
             duplicateWarnings += stats.duplicateKeyWarnings;
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} {} - {} keys from {} lang file stacks ({} pack layers, {})",
                     ExportLog.LANG,
                     langCode,
@@ -210,7 +196,7 @@ public final class LangMergerExporter {
         }
 
         if (onlyKeys != null) {
-            LOGGER.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "{} closure key filter: {} requested, ~{} keys per language file, {} entries skipped while scanning",
                     ExportLog.LANG,
                     onlyKeys.size(),
@@ -218,7 +204,7 @@ public final class LangMergerExporter {
                     keysSkipped);
         }
         if (duplicateWarnings > ExportLog.DETAIL_FAILURE_LIMIT) {
-            LOGGER.warn(
+            MinecraftWebExportMod.LOGGER.warn(
                     "{} {} duplicate-key warnings while merging (first {} at DEBUG)",
                     ExportLog.LANG,
                     duplicateWarnings,
@@ -244,9 +230,6 @@ public final class LangMergerExporter {
         return collectLangStacks(client, langFile, onlyNamespaces);
     }
 
-    /**
-     * Key-level merge of all pack layers (same order as {@code ClientLanguage.appendFrom}).
-     */
     static void mergeLangStacksInto(
             Map<String, String> merged,
             Map<ResourceLocation, List<Resource>> stacks,
@@ -273,9 +256,7 @@ public final class LangMergerExporter {
                         ResourceLocation previous = keyOrigin.get(key);
                         if (previous != null && !previous.equals(location)) {
                             stats.duplicateKeyWarnings++;
-                            ExportLog.detailFailure(
-                                    LOGGER,
-                                    stats.duplicateKeyWarnings,
+                            ExportLog.detailFailure(stats.duplicateKeyWarnings,
                                     "{} duplicate key '{}' from {} (was {})",
                                     ExportLog.LANG,
                                     key,
@@ -286,7 +267,7 @@ public final class LangMergerExporter {
                         keyOrigin.put(key, location);
                     }
                 } catch (Exception e) {
-                    LOGGER.warn("{} failed to read {}: {}", ExportLog.LANG, location, e.getMessage());
+                    MinecraftWebExportMod.LOGGER.warn("{} failed to read {}: {}", ExportLog.LANG, location, e.getMessage());
                 }
             }
         }
@@ -341,14 +322,14 @@ public final class LangMergerExporter {
             sample.append(location);
         }
         if (shown > 0) {
-            LOGGER.warn(
+            MinecraftWebExportMod.LOGGER.warn(
                     "{} client has {} lang file stack(s) for {} but none passed namespace filter; sample: {}",
                     ExportLog.LANG,
                     shown,
                     langFile,
                     sample);
         } else {
-            LOGGER.warn(
+            MinecraftWebExportMod.LOGGER.warn(
                     "{} client ResourceManager has no resources under lang/ for {} (assets not loaded?)",
                     ExportLog.LANG,
                     langFile);

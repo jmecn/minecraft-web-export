@@ -1,6 +1,6 @@
 package io.github.jmecn.minecraftwebexport.export;
 
-import org.apache.logging.log4j.Logger;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 import java.nio.file.Path;
 import java.util.Objects;
@@ -22,15 +22,12 @@ public final class RuntimeExportEntrypoint {
         this.orchestrator = Objects.requireNonNull(orchestrator, "orchestrator");
     }
 
-    public ExportReport runIfEnabled(
-            String modId,
-            String minecraftVersion,
-            Path gameDirectory,
-            Logger logger) {
-        Objects.requireNonNull(logger, "logger");
+    public void runIfEnabled(String modId, String minecraftVersion, Path gameDirectory) {
         if (!Boolean.getBoolean(ENABLE_PROPERTY)) {
-            logger.info("[export] skipped; set -D{}=true to enable minimal export", ENABLE_PROPERTY);
-            return null;
+            MinecraftWebExportMod.LOGGER.info(
+                    "[export] skipped; set -D{}=true to enable minimal export",
+                    ENABLE_PROPERTY);
+            return;
         }
 
         ExportRequest request = new ExportRequest(
@@ -43,14 +40,14 @@ public final class RuntimeExportEntrypoint {
 
         ExportReport report = orchestrator.export(request);
         if (report.isSuccessLike()) {
-            logger.info(
+            MinecraftWebExportMod.LOGGER.info(
                     "[export] wrote {} (status={}, files={}, took={}ms)",
                     report.manifestFile().toAbsolutePath(),
                     report.status().wireValue(),
                     report.filesWritten().size(),
                     report.durationMillis());
         } else {
-            logger.error(
+            MinecraftWebExportMod.LOGGER.error(
                     "[export] failed (status={}, errors={}, output={})",
                     report.status().wireValue(),
                     report.errors().size(),
@@ -58,8 +55,7 @@ public final class RuntimeExportEntrypoint {
         }
 
         for (ExportIssue issue : report.errors()) {
-            logger.error("[export:{}] {}", issue.stage(), issue.message());
+            MinecraftWebExportMod.LOGGER.error("[export:{}] {}", issue.stage(), issue.message());
         }
-        return report;
     }
 }

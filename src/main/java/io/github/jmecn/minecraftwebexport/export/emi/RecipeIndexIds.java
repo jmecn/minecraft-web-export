@@ -69,7 +69,6 @@ final class RecipeIndexIds {
         return new RecipeIdParts(recipeId.substring(0, sep), recipeId.substring(sep + 1));
     }
 
-    /** Test helper: write route + pack for a single layout without running the full exporter. */
     static RecipeBundleMods writeFixtureLayout(Path outputDir, String recipeId, JsonObject layout)
             throws IOException {
         RecipeRoutePackWriter writer = new RecipeRoutePackWriter(outputDir, RecipeRoutePackWriter.defaultPackMaxBytes());

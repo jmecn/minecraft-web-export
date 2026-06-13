@@ -6,9 +6,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Unified export outcome returned to {@link ExportModule#exportExtras} callers.
- */
 public record ExportResult(
         ExportScope scope,
         ExportPlan plan,

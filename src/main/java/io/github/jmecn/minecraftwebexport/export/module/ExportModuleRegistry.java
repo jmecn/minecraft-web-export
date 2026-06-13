@@ -6,11 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Registry for {@link ExportModule} implementations supplied by companion mods.
- *
- * <p>Register during mod setup, e.g. {@code ExportModuleRegistry.register(new MyExportModule());}</p>
- */
 public final class ExportModuleRegistry {
 
     private static final CopyOnWriteArrayList<ExportModule> MODULES = new CopyOnWriteArrayList<>();

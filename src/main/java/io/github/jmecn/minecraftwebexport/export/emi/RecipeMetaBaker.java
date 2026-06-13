@@ -5,9 +5,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
-/**
- * Bakes v2 recipe meta JSON from an in-memory layout (export intermediate).
- */
 final class RecipeMetaBaker {
 
     private RecipeMetaBaker() {

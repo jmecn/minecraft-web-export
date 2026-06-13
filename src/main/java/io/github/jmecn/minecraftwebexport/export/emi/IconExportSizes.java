@@ -26,7 +26,6 @@ public final class IconExportSizes {
         return DEFAULT_ICON;
     }
 
-    /** EMI recipe category tab icons (default export size 32×32 for web readability). */
     public static int categoryIconCellSize() {
         int size = Integer.getInteger("minecraftWebExport.categoryIconSize", DEFAULT_CATEGORY_ICON);
         return boundedSize(size, "minecraftWebExport.categoryIconSize");

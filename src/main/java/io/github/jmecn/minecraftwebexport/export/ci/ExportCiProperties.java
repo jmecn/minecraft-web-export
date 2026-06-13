@@ -1,8 +1,5 @@
 package io.github.jmecn.minecraftwebexport.export.ci;
 
-/**
- * System properties for headless CI export ({@code -DminecraftWebExport.*}).
- */
 public final class ExportCiProperties {
 
     public static final String RUN_EXPORT_AND_EXIT_PROPERTY = "minecraftWebExport.runExportAndExit";
@@ -11,7 +8,6 @@ public final class ExportCiProperties {
     public static final String EXPORT_WORLD_DELAY_TICKS_PROPERTY = "minecraftWebExport.exportWorldDelayTicks";
     public static final String EXPORT_WARMUP_TICKS_PROPERTY = "minecraftWebExport.exportWarmupTicks";
 
-    /** Extra ticks after {@link dev.emi.emi.runtime.EmiReloadManager#isLoaded()} before export. */
     private static final int DEFAULT_EXPORT_WARMUP_TICKS = 40;
     private static final int DEFAULT_EXPORT_WORLD_DELAY_TICKS = 600;
     private static final int DEFAULT_EXPORT_TIMEOUT_SECONDS = 7200;

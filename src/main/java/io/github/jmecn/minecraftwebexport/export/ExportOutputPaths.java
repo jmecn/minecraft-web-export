@@ -27,11 +27,6 @@ public record ExportOutputPaths(Path rootDir, Path manifestFile, Path bundleFile
         return pathsForRoot(root);
     }
 
-    /**
-     * CI / combined export root. When {@link ExportModuleRegistry} has modules and no explicit
-     * output dir, uses {@code <gameDir>/export/} so siblings like {@code guide-export/} and
-     * {@code emi/} share one parent.
-     */
     public static ExportOutputPaths resolveForRun(Path gameDirectory, String explicitOutputRoot) {
         if (!isBlank(explicitOutputRoot)) {
             return resolve(gameDirectory, explicitOutputRoot);

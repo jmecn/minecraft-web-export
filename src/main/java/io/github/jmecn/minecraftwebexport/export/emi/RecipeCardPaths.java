@@ -2,7 +2,6 @@ package io.github.jmecn.minecraftwebexport.export.emi;
 
 import java.nio.file.Path;
 
-/** v2 recipe card files under {@code recipes/<namespace>/<pathSafe>.{png,json}}. */
 public final class RecipeCardPaths {
 
     public static final int META_SCHEMA = 1;

@@ -16,15 +16,9 @@ import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorPresets;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
-/**
- * Creates or reopens the dedicated void world used by {@link ExportCiDriver}.
- */
 public final class ExportWorldCreator {
-
-    private static final Logger LOGGER = LogManager.getLogger("minecraft_web_export");
 
     private ExportWorldCreator() {}
 
@@ -36,18 +30,18 @@ public final class ExportWorldCreator {
         try {
             return mc.getLevelSource().levelExists(saveName());
         } catch (Exception e) {
-            LOGGER.warn("levelExists({}) threw; assuming missing", saveName(), e);
+            MinecraftWebExportMod.LOGGER.warn("levelExists({}) threw; assuming missing", saveName(), e);
             return false;
         }
     }
 
     public static void openExisting(Minecraft mc) {
-        LOGGER.info("opening existing world '{}'", saveName());
+        MinecraftWebExportMod.LOGGER.info("opening existing world '{}'", saveName());
         mc.createWorldOpenFlows().loadLevel(mc.screen, saveName());
     }
 
     public static void createAndLoad(Minecraft mc) {
-        LOGGER.info("creating fresh void creative world '{}' (seed=0, peaceful, cheats=on)", saveName());
+        MinecraftWebExportMod.LOGGER.info("creating fresh void creative world '{}' (seed=0, peaceful, cheats=on)", saveName());
 
         GameRules rules = buildHeadlessGameRules();
 

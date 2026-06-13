@@ -6,11 +6,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 
-/**
- * Lang keys for EMI recipe categories.
- * At export time {@link #resolveNameKey(EmiRecipeCategory)} reads the same key EMI uses in-game
- * ({@code category.getName()} → {@link TranslatableContents}).
- */
 public final class CategoryLangKeys {
 
     private CategoryLangKeys() {
@@ -27,9 +22,6 @@ public final class CategoryLangKeys {
         return EmiUtil.translateId("emi.category.", id);
     }
 
-    /**
-     * Authoritative translation key for a registered EMI category (matches in-game display).
-     */
     public static String resolveNameKey(EmiRecipeCategory category) {
         if (category == null) {
             return "emi.category.unknown";

@@ -23,8 +23,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -32,10 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
 final class EmiWidgetSerializer {
-
-    private static final Logger LOGGER = LogManager.getLogger(EmiWidgetSerializer.class);
 
     record Context(
             Minecraft client,
@@ -118,9 +115,7 @@ final class EmiWidgetSerializer {
             }
             return rasterChrome(widget, ctx, "raster");
         } catch (Exception e) {
-            ExportLog.detailFailure(
-                    LOGGER,
-                    1,
+            ExportLog.detailFailure(1,
                     "{} widget {} failed: {}",
                     ExportLog.EMI_LAYOUT,
                     widget.getClass().getName(),

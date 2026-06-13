@@ -16,18 +16,10 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import io.github.jmecn.minecraftwebexport.mod.MinecraftWebExportMod;
 
-/**
- * Aligns web export with EMI survival visibility: {@code EmiHidden.isDisabled} (recipe bake) and
- * {@code c:hidden_from_recipe_viewers} (item/fluid index).
- */
 public final class EmiExportVisibility {
 
-    private static final Logger LOGGER = LogManager.getLogger(EmiExportVisibility.class);
-
-    /** Same id as {@code dev.emi.emi.registry.EmiTags.HIDDEN_FROM_RECIPE_VIEWERS}. */
     public static final ResourceLocation HIDDEN_FROM_RECIPE_VIEWERS_TAG =
             ResourceLocation.fromNamespaceAndPath("c", "hidden_from_recipe_viewers");
 
@@ -38,9 +30,6 @@ public final class EmiExportVisibility {
         return !Boolean.getBoolean("minecraftWebExport.skipEmiVisibilityFilter");
     }
 
-    /**
-     * Recipe ids from {@link dev.emi.emi.api.EmiRecipeManager#getRecipes()} minus EMI-hidden recipes.
-     */
     public static java.util.Set<String> filterExportableRecipeIds(MinecraftServer server, Iterable<EmiRecipe> recipes) {
         java.util.Set<String> ids = new java.util.TreeSet<>();
         if (!isEnabled()) {
@@ -66,7 +55,7 @@ public final class EmiExportVisibility {
                 ids.add(recipe.getId().toString());
             }
         }
-        LOGGER.info(
+        MinecraftWebExportMod.LOGGER.info(
                 "{} recipe visibility: {} exportable, {} skipped ({} emi-disabled ingredient, {} hidden-tag ingredient)",
                 ExportLog.EMI,
                 ids.size(),
