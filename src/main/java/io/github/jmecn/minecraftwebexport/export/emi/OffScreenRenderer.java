@@ -73,8 +73,6 @@ public class OffScreenRenderer implements AutoCloseable {
     }
 
     public void uploadAnimatedFirstFrame(Collection<TextureAtlasSprite> sprites) {
-        // Current 1.20.1 mappings do not expose sprite animation internals here.
-        // Treat atlas captures as static until the icon export chain needs a stronger implementation.
     }
 
     private void renderToBuffer(Runnable runnable) {
@@ -113,10 +111,6 @@ public class OffScreenRenderer implements AutoCloseable {
         FogRenderer.setupNoFog();
     }
 
-    /**
-     * GUI pixel-space matrices for entity previews (Patchouli {@code PageEntity} uses screen coords,
-     * not the 16×16 item grid used by {@link #setupItemRendering()}).
-     */
     public void setupGuiEntityRendering(int width, int height) {
         var matrix4f = new Matrix4f().setOrtho(0.0f, width, height, 0.0f, 1000.0f, 21000.0f);
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);

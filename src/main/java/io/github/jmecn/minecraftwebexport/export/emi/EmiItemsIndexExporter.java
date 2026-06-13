@@ -766,7 +766,6 @@ public final class EmiItemsIndexExporter {
         }
     }
 
-    /** EMI tag pages (`emi:/tag/...`) are not crafting recipes; item reverse index lists real recipes only. */
     static boolean isEmiTagDisplayRecipe(String recipeId) {
         return recipeId != null && recipeId.startsWith("emi:/tag/");
     }

@@ -79,14 +79,16 @@ public final class TagClosureExpander {
             expandFluidTag(fluids, tagId, visitedFluidTags, outFluids, outTags);
         }
 
-        LOGGER.info(
-                "{} closure expand: {} seed tags -> {} items, {} blocks, {} fluids ({} tag keys)",
-                ExportLog.TAGS,
-                seedTagRefs.size(),
-                outItems.size(),
-                outBlocks.size(),
-                outFluids.size(),
-                outTags.size());
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(
+                    "{} expand: {} seed tags -> {} items, {} blocks, {} fluids ({} tag keys)",
+                    ExportLog.TAGS,
+                    seedTagRefs.size(),
+                    outItems.size(),
+                    outBlocks.size(),
+                    outFluids.size(),
+                    outTags.size());
+        }
 
         return new Expansion(outItems, outBlocks, outFluids, outTags);
     }

@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-/** v2 export: {@code recipes/<namespace>/<pathSafe>.{png,json}} per recipe. */
 public final class EmiRecipeCardExporter {
 
     private static final Logger LOGGER = LogManager.getLogger(EmiRecipeCardExporter.class);
@@ -78,56 +77,58 @@ public final class EmiRecipeCardExporter {
         int logStride = ExportProgressLog.stride(total, LOG_STRIDE_PROPERTY, 20, 200);
         int progress = 0;
 
-        for (String recipeId : recipeIds) {
-            progress++;
-            EmiRecipe recipe = EmiRecipeResolver.resolve(recipeId);
-            if (recipe == null) {
-                missing++;
-                logProgress(progress, total, written, missing, failures, logStride);
-                continue;
-            }
-            if (ExportMode.current() != ExportMode.SCOPED
-                    && !EmiExportVisibility.shouldExportRecipe(recipe, server)) {
-                skippedVisibility++;
-                logProgress(progress, total, written, missing, failures, logStride);
-                continue;
-            }
-            try {
-                JsonObject layout = EmiRecipeLayoutExporter.buildLayoutInMemory(
-                        client,
-                        recipe,
-                        recipeId,
-                        textureIds,
-                        referencedItems,
-                        referencedFluids,
-                        referencedTags,
-                        iconVariants);
-                layoutsByRecipeId.put(recipeId, layout);
-
-                JsonObject meta = RecipeMetaBaker.bake(layout);
-                if (langKeys != null) {
-                    langKeys.collectMeta(meta);
+        try (OffScreenRendererPool rendererPool = new OffScreenRendererPool()) {
+            for (String recipeId : recipeIds) {
+                progress++;
+                EmiRecipe recipe = EmiRecipeResolver.resolve(recipeId);
+                if (recipe == null) {
+                    missing++;
+                    logProgress(progress, total, written, missing, failures, logStride);
+                    continue;
                 }
-                String metaJson = GSON.toJson(meta);
-                metaBytes += metaJson.length();
+                if (ExportMode.current() != ExportMode.SCOPED
+                        && !EmiExportVisibility.shouldExportRecipe(recipe, server)) {
+                    skippedVisibility++;
+                    logProgress(progress, total, written, missing, failures, logStride);
+                    continue;
+                }
+                try {
+                    JsonObject layout = EmiRecipeLayoutExporter.buildLayoutInMemory(
+                            client,
+                            recipe,
+                            recipeId,
+                            textureIds,
+                            referencedItems,
+                            referencedFluids,
+                            referencedTags,
+                            iconVariants);
+                    layoutsByRecipeId.put(recipeId, layout);
 
-                Path metaFile = RecipeCardPaths.metaPath(outputDir, recipeId);
-                Path pngFile = RecipeCardPaths.pngPath(outputDir, recipeId);
-                Files.createDirectories(metaFile.getParent());
-                Files.writeString(metaFile, metaJson);
+                    JsonObject meta = RecipeMetaBaker.bake(layout);
+                    if (langKeys != null) {
+                        langKeys.collectMeta(meta);
+                    }
+                    String metaJson = GSON.toJson(meta);
+                    metaBytes += metaJson.length();
 
-                pngBytes += renderRecipePng(client, recipe, scale, pngFile);
-                written++;
-                logProgress(progress, total, written, missing, failures, logStride);
-            } catch (Exception e) {
-                failures++;
-                ExportLog.detailFailure(
-                        LOGGER,
-                        failures,
-                        "{} card failed for {}: {}",
-                        ExportLog.EMI,
-                        recipeId,
-                        e);
+                    Path metaFile = RecipeCardPaths.metaPath(outputDir, recipeId);
+                    Path pngFile = RecipeCardPaths.pngPath(outputDir, recipeId);
+                    Files.createDirectories(metaFile.getParent());
+                    Files.writeString(metaFile, metaJson);
+
+                    pngBytes += renderRecipePng(client, recipe, scale, pngFile, rendererPool);
+                    written++;
+                    logProgress(progress, total, written, missing, failures, logStride);
+                } catch (Exception e) {
+                    failures++;
+                    ExportLog.detailFailure(
+                            LOGGER,
+                            failures,
+                            "{} card failed for {}: {}",
+                            ExportLog.EMI,
+                            recipeId,
+                            e);
+                }
             }
         }
 
@@ -157,8 +158,12 @@ public final class EmiRecipeCardExporter {
                 layoutsByRecipeId);
     }
 
-    private static long renderRecipePng(Minecraft client, EmiRecipe recipe, int scale, Path out)
-            throws IOException {
+    private static long renderRecipePng(
+            Minecraft client,
+            EmiRecipe recipe,
+            int scale,
+            Path out,
+            OffScreenRendererPool rendererPool) throws IOException {
         int w = Math.max(1, recipe.getDisplayWidth());
         int h = Math.max(1, recipe.getDisplayHeight());
         int margin = RecipeCardPaths.recipeMargin();
@@ -167,13 +172,12 @@ public final class EmiRecipeCardExporter {
         int pixelW = logicalW * scale;
         int pixelH = logicalH * scale;
 
-        try (OffScreenRenderer off = new OffScreenRenderer(pixelW, pixelH)) {
-            GuiGraphics graphics = new GuiGraphics(client, client.renderBuffers().bufferSource());
-            off.captureAsPng(() -> off.runWithEmiRecipeMatrices(logicalW, logicalH, () -> {
-                EmiRenderHelper.renderRecipe(recipe, EmiDrawContext.wrap(graphics), 0, 0, false, -1);
-                graphics.flush();
-            }), out);
-        }
+        OffScreenRenderer off = rendererPool.borrow(pixelW, pixelH);
+        GuiGraphics graphics = new GuiGraphics(client, client.renderBuffers().bufferSource());
+        off.captureAsPng(() -> off.runWithEmiRecipeMatrices(logicalW, logicalH, () -> {
+            EmiRenderHelper.renderRecipe(recipe, EmiDrawContext.wrap(graphics), 0, 0, false, -1);
+            graphics.flush();
+        }), out);
         return Files.size(out);
     }
 
