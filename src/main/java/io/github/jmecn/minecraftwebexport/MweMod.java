@@ -1,8 +1,9 @@
 package io.github.jmecn.minecraftwebexport;
+
 import io.github.jmecn.minecraftwebexport.runtime.CiDriver;
 import io.github.jmecn.minecraftwebexport.runtime.CiProperties;
 import io.github.jmecn.minecraftwebexport.runtime.ClientEntrypoint;
-
+import java.nio.file.Path;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLEnvironment;
@@ -24,7 +25,7 @@ public final class MweMod {
     }
 
     private static final class ClientBootstrap {
-        private static void arm(java.nio.file.Path gameDirectory) {
+        private static void arm(Path gameDirectory) {
             if (CiProperties.runExportAndExit()) {
                 new CiDriver(
                         gameDirectory,

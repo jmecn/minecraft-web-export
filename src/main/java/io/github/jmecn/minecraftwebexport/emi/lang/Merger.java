@@ -1,20 +1,16 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ResourceFilter;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.server.packs.resources.ResourceManager;
-
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -27,7 +23,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.Predicate;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 
 public final class Merger {
 
@@ -63,7 +65,7 @@ public final class Merger {
         if (keys == null || keys.isEmpty()) {
             return keys;
         }
-        java.util.TreeSet<String> out = new java.util.TreeSet<>();
+        TreeSet<String> out = new TreeSet<>();
         for (String key : keys) {
             if (isWebDeployLangKey(key)) {
                 out.add(key);
@@ -107,7 +109,7 @@ public final class Merger {
 
     public static LangMergeResult exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys, Hints hints)
             throws IOException {
-        return exportTo(Paths.resolve(outputDir, Constants.LANG_DIR), client, null, onlyKeys, hints);
+        return exportTo(EmiPaths.resolve(outputDir, Constants.LANG_DIR), client, null, onlyKeys, hints);
     }
 
     @Deprecated
@@ -238,9 +240,9 @@ public final class Merger {
             }
             for (Resource resource : layers) {
                 stats.resourceLayersRead++;
-                try (var reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8)) {
+                try (InputStreamReader reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8)) {
                     JsonObject object = JsonParser.parseReader(reader).getAsJsonObject();
-                    for (var entry : object.entrySet()) {
+                    for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
                         String key = entry.getKey();
                         if (!shouldMergeLangKey(key, onlyKeys)) {
                             stats.keysSkipped++;
@@ -277,7 +279,7 @@ public final class Merger {
 
         Map<ResourceLocation, List<Resource>> stacks = new LinkedHashMap<>();
         appendLangStacks(stacks, client.getResourceManager(), filter);
-        var server = client.getSingleplayerServer();
+        MinecraftServer server = client.getSingleplayerServer();
         if (server != null) {
             appendLangStacks(stacks, server.getResourceManager(), filter);
         }
@@ -288,14 +290,14 @@ public final class Merger {
             Map<ResourceLocation, List<Resource>> into,
             ResourceManager resourceManager,
             Predicate<ResourceLocation> filter) {
-        for (var entry : resourceManager.listResourceStacks("lang", filter).entrySet()) {
+        for (Map.Entry<ResourceLocation, List<Resource>> entry : resourceManager.listResourceStacks("lang", filter).entrySet()) {
             into.compute(
                     entry.getKey(),
                     (id, existing) -> {
                         if (existing == null || existing.isEmpty()) {
                             return new ArrayList<>(entry.getValue());
                         }
-                        var combined = new ArrayList<>(existing);
+                        ArrayList<Resource> combined = new ArrayList<>(existing);
                         combined.addAll(entry.getValue());
                         return combined;
                     });

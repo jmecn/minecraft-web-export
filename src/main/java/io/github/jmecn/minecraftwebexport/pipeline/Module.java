@@ -1,12 +1,11 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
+
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
-
-import net.minecraft.client.Minecraft;
-
 import java.io.IOException;
+import net.minecraft.client.Minecraft;
 
 public interface Module {
 

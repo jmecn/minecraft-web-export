@@ -1,5 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -17,7 +19,7 @@ public final class ClosureKeys {
         addComposedMaterialFluidKeys(into, registryId);
     }
 
-    private static void addLookupKeys(Set<String> into, java.util.List<String> keys) {
+    private static void addLookupKeys(Set<String> into, List<String> keys) {
         for (String key : keys) {
             if (key != null && !key.isBlank()) {
                 into.add(key);
@@ -50,7 +52,7 @@ public final class ClosureKeys {
         if (addGtToolClosureKeys(into, namespace, path)) {
             return;
         }
-        for (var entry : GtMaterialPatterns.TAG_PREFIX_PATTERNS.entrySet()) {
+        for (Map.Entry<String, String> entry : GtMaterialPatterns.TAG_PREFIX_PATTERNS.entrySet()) {
             String material = GtMaterialPatterns.extractMaterial(path, entry.getValue());
             if (material == null) {
                 continue;
@@ -107,7 +109,7 @@ public final class ClosureKeys {
     }
 
     private static boolean addGtToolClosureKeys(Set<String> into, String namespace, String path) {
-        for (var entry : GtMaterialPatterns.orderedToolPatterns()) {
+        for (Map.Entry<String, String> entry : GtMaterialPatterns.orderedToolPatterns()) {
             String material = GtMaterialPatterns.extractMaterial(path, entry.getValue());
             if (material == null || material.isEmpty()) {
                 continue;

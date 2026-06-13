@@ -15,13 +15,13 @@ class ItemsSearchRegistryKindTest {
         var resolver = new RegistryResolver(Map.of(), Map.of());
         assertEquals(
                 "fluid",
-                SearchIndexWriter.resolveRegistryKind(
+                ItemsLangExporter.resolveRegistryKind(
                         "gtceu:acetic_acid",
                         Set.of("gtceu:acetic_acid"),
                         resolver));
         assertEquals(
                 "item",
-                SearchIndexWriter.resolveRegistryKind(
+                ItemsLangExporter.resolveRegistryKind(
                         "gtceu:acetic_acid_bucket",
                         Set.of("gtceu:acetic_acid"),
                         resolver));
@@ -37,7 +37,7 @@ class ItemsSearchRegistryKindTest {
                 Map.of());
         assertEquals(
                 "fluid",
-                SearchIndexWriter.resolveRegistryKind(
+                ItemsLangExporter.resolveRegistryKind(
                         "gtceu:acetic_acid",
                         Set.of(),
                         resolver));
@@ -45,13 +45,13 @@ class ItemsSearchRegistryKindTest {
                 "Acetic Acid",
                 resolver.translateRegistry(
                         "gtceu:acetic_acid",
-                        SearchIndexWriter.resolveRegistryKind(
+                        ItemsLangExporter.resolveRegistryKind(
                                 "gtceu:acetic_acid",
                                 Set.of(),
                                 resolver)));
         assertEquals(
                 "item",
-                SearchIndexWriter.resolveRegistryKind(
+                ItemsLangExporter.resolveRegistryKind(
                         "gtceu:acetic_acid_bucket",
                         Set.of(),
                         resolver));

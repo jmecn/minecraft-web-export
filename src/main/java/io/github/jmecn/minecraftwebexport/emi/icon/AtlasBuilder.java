@@ -4,8 +4,11 @@ import com.mojang.blaze3d.platform.NativeImage;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.category.CategoryIconSprite;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
-
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasIndex;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasPage;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasSpriteEntry;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -39,10 +42,6 @@ final class AtlasBuilder implements AutoCloseable {
     private int extentY;
     private int pagePlanIndex;
 
-    AtlasBuilder(Path outputDir, int cellSize, int maxAtlasSize, String atlasKind) {
-        this(outputDir, cellSize, maxAtlasSize, atlasKind, List.of(), null);
-    }
-
     AtlasBuilder(
             Path outputDir,
             int cellSize,
@@ -65,16 +64,12 @@ final class AtlasBuilder implements AutoCloseable {
         startNewPage();
     }
 
-    Map<String, Object> spriteFor(String itemId) {
+    CategoryIconSprite spriteFor(String itemId) {
         SpriteRef ref = items.get(itemId);
         if (ref == null) {
-            return Map.of();
+            return null;
         }
-        Map<String, Object> sprite = new LinkedHashMap<>();
-        sprite.put("page", ref.page());
-        sprite.put("x", ref.x());
-        sprite.put("y", ref.y());
-        return sprite;
+        return new CategoryIconSprite(ref.page(), ref.x(), ref.y());
     }
 
     void place(String itemId, OffScreenRenderer frame) {
@@ -116,22 +111,20 @@ final class AtlasBuilder implements AutoCloseable {
             pngBytes += Files.size(out);
         }
 
-        Map<String, Object> indexRoot = new LinkedHashMap<>();
-        indexRoot.put("schema", 1);
-        indexRoot.put("cellSize", cellSize);
-        if (usageWeights != null && !usageWeights.isEmpty()) {
-            indexRoot.put("sort", "usageDesc");
-        }
-        List<Map<String, Object>> pageList = new ArrayList<>();
+        List<AtlasPage> pageList = new ArrayList<>();
         for (PageInfo page : pages) {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("file", page.fileName());
-            entry.put("width", page.width());
-            entry.put("height", page.height());
-            pageList.add(entry);
+            pageList.add(new AtlasPage(page.fileName(), page.width(), page.height()));
         }
-        indexRoot.put("pages", pageList);
-        indexRoot.put("items", items);
+        Map<String, AtlasSpriteEntry> spriteEntries = new LinkedHashMap<>();
+        for (Map.Entry<String, SpriteRef> entry : items.entrySet()) {
+            SpriteRef ref = entry.getValue();
+            AtlasSpriteEntry sprite = usageWeights != null && !usageWeights.isEmpty()
+                    ? new AtlasSpriteEntry(ref.page(), ref.x(), ref.y(), ref.usage())
+                    : new AtlasSpriteEntry(ref.page(), ref.x(), ref.y());
+            spriteEntries.put(entry.getKey(), sprite);
+        }
+        String sort = usageWeights != null && !usageWeights.isEmpty() ? "usageDesc" : null;
+        AtlasIndex indexRoot = AtlasIndex.of(cellSize, sort, pageList, spriteEntries);
 
         Path indexPath = outputDir.resolve("index.json");
         JsonIO.write(indexPath, indexRoot);
@@ -229,7 +222,7 @@ final class AtlasBuilder implements AutoCloseable {
     }
 
     private String buildCss() {
-        var sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.append("/* Auto-generated item icon sprites. cell=").append(cellSize).append("px */\n");
         sb.append('.').append(cssClass).append(" {\n");
         sb.append("  width: ").append(cellSize).append("px;\n");
@@ -241,7 +234,7 @@ final class AtlasBuilder implements AutoCloseable {
         sb.append("  --cell: ").append(cellSize).append(";\n");
         sb.append("}\n\n");
 
-        for (var entry : items.entrySet()) {
+        for (Map.Entry<String, SpriteRef> entry : items.entrySet()) {
             SpriteRef ref = entry.getValue();
             PageInfo page = pages.get(ref.page());
             sb.append('.').append(cssClass).append("[data-item=\"")

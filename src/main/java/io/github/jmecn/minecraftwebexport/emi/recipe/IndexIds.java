@@ -4,9 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,7 +42,7 @@ public final class IndexIds {
 
     private static List<String> readRouteShardPaths(Path outputDir, String namespace, String routeFile)
             throws IOException {
-        Path routePath = Paths.resolve(
+        Path routePath = EmiPaths.resolve(
                 outputDir,
                 Constants.RECIPES_ROUTES_DIR + "/" + namespace + "/" + routeFile + ".json");
         if (!Files.isRegularFile(routePath)) {

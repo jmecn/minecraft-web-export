@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.item;
 
 import io.github.jmecn.minecraftwebexport.Constants;
-
 import java.util.List;
 
 public record ItemsLang(int schema, String locale, int itemCount, List<ItemsLangEntry> items) {

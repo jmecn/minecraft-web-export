@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.emi.icon;
 
+
 public record AtlasPagePlan(int cols, int rows) {
 
     public int widthPx(int cellSize) {

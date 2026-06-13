@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.pipeline;
+
 import io.github.jmecn.minecraftwebexport.emi.lang.ClosureKeys;
-
-
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;

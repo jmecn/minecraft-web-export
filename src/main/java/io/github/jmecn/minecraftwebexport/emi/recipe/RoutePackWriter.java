@@ -2,11 +2,10 @@ package io.github.jmecn.minecraftwebexport.emi.recipe;
 
 import com.google.gson.JsonObject;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.PackRef;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -107,7 +106,7 @@ public final class RoutePackWriter {
             byte[] bytes = JsonIO.toUtf8Bytes(root);
             String stem = BundleDigest.stem(packSequence, bytes, width);
 
-            Path packDir = Paths.resolve(outputDir, Constants.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace);
+            Path packDir = EmiPaths.resolve(outputDir, Constants.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace);
             JsonIO.write(packDir.resolve(stem + ".json"), root);
             packRefs.add(new PackRef(stem, bytes.length));
             packSequence++;
@@ -131,7 +130,7 @@ public final class RoutePackWriter {
             byte[] bytes = JsonIO.toUtf8Bytes(root);
             String stem = BundleDigest.stem(routeSequence, bytes, width);
 
-            Path routeDir = Paths.resolve(outputDir, Constants.RECIPES_ROUTES_DIR + "/" + namespace);
+            Path routeDir = EmiPaths.resolve(outputDir, Constants.RECIPES_ROUTES_DIR + "/" + namespace);
             JsonIO.write(routeDir.resolve(stem + ".json"), root);
             routeFiles.add(stem);
             routeSequence++;

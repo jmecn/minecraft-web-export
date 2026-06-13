@@ -1,13 +1,12 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
 
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import java.nio.file.Path;
 
-public final class CardPaths {
+public final class RecipePaths {
 
-    private CardPaths() {
+    private RecipePaths() {
     }
 
     public static IndexIds.RecipeIdParts requireParts(String recipeId) {
@@ -31,14 +30,14 @@ public final class CardPaths {
 
     public static Path pngPath(Path exportRoot, String recipeId) {
         IndexIds.RecipeIdParts parts = requireParts(recipeId);
-        return Paths.resolve(
+        return EmiPaths.resolve(
                 exportRoot,
                 Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".png");
     }
 
     public static Path metaPath(Path exportRoot, String recipeId) {
         IndexIds.RecipeIdParts parts = requireParts(recipeId);
-        return Paths.resolve(
+        return EmiPaths.resolve(
                 exportRoot,
                 Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".json");
     }

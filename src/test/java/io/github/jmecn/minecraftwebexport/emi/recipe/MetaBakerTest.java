@@ -2,6 +2,9 @@ package io.github.jmecn.minecraftwebexport.emi.recipe;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
+import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,6 +16,7 @@ class MetaBakerTest {
     void bakesTagAndListInteractions() {
         JsonObject layout = JsonParser.parseString("""
                 {
+                  "id": "gtceu:assembler/iron_plate",
                   "panel": { "width": 126, "height": 72 },
                   "category": "gtceu:assembler",
                   "widgets": [
@@ -41,22 +45,28 @@ class MetaBakerTest {
                 }
                 """).getAsJsonObject();
 
-        JsonObject meta = MetaBaker.bake(layout);
-        assertEquals(1, meta.get("schema").getAsInt());
-        assertEquals(126, meta.get("width").getAsInt());
-        assertEquals(4, meta.get("margin").getAsInt());
-        assertEquals(2, meta.getAsJsonArray("widgets").size());
-        JsonObject tag = meta.getAsJsonArray("widgets").get(0).getAsJsonObject();
-        assertEquals("tag", tag.getAsJsonObject("interaction").get("kind").getAsString());
-        assertEquals("c:iron_plates", tag.getAsJsonObject("interaction").get("tag").getAsString());
-        JsonObject list = meta.getAsJsonArray("widgets").get(1).getAsJsonObject();
-        assertEquals("list", list.getAsJsonObject("interaction").get("kind").getAsString());
-        assertEquals(2, list.getAsJsonObject("interaction").getAsJsonArray("entries").size());
+        RecipeMeta meta = MetaBaker.bake(layout);
+        assertEquals(1, meta.schema());
+        assertEquals("gtceu:assembler/iron_plate", meta.id());
+        assertEquals(126, meta.width());
+        assertEquals(4, meta.margin());
+        assertEquals(2, meta.widgets().size());
+
+        RecipeWidget tagWidget = meta.widgets().get(0);
+        WidgetInteraction tag = tagWidget.interaction();
+        assertEquals("tag", tag.kind());
+        assertEquals("c:iron_plates", tag.tag());
+        assertEquals("gtceu:iron_plate", tag.displayId());
+
+        RecipeWidget listWidget = meta.widgets().get(1);
+        WidgetInteraction list = listWidget.interaction();
+        assertEquals("list", list.kind());
+        assertEquals(2, list.entries().size());
     }
 
     @Test
     void pathSafeEncodesSlashes() {
-        assertEquals("assembler_iron_plate", CardPaths.pathSafe("assembler/iron_plate"));
-        assertTrue(CardPaths.pathSafe("/emi/tag").startsWith("_"));
+        assertEquals("assembler_iron_plate", RecipePaths.pathSafe("assembler/iron_plate"));
+        assertTrue(RecipePaths.pathSafe("/emi/tag").startsWith("_"));
     }
 }

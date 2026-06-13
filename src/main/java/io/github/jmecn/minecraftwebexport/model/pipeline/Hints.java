@@ -2,7 +2,9 @@ package io.github.jmecn.minecraftwebexport.model.pipeline;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -48,12 +50,12 @@ public record Hints(
         if (languages == null || languages.isEmpty()) {
             return List.of();
         }
-        java.util.LinkedHashSet<String> normalized = new java.util.LinkedHashSet<>();
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
         for (String language : languages) {
             if (language == null) {
                 continue;
             }
-            String code = language.trim().toLowerCase(java.util.Locale.ROOT).replace('-', '_');
+            String code = language.trim().toLowerCase(Locale.ROOT).replace('-', '_');
             if (!code.isEmpty() && !"*".equals(code)) {
                 normalized.add(code);
             }
@@ -68,7 +70,7 @@ public record Hints(
         if (right.isEmpty()) {
             return left;
         }
-        java.util.LinkedHashSet<String> merged = new java.util.LinkedHashSet<>(left);
+        LinkedHashSet<String> merged = new LinkedHashSet<>(left);
         merged.addAll(right);
         return List.copyOf(merged);
     }

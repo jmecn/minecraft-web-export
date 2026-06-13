@@ -3,23 +3,25 @@ package io.github.jmecn.minecraftwebexport.emi.recipe;
 import com.mojang.blaze3d.platform.NativeImage;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
-
+import io.github.jmecn.minecraftwebexport.model.recipe.TextureManifest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 
 public final class TextureWriter {
 
@@ -28,10 +30,10 @@ public final class TextureWriter {
 
 
     public static TextureWriteResult export(Path outputDir, Minecraft client, Set<String> textureIds) throws IOException {
-        Path texRoot = Paths.resolve(outputDir, Constants.TEXTURES_DIR);
+        Path texRoot = EmiPaths.resolve(outputDir, Constants.TEXTURES_DIR);
         if (Files.exists(texRoot)) {
             Files.walk(texRoot)
-                    .sorted(java.util.Comparator.reverseOrder())
+                    .sorted(Comparator.reverseOrder())
                     .forEach(path -> {
                         try {
                             Files.deleteIfExists(path);
@@ -50,14 +52,14 @@ public final class TextureWriter {
         int missing = 0;
         long bytes = 0;
 
-        var resourceManager = client.getResourceManager();
+        ResourceManager resourceManager = client.getResourceManager();
         for (String idString : all) {
             ResourceLocation id = ResourceLocation.parse(idString);
             String relative = textureRelativePath(id);
             Path out = texRoot.resolve(relative);
             Files.createDirectories(out.getParent());
 
-            var resourceOpt = resourceManager.getResource(id);
+            Optional<Resource> resourceOpt = resourceManager.getResource(id);
             if (resourceOpt.isEmpty()) {
                 missing++;
                 MweMod.LOGGER.debug("{} missing {}", Log.RECIPE_TEXTURES, idString);
@@ -82,10 +84,7 @@ public final class TextureWriter {
             }
         }
 
-        Map<String, Object> root = new LinkedHashMap<>();
-        root.put("schema", 1);
-        root.put("textures", manifest);
-        JsonIO.write(texRoot.resolve(Constants.TEXTURE_MANIFEST_FILE), root);
+        JsonIO.write(texRoot.resolve(Constants.TEXTURE_MANIFEST_FILE), TextureManifest.of(manifest));
 
         MweMod.LOGGER.info(
                 "{} {}/{} written ({} bytes), {} missing",

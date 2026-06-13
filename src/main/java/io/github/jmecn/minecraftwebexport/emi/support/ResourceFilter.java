@@ -1,12 +1,11 @@
 package io.github.jmecn.minecraftwebexport.emi.support;
 
 import io.github.jmecn.minecraftwebexport.Constants;
-import net.minecraft.resources.ResourceLocation;
-
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
+import net.minecraft.resources.ResourceLocation;
 
 public final class ResourceFilter {
 
@@ -17,7 +16,7 @@ public final class ResourceFilter {
         if (extra.isEmpty()) {
             return Constants.DEFAULT_EXCLUDED_NAMESPACES;
         }
-        var merged = new LinkedHashSet<>(Constants.DEFAULT_EXCLUDED_NAMESPACES);
+        LinkedHashSet<String> merged = new LinkedHashSet<>(Constants.DEFAULT_EXCLUDED_NAMESPACES);
         Arrays.stream(extra.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())

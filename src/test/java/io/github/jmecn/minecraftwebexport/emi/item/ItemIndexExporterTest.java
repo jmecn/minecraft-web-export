@@ -3,7 +3,7 @@ package io.github.jmecn.minecraftwebexport.emi.item;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.BundleMods;
 import io.github.jmecn.minecraftwebexport.emi.recipe.IndexIds;
 import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class IndexWriterTest {
+class ItemIndexExporterTest {
 
     @TempDir
     Path tempDir;
@@ -58,16 +58,16 @@ class IndexWriterTest {
                         }
                         """));
 
-        ItemIndexResult result = IndexWriter.export(tempDir, null, mods);
+        ItemIndexResult result = ItemIndexExporter.export(tempDir, null, mods);
 
         assertEquals(3, result.itemCount());
         assertEquals(2, result.inputsIndexed());
         assertEquals(1, result.outputsIndexed());
 
-        Path itemsIndexFile = Paths.resolve(tempDir, Constants.ITEMS_INDEX_FILE);
+        Path itemsIndexFile = EmiPaths.resolve(tempDir, Constants.ITEMS_INDEX_FILE);
         JsonObject json = JsonParser.parseString(Files.readString(itemsIndexFile)).getAsJsonObject();
-        Path stickFile = Paths.resolve(tempDir, "items/minecraft/stick.json");
-        Path pickaxeFile = Paths.resolve(tempDir, "items/minecraft/iron_pickaxe.json");
+        Path stickFile = EmiPaths.resolve(tempDir, "items/minecraft/stick.json");
+        Path pickaxeFile = EmiPaths.resolve(tempDir, "items/minecraft/iron_pickaxe.json");
         JsonObject stick = JsonParser.parseString(Files.readString(stickFile)).getAsJsonObject();
         JsonObject pickaxe = JsonParser.parseString(Files.readString(pickaxeFile)).getAsJsonObject();
 
@@ -108,7 +108,7 @@ class IndexWriterTest {
                         }
                         """));
 
-        Path tagFile = Paths.resolve(tempDir, "tags/tfc/items/glass_batches_tier_2.json");
+        Path tagFile = EmiPaths.resolve(tempDir, "tags/tfc/items/glass_batches_tier_2.json");
         Files.createDirectories(tagFile.getParent());
         Files.writeString(tagFile, """
                 {
@@ -119,10 +119,10 @@ class IndexWriterTest {
                 }
                 """);
 
-        IndexWriter.export(tempDir, null, mods);
+        ItemIndexExporter.export(tempDir, null, mods);
 
-        Path silicaFile = Paths.resolve(tempDir, "items/tfc/silica_glass_batch.json");
-        Path hematiticFile = Paths.resolve(tempDir, "items/tfc/hematitic_glass_batch.json");
+        Path silicaFile = EmiPaths.resolve(tempDir, "items/tfc/silica_glass_batch.json");
+        Path hematiticFile = EmiPaths.resolve(tempDir, "items/tfc/hematitic_glass_batch.json");
         JsonObject hematitic = JsonParser.parseString(Files.readString(hematiticFile)).getAsJsonObject();
 
         assertTrue(Files.exists(silicaFile));
@@ -172,9 +172,9 @@ class IndexWriterTest {
                         }
                         """)));
 
-        IndexWriter.export(tempDir, null, mods);
+        ItemIndexExporter.export(tempDir, null, mods);
 
-        Path railFile = Paths.resolve(tempDir, "items/minecraft/activator_rail.json");
+        Path railFile = EmiPaths.resolve(tempDir, "items/minecraft/activator_rail.json");
         JsonObject rail = JsonParser.parseString(Files.readString(railFile)).getAsJsonObject();
         assertTrue(rail.has("outputs"));
         assertEquals(
@@ -205,7 +205,7 @@ class IndexWriterTest {
                         }
                         """));
 
-        Set<String> itemIds = IndexWriter.collectReferencedItemIds(
+        Set<String> itemIds = ItemIndexExporter.collectReferencedItemIds(
                 null,
                 layouts,
                 Set.of("minecraft:oak_log"),
@@ -216,13 +216,13 @@ class IndexWriterTest {
 
     @Test
     void collectRegistryTagIdsReturnsEmptyWithoutServer() {
-        assertTrue(IndexWriter.collectRegistryTagIds(null, Set.of("minecraft:stick")).isEmpty());
+        assertTrue(ItemIndexExporter.collectRegistryTagIds(null, Set.of("minecraft:stick")).isEmpty());
     }
 
     @Test
     void mergesSeedItemIdsWithoutRecipeRefs() throws IOException {
         BundleMods mods = BundleMods.empty();
-        IndexWriter.export(
+        ItemIndexExporter.export(
                 tempDir,
                 null,
                 Map.of(
@@ -243,8 +243,8 @@ class IndexWriterTest {
                                 """)),
                 Set.of("minecraft:oak_log"));
 
-        Path oakFile = Paths.resolve(tempDir, "items/minecraft/oak_log.json");
-        Path itemsIndexFile = Paths.resolve(tempDir, Constants.ITEMS_INDEX_FILE);
+        Path oakFile = EmiPaths.resolve(tempDir, "items/minecraft/oak_log.json");
+        Path itemsIndexFile = EmiPaths.resolve(tempDir, Constants.ITEMS_INDEX_FILE);
         JsonObject index = JsonParser.parseString(Files.readString(itemsIndexFile)).getAsJsonObject();
 
         assertTrue(Files.exists(oakFile));

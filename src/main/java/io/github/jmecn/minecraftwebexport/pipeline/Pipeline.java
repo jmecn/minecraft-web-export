@@ -1,66 +1,115 @@
-package io.github.jmecn.minecraftwebexport.emi.pipeline;
+package io.github.jmecn.minecraftwebexport.pipeline;
 
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.bundle.ManifestWriter;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
+import io.github.jmecn.minecraftwebexport.emi.icon.CategoryIconWriter;
 import io.github.jmecn.minecraftwebexport.emi.icon.ItemIconWriter;
-import io.github.jmecn.minecraftwebexport.emi.item.IndexWriter;
-import io.github.jmecn.minecraftwebexport.emi.item.NameKeysWriter;
-import io.github.jmecn.minecraftwebexport.emi.item.SearchIndexWriter;
+import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
+import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
+import io.github.jmecn.minecraftwebexport.emi.item.ItemsLangExporter;
+import io.github.jmecn.minecraftwebexport.emi.item.NameKeysExporter;
 import io.github.jmecn.minecraftwebexport.emi.lang.ClosureKeys;
 import io.github.jmecn.minecraftwebexport.emi.lang.Languages;
 import io.github.jmecn.minecraftwebexport.emi.lang.Merger;
 import io.github.jmecn.minecraftwebexport.emi.lang.UsedKeysCollector;
-import io.github.jmecn.minecraftwebexport.emi.recipe.CardWriter;
+import io.github.jmecn.minecraftwebexport.emi.recipe.RecipeWriter;
 import io.github.jmecn.minecraftwebexport.emi.recipe.TextureWriter;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.tag.MembersIndexWriter;
-import io.github.jmecn.minecraftwebexport.model.emi.EmiExportReport;
-import io.github.jmecn.minecraftwebexport.model.emi.category.CategoryIndexResult;
+import io.github.jmecn.minecraftwebexport.io.JsonIO;
+import io.github.jmecn.minecraftwebexport.model.bundle.Bundle;
+import io.github.jmecn.minecraftwebexport.model.bundle.ItemsLangRef;
+import io.github.jmecn.minecraftwebexport.model.emi.icon.CategoryIconResult;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.ItemIconResult;
 import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
-import io.github.jmecn.minecraftwebexport.model.emi.item.SearchIndexResult;
+import io.github.jmecn.minecraftwebexport.model.emi.item.ItemsLangExportResult;
 import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.RecipeWriteResult;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembersResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
-import io.github.jmecn.minecraftwebexport.pipeline.Planner;
-import net.minecraft.client.Minecraft;
-import net.minecraft.server.MinecraftServer;
-
+import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
+import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.MinecraftServer;
 
-public final class Orchestrator {
+public final class Pipeline {
 
-
-    public EmiExportReport export(Path outputRoot, Minecraft client) throws IOException {
-        return export(outputRoot, client, Plan.full(Planner.collectExportableRecipeIds(client)));
+    private Pipeline() {
     }
 
-    public EmiExportReport export(Path outputRoot, Minecraft client, Plan plan) throws IOException {
+    public static ExportResult run(Path outputRoot, Path gameDirectory, Minecraft client) throws IOException {
+        Objects.requireNonNull(outputRoot, "outputRoot");
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        Objects.requireNonNull(client, "client");
+
+        Mode mode = Mode.current();
+        Scope scope = new Scope(outputRoot, gameDirectory, mode);
+        List<Module> modules = ModuleRegistry.modules();
+
+        for (Module module : modules) {
+            module.beforeEmiExport(scope, client);
+        }
+
+        Plan plan = Planner.plan(client, mode, modules, scope);
+        Seeds mergedSeeds = plan.mode() == Mode.FULL ? Seeds.empty() : plan.sourceSeeds();
+
+        if (plan.mode() == Mode.SCOPED) {
+            MweMod.LOGGER.info(
+                    "[export] scoped export via modules {} (recipes={})",
+                    modules.stream().map(Module::moduleId).toList(),
+                    plan.recipeIds().size());
+        }
+
+        EmiRunStats stats = exportEmi(outputRoot, client, plan);
+
+        ExportResult result = ExportResult.from(
+                scope,
+                plan,
+                outputRoot,
+                stats.recipesRequested(),
+                stats.recipesWritten(),
+                stats.itemIndexCount(),
+                stats.tagIndexCount(),
+                stats.languagesWritten(),
+                stats.iconsWritten(),
+                mergedSeeds,
+                modules);
+
+        for (Module module : modules) {
+            module.exportExtras(scope, result);
+        }
+        return result;
+    }
+
+    private static EmiRunStats exportEmi(Path outputRoot, Minecraft client, Plan plan) throws IOException {
         Set<String> recipeIds = plan.recipeIds();
         boolean langPrune = plan.mode() == Mode.FULL && Merger.isLangPruneEnabled();
         UsedKeysCollector langCollector = langPrune ? new UsedKeysCollector() : null;
 
-        CardWriteResult cards = exportRecipeCards(outputRoot, client, recipeIds, langCollector);
+        RecipeWriteResult recipes = exportRecipes(outputRoot, client, recipeIds, langCollector);
         client.renderBuffers().bufferSource().endBatch();
 
         MinecraftServer server = client.getSingleplayerServer();
-        Set<String> tagIds = plan.tagsForExport(cards.referencedTags());
-        if (plan.mode() == Mode.FULL && server != null && cards.written() > 0) {
+        Set<String> tagIds = plan.tagsForExport(recipes.referencedTags());
+        if (plan.mode() == Mode.FULL && server != null && recipes.written() > 0) {
             int layoutTagCount = tagIds.size();
-            tagIds = IndexWriter.planFullModeTagExport(
+            tagIds = ItemIndexExporter.planFullModeTagExport(
                     server,
-                    cards.layoutsByRecipeId(),
+                    recipes.layoutsByRecipeId(),
                     plan.seedItemsForIndex(),
-                    cards.referencedTags());
+                    recipes.referencedTags());
             MweMod.LOGGER.info(
                     "{} full tag export: {} -> {} tags",
                     Log.TAGS,
@@ -76,22 +125,22 @@ public final class Orchestrator {
             MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
         }
 
-        CategoryIndexResult categories = cards.written() > 0
-                ? io.github.jmecn.minecraftwebexport.emi.category.IndexWriter.export(outputRoot, client)
-                : new CategoryIndexResult(0, 0);
-        ItemIndexResult items = cards.written() > 0
-                ? IndexWriter.export(
+        CategoryIconResult categories = recipes.written() > 0
+                ? CategoryIconWriter.export(outputRoot, client)
+                : new CategoryIconResult(0, 0, 0, 0, 0);
+        ItemIndexResult items = recipes.written() > 0
+                ? ItemIndexExporter.export(
                         outputRoot,
                         server,
-                        cards.layoutsByRecipeId(),
+                        recipes.layoutsByRecipeId(),
                         plan.seedItemsForIndex())
                 : new ItemIndexResult(0, 0, 0, 0);
 
-        if (cards.written() > 0 && NameKeysWriter.isEnabled()) {
-            NameKeysWriter.export(outputRoot, client);
+        if (recipes.written() > 0 && NameKeysExporter.isEnabled()) {
+            NameKeysExporter.export(outputRoot, client);
         }
 
-        if (langCollector != null && cards.written() > 0) {
+        if (langCollector != null && recipes.written() > 0) {
             langCollector.collectFromCategoriesIndex(outputRoot);
             langCollector.collectFromItemNameKeys(outputRoot);
             langCollector.collectFromItemsIndex(outputRoot);
@@ -100,15 +149,14 @@ public final class Orchestrator {
         }
 
         Set<String> langKeys = resolveLangMergeKeys(plan, langCollector);
-        Path emiRoot = Paths.resolve(outputRoot, "");
+        Path emiRoot = EmiPaths.resolve(outputRoot, "");
         Path composeDir = emiRoot.resolve(Constants.COMPOSE_LANG_DIR);
         if (plan.mode() == Mode.SCOPED && items.itemCount() > 0) {
             langKeys = augmentScopedLangKeys(langKeys, plan, emiRoot);
         }
-        boolean langPruneForWeb = langPrune && langCollector != null;
         boolean composeLangForItems = items.itemCount() > 0
                 && Merger.isEnabled()
-                && (langPruneForWeb || plan.mode() == Mode.SCOPED);
+                && (langPrune || plan.mode() == Mode.SCOPED);
 
         if (composeLangForItems) {
             Merger.exportTo(composeDir, client, null, null, plan.hints());
@@ -118,24 +166,24 @@ public final class Orchestrator {
                 ? Merger.exportEmiLang(
                         outputRoot,
                         client,
-                        langPruneForWeb ? Merger.filterWebDeployKeys(langKeys) : langKeys,
+                        langPrune ? Merger.filterWebDeployKeys(langKeys) : langKeys,
                         plan.hints())
                 : emptyLangResult();
 
         List<String> languages = List.of();
-        SearchIndexResult itemsLang = SearchIndexResult.EMPTY;
-        if (items.itemCount() > 0 && SearchIndexWriter.isEnabled()) {
+        ItemsLangExportResult itemsLang = ItemsLangExportResult.EMPTY;
+        if (items.itemCount() > 0 && ItemsLangExporter.isEnabled()) {
             languages = exportedLanguages(outputRoot);
             if (languages.isEmpty()) {
                 languages = Languages.resolve(plan.hints()).stream().sorted().toList();
             }
             if (!languages.isEmpty()) {
-                itemsLang = SearchIndexWriter.export(outputRoot, languages, composeLangForItems);
+                itemsLang = ItemsLangExporter.export(outputRoot, languages, composeLangForItems);
             }
         }
 
         if (composeLangForItems && Files.isDirectory(composeDir)) {
-            try (var walk = Files.walk(composeDir)) {
+            try (Stream<Path> walk = Files.walk(composeDir)) {
                 walk.sorted(Comparator.reverseOrder()).forEach(path -> {
                     try {
                         Files.deleteIfExists(path);
@@ -150,33 +198,38 @@ public final class Orchestrator {
             languages = exportedLanguages(outputRoot);
         }
 
-        Set<String> itemsForIcons = plan.itemsForIcons(cards.referencedItems());
-        Set<String> fluidsForIcons = plan.fluidsForIcons(cards.referencedFluids());
+        Set<String> itemsForIcons = plan.itemsForIcons(recipes.referencedItems());
+        Set<String> fluidsForIcons = plan.fluidsForIcons(recipes.referencedFluids());
 
         ItemIconResult icons = ItemIconWriter.isEnabled()
                 ? ItemIconWriter.export(
-                outputRoot,
-                client,
-                itemsForIcons,
-                fluidsForIcons,
-                null,
-                cards.iconVariants())
+                        outputRoot,
+                        client,
+                        itemsForIcons,
+                        fluidsForIcons,
+                        null,
+                        recipes.iconVariants())
                 : emptyIconResult();
 
-        ManifestWriter.write(
-                outputRoot,
+        List<String> itemsLangLocales = itemsLang.locales();
+        ItemsLangRef itemsLangRef = itemsLangLocales.isEmpty()
+                ? null
+                : new ItemsLangRef(Constants.ITEMS_LANG_DIR, List.copyOf(itemsLangLocales));
+        Bundle bundle = Bundle.of(
+                recipes.imageScale(),
+                recipes.written(),
                 languages,
-                cards.imageScale(),
-                cards.written(),
-                itemsLang.locales());
+                PlaceholderRenderer.REGISTRY_ID,
+                itemsLangRef);
+        JsonIO.write(EmiPaths.resolve(outputRoot, Constants.BUNDLE_FILE), bundle);
 
-        TextureWriter.export(outputRoot, client, java.util.Set.of());
+        TextureWriter.export(outputRoot, client, Set.of());
 
         if (plan.mode() == Mode.SCOPED) {
             MweMod.LOGGER.info(
                     "{} scoped export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     Log.EMI,
-                    cards.written(),
+                    recipes.written(),
                     recipeIds.size(),
                     categories.categoryCount(),
                     items.itemCount(),
@@ -185,9 +238,9 @@ public final class Orchestrator {
                     icons.totalSpritesWritten());
         } else {
             MweMod.LOGGER.info(
-                    "{} export complete: {}/{} recipe cards, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    "{} export complete: {}/{} recipes, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     Log.EMI,
-                    cards.written(),
+                    recipes.written(),
                     recipeIds.size(),
                     categories.categoryCount(),
                     items.itemCount(),
@@ -196,14 +249,22 @@ public final class Orchestrator {
                     icons.totalSpritesWritten());
         }
 
-        return new EmiExportReport(
-                outputRoot,
+        return new EmiRunStats(
                 recipeIds.size(),
-                cards.written(),
+                recipes.written(),
                 items.itemCount(),
                 tags.tagsIndexed(),
                 langs.languagesWritten(),
                 icons.totalSpritesWritten());
+    }
+
+    private record EmiRunStats(
+            int recipesRequested,
+            int recipesWritten,
+            int itemIndexCount,
+            int tagIndexCount,
+            int languagesWritten,
+            int iconsWritten) {
     }
 
     private static Set<String> augmentScopedLangKeys(Set<String> langKeys, Plan plan, Path emiRoot) {
@@ -211,8 +272,8 @@ public final class Orchestrator {
         try {
             Set<String> merged = ClosureKeys.mergeClosureLangKeys(
                     seed,
-                    SearchIndexWriter.readIndexedItemIds(emiRoot),
-                    SearchIndexWriter.readFluidRegistryIds(emiRoot));
+                    ItemsLangExporter.readIndexedItemIds(emiRoot),
+                    ItemsLangExporter.readFluidRegistryIds(emiRoot));
             merged = ClosureKeys.mergeTagLangKeys(merged, plan.closureTagIds());
             return merged.isEmpty() ? null : merged;
         } catch (IOException e) {
@@ -232,28 +293,28 @@ public final class Orchestrator {
         return null;
     }
 
-    private static CardWriteResult exportRecipeCards(
+    private static RecipeWriteResult exportRecipes(
             Path outputRoot,
             Minecraft client,
             Set<String> recipeIds,
             UsedKeysCollector langCollector) throws IOException {
-        if (CardWriter.isEnabled()) {
-            return CardWriter.export(outputRoot, client, recipeIds, langCollector);
+        if (RecipeWriter.isEnabled()) {
+            return RecipeWriter.export(outputRoot, client, recipeIds, langCollector);
         }
-        MweMod.LOGGER.info("{} recipe card export disabled by configuration", Log.EMI);
-        return new CardWriteResult(
+        MweMod.LOGGER.info("{} recipe export disabled by configuration", Log.EMI);
+        return new RecipeWriteResult(
                 recipeIds.size(),
                 0,
                 0,
                 0,
                 0,
                 0,
-                CardWriter.imageScale(),
+                RecipeWriter.imageScale(),
                 Set.of(),
                 Set.of(),
                 Set.of(),
-                java.util.Map.of(),
-                java.util.Map.of());
+                Map.of(),
+                Map.of());
     }
 
     private static LangMergeResult emptyLangResult() {
@@ -265,11 +326,11 @@ public final class Orchestrator {
     }
 
     private static List<String> exportedLanguages(Path outputRoot) throws IOException {
-        Path langDir = Paths.resolve(outputRoot, Constants.LANG_DIR);
+        Path langDir = EmiPaths.resolve(outputRoot, Constants.LANG_DIR);
         if (!Files.isDirectory(langDir)) {
             return List.of();
         }
-        try (var stream = Files.list(langDir)) {
+        try (Stream<Path> stream = Files.list(langDir)) {
             return stream
                     .filter(Files::isRegularFile)
                     .map(path -> path.getFileName().toString())

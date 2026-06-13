@@ -2,6 +2,7 @@ package io.github.jmecn.minecraftwebexport.pipeline;
 
 import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.recipe.EmiRecipe;
+import dev.emi.emi.api.recipe.EmiRecipeManager;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ClosureResult;
@@ -10,13 +11,12 @@ import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
-import net.minecraft.client.Minecraft;
-import net.minecraft.server.MinecraftServer;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.MinecraftServer;
 
 public final class Planner {
 
@@ -58,7 +58,7 @@ public final class Planner {
         Set<String> recipeIds = resolveRecipeIds(mode, merged.recipeIds(), availableRecipes);
 
         MinecraftServer server = client.getSingleplayerServer();
-        ClosureResult closure = ClosureExpander.expand(server, merged);
+        ClosureResult closure = SeedClosureExpander.expand(server, merged);
 
         if (mode == Mode.SCOPED && merged.recipeIds().size() != recipeIds.size()) {
             MweMod.LOGGER.warn("[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
@@ -72,7 +72,7 @@ public final class Planner {
                 }
             }
             MweMod.LOGGER.info(
-                    "[export] scoped handbook recipes include {} EMI-hidden ids (exported anyway)",
+                    "[export] scoped recipes include {} EMI-hidden ids (exported anyway)",
                     hiddenFromEmi);
         }
 
@@ -130,7 +130,7 @@ public final class Planner {
 
     @Deprecated
     public static Set<String> collectAllRecipeIds() {
-        var manager = EmiApi.getRecipeManager();
+        EmiRecipeManager manager = EmiApi.getRecipeManager();
         if (manager == null) {
             return Set.of();
         }
@@ -144,7 +144,7 @@ public final class Planner {
     }
 
     public static Set<String> collectExportableRecipeIds(Minecraft client) {
-        var manager = EmiApi.getRecipeManager();
+        EmiRecipeManager manager = EmiApi.getRecipeManager();
         if (manager == null) {
             return Set.of();
         }

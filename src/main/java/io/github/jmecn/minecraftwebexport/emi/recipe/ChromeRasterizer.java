@@ -1,25 +1,24 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
 
 import dev.emi.emi.api.widget.Bounds;
+import dev.emi.emi.api.widget.DrawableWidget;
 import dev.emi.emi.api.widget.Widget;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Map;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 
 public final class ChromeRasterizer {
 
     private ChromeRasterizer() {
     }
-
 
     public static ChromeAsset rasterizeWidget(
             Minecraft client,
@@ -66,7 +65,7 @@ public final class ChromeRasterizer {
     }
 
     static boolean isDrawableWidget(Widget widget) {
-        if (widget instanceof dev.emi.emi.api.widget.DrawableWidget) {
+        if (widget instanceof DrawableWidget) {
             return true;
         }
         return widget.getClass().getName().endsWith(".DrawableWidget");

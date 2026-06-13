@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.bundle;
 
 import io.github.jmecn.minecraftwebexport.Constants;
-
 import java.util.List;
 import java.util.Objects;
 

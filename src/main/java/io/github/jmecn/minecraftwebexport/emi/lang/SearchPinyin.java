@@ -2,14 +2,13 @@ package io.github.jmecn.minecraftwebexport.emi.lang;
 
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import java.util.ArrayList;
+import java.util.List;
 import net.sourceforge.pinyin4j.PinyinHelper;
 import net.sourceforge.pinyin4j.format.HanyuPinyinCaseType;
 import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
 import net.sourceforge.pinyin4j.format.HanyuPinyinToneType;
 import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class SearchPinyin {
 

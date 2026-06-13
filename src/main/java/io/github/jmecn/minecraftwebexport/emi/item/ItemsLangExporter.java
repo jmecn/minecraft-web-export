@@ -1,18 +1,20 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
 import io.github.jmecn.minecraftwebexport.emi.lang.SearchPinyin;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.emi.item.SearchIndexResult;
+import io.github.jmecn.minecraftwebexport.model.emi.item.ItemsLangExportResult;
+import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
+import io.github.jmecn.minecraftwebexport.model.item.ItemsLang;
+import io.github.jmecn.minecraftwebexport.model.item.ItemsLangEntry;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,23 +27,24 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 
-public final class SearchIndexWriter {
+public final class ItemsLangExporter {
 
-    private SearchIndexWriter() {
+    private ItemsLangExporter() {
     }
-
 
     public static boolean isEnabled() {
         return !Boolean.getBoolean(Constants.PROP_SKIP_ITEMS_SEARCH_EXPORT);
     }
 
-    public static SearchIndexResult export(Path outputDir, List<String> languages) throws IOException {
+    public static ItemsLangExportResult export(Path outputDir, List<String> languages) throws IOException {
         return export(outputDir, languages, false);
     }
 
-    public static SearchIndexResult export(Path outputDir, List<String> languages, boolean readComposeLang) throws IOException {
-        Path bundleRoot = Paths.resolve(outputDir, "");
+    public static ItemsLangExportResult export(Path outputDir, List<String> languages, boolean readComposeLang)
+            throws IOException {
+        Path bundleRoot = EmiPaths.resolve(outputDir, "");
         List<String> itemIds = readItemIds(bundleRoot);
         Set<String> fluidRegistryIds = readFluidRegistryIds(bundleRoot);
         List<String> locales = resolveLocales(bundleRoot, languages);
@@ -51,14 +54,14 @@ public final class SearchIndexWriter {
                     Log.ITEMS_LANG,
                     itemIds.size(),
                     locales.size());
-            return new SearchIndexResult(0, itemIds.size(), List.of());
+            return ItemsLangExportResult.EMPTY;
         }
 
         Path searchRoot = bundleRoot.resolve(Constants.ITEMS_LANG_DIR);
         Files.createDirectories(searchRoot);
 
         Map<String, String> enUs = readLangTable(bundleRoot, Constants.DEFAULT_LANGUAGE, readComposeLang);
-        Map<String, String> nameKeysByRegistryId = NameKeysWriter.readNameKeys(outputDir);
+        Map<String, String> nameKeysByRegistryId = NameKeysExporter.readNameKeys(outputDir);
         List<String> writtenLocales = new ArrayList<>();
 
         for (String locale : locales) {
@@ -78,18 +81,15 @@ public final class SearchIndexWriter {
                     ? new RegistryResolver(enUs, Map.of(), nameKeysByRegistryId)
                     : null;
 
-            JsonArray items = new JsonArray();
+            List<ItemsLangEntry> entries = new ArrayList<>(itemIds.size());
             for (int i = 0; i < itemIds.size(); i++) {
                 String id = itemIds.get(i);
                 String kind = resolveRegistryKind(id, fluidRegistryIds, currentResolver);
                 String label = currentResolver.translateRegistry(id, kind);
-                JsonObject row = new JsonObject();
-                row.addProperty("id", id);
-                row.addProperty("label", label);
-                row.addProperty(
-                        "haystack",
-                        buildHaystack(id, kind, normalized, currentResolver, enResolver));
-                items.add(row);
+                entries.add(new ItemsLangEntry(
+                        id,
+                        label,
+                        buildHaystack(id, kind, normalized, currentResolver, enResolver)));
                 int n = i + 1;
                 if (n % Constants.SEARCH_INDEX_PROGRESS_EVERY == 0) {
                     MweMod.LOGGER.info(
@@ -108,12 +108,7 @@ public final class SearchIndexWriter {
                     itemIds.size(),
                     System.currentTimeMillis() - startedAt);
 
-            JsonObject payload = new JsonObject();
-            payload.addProperty("schema", 2);
-            payload.addProperty("locale", normalized);
-            payload.addProperty("itemCount", itemIds.size());
-            payload.add("items", items);
-
+            ItemsLang payload = ItemsLang.of(normalized, entries);
             Path out = searchRoot.resolve(normalized + ".json");
             MweMod.LOGGER.info("{} {}: writing {} ...", Log.ITEMS_LANG, normalized, out);
             JsonIO.writeLine(out, payload);
@@ -125,7 +120,7 @@ public final class SearchIndexWriter {
                     itemIds.size());
         }
 
-        return new SearchIndexResult(writtenLocales.size(), itemIds.size(), List.copyOf(writtenLocales));
+        return new ItemsLangExportResult(writtenLocales.size(), itemIds.size(), List.copyOf(writtenLocales));
     }
 
     static String normalizeLocale(String locale) {
@@ -223,20 +218,7 @@ public final class SearchIndexWriter {
         if (!Files.isRegularFile(indexPath)) {
             return Set.of();
         }
-        JsonObject index = JsonParser.parseString(Files.readString(indexPath)).getAsJsonObject();
-        if (!index.has(Constants.FLUID_REGISTRY_IDS_KEY) || !index.get(Constants.FLUID_REGISTRY_IDS_KEY).isJsonArray()) {
-            return Set.of();
-        }
-        Set<String> ids = new TreeSet<>();
-        for (JsonElement element : index.getAsJsonArray(Constants.FLUID_REGISTRY_IDS_KEY)) {
-            if (element.isJsonPrimitive()) {
-                String id = element.getAsString();
-                if (id != null && !id.isEmpty()) {
-                    ids.add(id);
-                }
-            }
-        }
-        return Set.copyOf(ids);
+        return Set.copyOf(JsonIO.read(indexPath, ItemIndex.class).fluidRegistryIds());
     }
 
     private static List<String> readItemIds(Path bundleRoot) throws IOException {
@@ -248,21 +230,11 @@ public final class SearchIndexWriter {
         if (!Files.isRegularFile(indexPath)) {
             return Set.of();
         }
-        JsonObject index = JsonParser.parseString(Files.readString(indexPath)).getAsJsonObject();
+        ItemIndex index = JsonIO.read(indexPath, ItemIndex.class);
         Set<String> ids = new TreeSet<>();
-        for (Map.Entry<String, JsonElement> entry : index.entrySet()) {
-            String key = entry.getKey();
-            if ("schema".equals(key)
-                    || Constants.FLUID_REGISTRY_IDS_KEY.equals(key)
-                    || !entry.getValue().isJsonArray()) {
-                continue;
-            }
+        for (Map.Entry<String, List<String>> entry : index.namespacePaths().entrySet()) {
             String namespace = entry.getKey();
-            for (JsonElement pathEl : entry.getValue().getAsJsonArray()) {
-                if (!pathEl.isJsonPrimitive()) {
-                    continue;
-                }
-                String path = pathEl.getAsString();
+            for (String path : entry.getValue()) {
                 if (path == null || path.isEmpty()) {
                     continue;
                 }
@@ -274,13 +246,13 @@ public final class SearchIndexWriter {
 
     private static List<String> resolveLocales(Path bundleRoot, List<String> languages) throws IOException {
         if (languages != null && !languages.isEmpty()) {
-            return languages.stream().map(SearchIndexWriter::normalizeLocale).distinct().sorted().toList();
+            return languages.stream().map(ItemsLangExporter::normalizeLocale).distinct().sorted().toList();
         }
         Path langDir = bundleRoot.resolve(Constants.LANG_DIR);
         if (!Files.isDirectory(langDir)) {
             return List.of(Constants.DEFAULT_LANGUAGE);
         }
-        try (var stream = Files.list(langDir)) {
+        try (Stream<Path> stream = Files.list(langDir)) {
             return stream
                     .filter(Files::isRegularFile)
                     .map(path -> path.getFileName().toString())
@@ -291,7 +263,8 @@ public final class SearchIndexWriter {
         }
     }
 
-    private static Map<String, String> readLangTable(Path bundleRoot, String locale, boolean composeLang) throws IOException {
+    private static Map<String, String> readLangTable(Path bundleRoot, String locale, boolean composeLang)
+            throws IOException {
         String dir = composeLang ? Constants.COMPOSE_LANG_DIR : Constants.LANG_DIR;
         Path langPath = bundleRoot.resolve(dir).resolve(locale + ".json");
         if (!Files.isRegularFile(langPath)) {

@@ -4,8 +4,14 @@ import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagExpansion;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembers;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -14,12 +20,6 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
-
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
 
 public final class ClosureExpander {
 
@@ -33,7 +33,7 @@ public final class ClosureExpander {
         if (tagId == null) {
             return new TagMembers(Set.of(), Set.of(), Set.of());
         }
-        var access = server.registryAccess();
+        RegistryAccess access = server.registryAccess();
         Registry<Item> items = access.registryOrThrow(Registries.ITEM);
         Registry<Block> blocks = access.registryOrThrow(Registries.BLOCK);
         Registry<Fluid> fluids = access.registryOrThrow(Registries.FLUID);
@@ -48,7 +48,7 @@ public final class ClosureExpander {
     }
 
     public static TagExpansion expand(MinecraftServer server, Set<String> seedTagRefs) {
-        var access = server.registryAccess();
+        RegistryAccess access = server.registryAccess();
         Registry<Item> items = access.registryOrThrow(Registries.ITEM);
         Registry<Block> blocks = access.registryOrThrow(Registries.BLOCK);
         Registry<Fluid> fluids = access.registryOrThrow(Registries.FLUID);

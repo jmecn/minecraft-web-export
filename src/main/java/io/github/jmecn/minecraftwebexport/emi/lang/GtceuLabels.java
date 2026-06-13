@@ -173,7 +173,7 @@ public final class GtceuLabels {
             return patterns;
         }
         String prefix = "item.gtceu.tool.";
-        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        Set<String> seen = new LinkedHashSet<>();
         for (String key : langTable.keySet()) {
             if (!key.startsWith(prefix)) {
                 continue;

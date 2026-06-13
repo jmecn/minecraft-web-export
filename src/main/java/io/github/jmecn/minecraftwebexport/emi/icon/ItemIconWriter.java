@@ -4,25 +4,11 @@ import com.google.common.io.MoreFiles;
 import com.google.common.io.RecursiveDeleteOption;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.ItemIconResult;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.client.model.data.ModelData;
-import net.minecraftforge.registries.ForgeRegistries;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,6 +21,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.registries.ForgeRegistries;
 
 public final class ItemIconWriter {
 
@@ -82,7 +84,7 @@ public final class ItemIconWriter {
             Set<String> onlyFluidIds,
             Map<String, Integer> usageWeights,
             Map<String, ItemStack> iconVariants) {
-        Path iconsRoot = Paths.resolve(outputDir, Constants.ICONS_DIR);
+        Path iconsRoot = EmiPaths.resolve(outputDir, Constants.ICONS_DIR);
         clearLegacyDirs(outputDir);
         clearDir(iconsRoot);
         return exportImpl(iconsRoot, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants);
@@ -164,10 +166,10 @@ public final class ItemIconWriter {
         int variantFailures = 0;
 
         AtlasBuilder.AtlasResult atlasResult;
-        try (var renderer = new OffScreenRenderer(cell, cell);
-             var atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights)) {
-            var bufferSource = client.renderBuffers().bufferSource();
-            var guiGraphics = new GuiGraphics(client, bufferSource);
+        try (OffScreenRenderer renderer = new OffScreenRenderer(cell, cell);
+             AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights)) {
+            MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
+            GuiGraphics guiGraphics = new GuiGraphics(client, bufferSource);
             PlaceholderRenderer.render(guiGraphics, renderer);
             atlas.place(PlaceholderRenderer.REGISTRY_ID, renderer);
 
@@ -241,7 +243,7 @@ public final class ItemIconWriter {
                 renderer.setupItemRendering();
                 int variantIndex = 0;
                 int variantTotal = variants.size();
-                for (var entry : variants.entrySet()) {
+                for (Map.Entry<String, ItemStack> entry : variants.entrySet()) {
                     variantIndex++;
                     try {
                         renderItemStackIcon(client, guiGraphics, renderer, entry.getValue());
@@ -353,7 +355,7 @@ public final class ItemIconWriter {
             if (item == null || item == Items.AIR) {
                 continue;
             }
-            if (item instanceof net.minecraft.world.item.BlockItem) {
+            if (item instanceof BlockItem) {
                 blockItems++;
             }
             ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
@@ -373,7 +375,7 @@ public final class ItemIconWriter {
             GuiGraphics guiGraphics,
             OffScreenRenderer renderer,
             ItemStack stack) {
-        var sprites = collectSprites(client, stack);
+        Set<TextureAtlasSprite> sprites = collectSprites(client, stack);
         Runnable draw = () -> {
             guiGraphics.renderItem(stack, 0, 0);
             guiGraphics.renderItemDecorations(client.font, stack, 0, 0, "");
@@ -387,7 +389,7 @@ public final class ItemIconWriter {
             OffScreenRenderer renderer,
             Item item) {
         ItemStack stack = new ItemStack(item);
-        var sprites = collectSprites(client, item);
+        Set<TextureAtlasSprite> sprites = collectSprites(client, item);
         Runnable draw = () -> {
             guiGraphics.renderItem(stack, 0, 0);
             guiGraphics.renderItemDecorations(client.font, stack, 0, 0, "");
@@ -413,10 +415,10 @@ public final class ItemIconWriter {
     }
 
     private static Set<TextureAtlasSprite> guessSprites(Collection<BakedModel> models) {
-        var result = Collections.newSetFromMap(new IdentityHashMap<TextureAtlasSprite, Boolean>());
-        var random = RandomSource.create(0);
-        for (var model : models) {
-            for (var quad : model.getQuads(null, null, random, ModelData.EMPTY, null)) {
+        Set<TextureAtlasSprite> result = Collections.newSetFromMap(new IdentityHashMap<TextureAtlasSprite, Boolean>());
+        RandomSource random = RandomSource.create(0);
+        for (BakedModel model : models) {
+            for (BakedQuad quad : model.getQuads(null, null, random, ModelData.EMPTY, null)) {
                 result.add(quad.getSprite());
             }
         }

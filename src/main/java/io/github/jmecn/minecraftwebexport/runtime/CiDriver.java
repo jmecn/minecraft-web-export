@@ -4,29 +4,22 @@ import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
-import io.github.jmecn.minecraftwebexport.pipeline.Coordinator;
+import io.github.jmecn.minecraftwebexport.pipeline.Pipeline;
+import java.nio.file.Path;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LoadingOverlay;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-import java.nio.file.Path;
-
 public final class CiDriver {
 
     private final Path gameDirectory;
     private final String outputRootOverride;
-    private final Coordinator coordinator;
 
     public CiDriver(Path gameDirectory, String outputRootOverride) {
-        this(gameDirectory, outputRootOverride, new Coordinator());
-    }
-
-    CiDriver(Path gameDirectory, String outputRootOverride, Coordinator coordinator) {
         this.gameDirectory = gameDirectory;
         this.outputRootOverride = outputRootOverride;
-        this.coordinator = coordinator;
     }
 
     public void register() {
@@ -36,7 +29,7 @@ public final class CiDriver {
                 OutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir(),
                 CiProperties.exportWarmupTicks(),
                 CiProperties.exportTimeoutSeconds());
-        MinecraftForge.EVENT_BUS.register(new AutoExportHandler(gameDirectory, outputRootOverride, coordinator));
+        MinecraftForge.EVENT_BUS.register(new AutoExportHandler(gameDirectory, outputRootOverride));
     }
 
     static boolean isFatalMenuScreen(Minecraft client) {
@@ -85,7 +78,6 @@ public final class CiDriver {
 
         private final Path gameDirectory;
         private final String outputRootOverride;
-        private final Coordinator coordinator;
         private final StateLogger stateLog;
 
         private Phase phase = Phase.ARMED;
@@ -94,10 +86,9 @@ public final class CiDriver {
         private int warmupTicks;
         private long startNanos;
 
-        AutoExportHandler(Path gameDirectory, String outputRootOverride, Coordinator coordinator) {
+        AutoExportHandler(Path gameDirectory, String outputRootOverride) {
             this.gameDirectory = gameDirectory;
             this.outputRootOverride = outputRootOverride;
-            this.coordinator = coordinator;
             this.stateLog = new StateLogger();
         }
 
@@ -245,7 +236,7 @@ public final class CiDriver {
             Path outputRoot = OutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir();
             MweMod.LOGGER.info("running EMI export to {} ...", outputRoot.toAbsolutePath());
             try {
-                ExportResult result = coordinator.run(outputRoot, gameDirectory, client);
+                ExportResult result = Pipeline.run(outputRoot, gameDirectory, client);
                 MweMod.LOGGER.info(
                         "EMI export finished (recipes={}/{}, items={}, tags={}, langs={}, icons={}), exiting 0",
                         result.recipesWritten(),

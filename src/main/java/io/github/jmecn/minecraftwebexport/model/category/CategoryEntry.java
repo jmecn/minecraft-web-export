@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.category;
 
+
 public record CategoryEntry(
         String id,
         int order,

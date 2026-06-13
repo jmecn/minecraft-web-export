@@ -1,12 +1,11 @@
 package io.github.jmecn.minecraftwebexport.model.emi.recipe;
 
 import com.google.gson.JsonObject;
-import net.minecraft.world.item.ItemStack;
-
 import java.util.Map;
 import java.util.Set;
+import net.minecraft.world.item.ItemStack;
 
-public record CardWriteResult(
+public record RecipeWriteResult(
         int requested,
         int written,
         int missing,

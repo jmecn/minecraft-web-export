@@ -2,10 +2,13 @@ package io.github.jmecn.minecraftwebexport.emi.icon;
 
 import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
+import dev.emi.emi.api.recipe.EmiRecipeManager;
+import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
+import dev.emi.emi.data.EmiRecipeCategoryProperties;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.category.IconRenderer;
 import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
@@ -15,15 +18,14 @@ import io.github.jmecn.minecraftwebexport.model.category.CategoryEntry;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryIconSprite;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import io.github.jmecn.minecraftwebexport.model.emi.icon.CategoryIconResult;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.world.item.ItemStack;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.item.ItemStack;
 
 public final class CategoryIconWriter {
 
@@ -35,7 +37,7 @@ public final class CategoryIconWriter {
     }
 
     public static CategoryIconResult export(Path outputRoot, Minecraft client) throws IOException {
-        var manager = EmiApi.getRecipeManager();
+        EmiRecipeManager manager = EmiApi.getRecipeManager();
         if (manager == null) {
             MweMod.LOGGER.warn("{} EMI recipe manager unavailable - skipping category icons", Log.EMI);
             return new CategoryIconResult(0, 0, 0, 0, 0);
@@ -55,12 +57,12 @@ public final class CategoryIconWriter {
         if (isEnabled() && !categories.isEmpty()) {
             int cell = ExportSizes.categoryIconCellSize();
             int atlasMax = ExportSizes.atlasMaxSize();
-            Path iconsRoot = Paths.resolve(outputRoot, Constants.CATEGORY_ICONS_DIR);
+            Path iconsRoot = EmiPaths.resolve(outputRoot, Constants.CATEGORY_ICONS_DIR);
             List<AtlasPagePlan> layout = AtlasLayout.plan(categories.size(), cell, atlasMax);
 
-            var bufferSource = client.renderBuffers().bufferSource();
-            try (var renderer = new OffScreenRenderer(cell, cell);
-                 var atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "category", layout, null)) {
+            MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
+            try (OffScreenRenderer renderer = new OffScreenRenderer(cell, cell);
+                 AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "category", layout, null)) {
                 GuiGraphics guiGraphics = new GuiGraphics(client, bufferSource);
                 PlaceholderRenderer.render(guiGraphics, renderer);
                 atlas.place(PlaceholderRenderer.REGISTRY_ID, renderer);
@@ -79,7 +81,7 @@ public final class CategoryIconWriter {
                         }
                         if (ok) {
                             atlas.place(categoryId, renderer);
-                            categories.set(i, categories.get(i).withIcon(toSprite(atlas.spriteFor(categoryId))));
+                            categories.set(i, categories.get(i).withIcon(atlas.spriteFor(categoryId)));
                             placed++;
                         } else {
                             failures++;
@@ -106,7 +108,7 @@ public final class CategoryIconWriter {
 
         int cellSize = ExportSizes.categoryIconCellSize();
         CategoriesIndex index = CategoriesIndex.of(cellSize, Constants.CATEGORY_ICONS_DIR, categories);
-        Path indexFile = Paths.resolve(outputRoot, Constants.CATEGORIES_INDEX_FILE);
+        Path indexFile = EmiPaths.resolve(outputRoot, Constants.CATEGORIES_INDEX_FILE);
         JsonIO.write(indexFile, index);
         long indexBytes = JsonIO.toUtf8Bytes(index).length;
 
@@ -123,22 +125,9 @@ public final class CategoryIconWriter {
 
     private static CategoryEntry buildCategoryEntry(EmiRecipeCategory category, int order) {
         String categoryId = category.getId().toString();
-        int priority = dev.emi.emi.data.EmiRecipeCategoryProperties.getOrder(category);
+        int priority = EmiRecipeCategoryProperties.getOrder(category);
         Integer priorityField = priority != 0 ? priority : null;
         return new CategoryEntry(categoryId, order, priorityField, LangKeys.resolveNameKey(category), null);
-    }
-
-    private static CategoryIconSprite toSprite(Map<String, Object> sprite) {
-        if (sprite == null || sprite.isEmpty()) {
-            return null;
-        }
-        Object page = sprite.get("page");
-        Object x = sprite.get("x");
-        Object y = sprite.get("y");
-        if (page instanceof Number pageNumber && x instanceof Number xNumber && y instanceof Number yNumber) {
-            return new CategoryIconSprite(pageNumber.intValue(), xNumber.intValue(), yNumber.intValue());
-        }
-        return null;
     }
 
     private static boolean renderWorkstationFallback(
@@ -146,11 +135,11 @@ public final class CategoryIconWriter {
             GuiGraphics guiGraphics,
             OffScreenRenderer renderer,
             EmiRecipeCategory category) {
-        var manager = EmiApi.getRecipeManager();
+        EmiRecipeManager manager = EmiApi.getRecipeManager();
         if (manager == null) {
             return false;
         }
-        for (var workstation : manager.getWorkstations(category)) {
+        for (EmiIngredient workstation : manager.getWorkstations(category)) {
             if (workstation == null) {
                 continue;
             }

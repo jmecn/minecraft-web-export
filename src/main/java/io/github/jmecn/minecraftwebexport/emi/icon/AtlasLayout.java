@@ -1,6 +1,6 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 
+import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
 import java.util.ArrayList;
 import java.util.List;
 

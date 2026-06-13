@@ -7,13 +7,6 @@ import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.api.widget.WidgetHolder;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.LayoutBuildResult;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 public final class LayoutBuilder {
 
@@ -47,28 +44,8 @@ public final class LayoutBuilder {
         return true;
     }
 
-    public static int layoutScale() {
+    public     static int layoutScale() {
         return Math.max(1, Integer.getInteger(Constants.PROP_RECIPE_LAYOUT_SCALE, Constants.DEFAULT_RECIPE_LAYOUT_SCALE));
-    }
-
-    public static LayoutBuildResult export(Path outputDir, Minecraft client, Set<String> recipeIds) throws IOException {
-        CardWriteResult cards = CardWriter.export(outputDir, client, recipeIds, null);
-        return new LayoutBuildResult(
-                cards.requested(),
-                cards.written(),
-                cards.missing(),
-                cards.failures(),
-                0,
-                0,
-                0,
-                cards.metaBytes(),
-                0,
-                cards.referencedItems(),
-                cards.referencedFluids(),
-                cards.referencedTags(),
-                cards.iconVariants(),
-                new TextureWriteResult(0, 0, 0, 0),
-                BundleMods.empty());
     }
 
     static JsonObject buildLayoutInMemory(
@@ -92,7 +69,7 @@ public final class LayoutBuilder {
                 referencedTags,
                 iconVariants,
                 null,
-                java.util.Map.of(),
+                Map.of(),
                 chromeWritten,
                 chromeDedupedCount);
     }
@@ -175,7 +152,7 @@ public final class LayoutBuilder {
         if (!Files.isDirectory(root)) {
             return 0;
         }
-        try (var walk = Files.walk(root)) {
+        try (Stream<Path> walk = Files.walk(root)) {
             return walk.filter(Files::isRegularFile).mapToLong(path -> {
                 try {
                     return Files.size(path);

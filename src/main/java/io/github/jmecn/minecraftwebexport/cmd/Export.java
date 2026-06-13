@@ -2,21 +2,15 @@ package io.github.jmecn.minecraftwebexport.cmd;
 
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Orchestrator;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
-import io.github.jmecn.minecraftwebexport.model.emi.EmiExportReport;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
-import io.github.jmecn.minecraftwebexport.pipeline.Planner;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
+import io.github.jmecn.minecraftwebexport.pipeline.Pipeline;
 import io.github.jmecn.minecraftwebexport.runtime.OutputPaths;
+import java.io.IOException;
+import java.nio.file.Path;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.List;
 
 public final class Export {
 
@@ -42,20 +36,18 @@ public final class Export {
 
             Path gameDir = client.gameDirectory.toPath();
             Path outputRoot = OutputPaths.resolve(gameDir, null).rootDir();
-            Scope scope = new Scope(outputRoot, gameDir, Mode.FULL);
-            Plan plan = Planner.plan(client, Mode.FULL, List.of(), scope);
-            EmiExportReport report = new Orchestrator().export(outputRoot, client, plan);
+            ExportResult result = Pipeline.run(outputRoot, gameDir, client);
 
             String summary = String.format(
                     "%swrote %s (recipes=%d/%d, items=%d, tags=%d, langs=%d, icons=%d)",
                     Constants.COMMAND_LOG_PREFIX,
-                    report.outputRoot().toAbsolutePath(),
-                    report.recipesWritten(),
-                    report.recipesRequested(),
-                    report.itemIndexCount(),
-                    report.tagIndexCount(),
-                    report.languagesWritten(),
-                    report.iconsWritten());
+                    result.outputRoot().toAbsolutePath(),
+                    result.recipesWritten(),
+                    result.recipesRequested(),
+                    result.itemIndexCount(),
+                    result.tagIndexCount(),
+                    result.languagesWritten(),
+                    result.iconsWritten());
             source.sendSystemMessage(Component.literal(summary));
             MweMod.LOGGER.info(summary);
             return 1;

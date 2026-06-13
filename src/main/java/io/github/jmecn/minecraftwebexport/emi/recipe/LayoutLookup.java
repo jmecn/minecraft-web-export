@@ -4,10 +4,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.PackRef;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -63,7 +62,7 @@ final class LayoutLookup {
         if (cached != null) {
             return cached;
         }
-        Path routePath = Paths.resolve(
+        Path routePath = EmiPaths.resolve(
                 outputDir,
                 Constants.RECIPES_ROUTES_DIR + "/" + namespace + "/" + routeFile + ".json");
         if (!Files.isRegularFile(routePath)) {
@@ -80,7 +79,7 @@ final class LayoutLookup {
         if (cached != null) {
             return cached;
         }
-        Path packPath = Paths.resolve(
+        Path packPath = EmiPaths.resolve(
                 outputDir,
                 Constants.RECIPES_LAYOUT_PACKS_DIR + "/" + namespace + "/" + packFile + ".json");
         if (!Files.isRegularFile(packPath)) {

@@ -2,16 +2,15 @@ package io.github.jmecn.minecraftwebexport.emi.lang;
 
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 
 final class VanillaSupplement {
 
@@ -25,9 +24,9 @@ final class VanillaSupplement {
                         || key.startsWith("fluid.minecraft."));
     }
 
-    static int supplement(Map<String, String> merged, Minecraft client, String langCode, Set<String> onlyKeys) {
+    static void supplement(Map<String, String> merged, Minecraft client, String langCode, Set<String> onlyKeys) {
         if (onlyKeys == null || onlyKeys.isEmpty()) {
-            return 0;
+            return;
         }
         Set<String> missing = new TreeSet<>();
         for (String key : onlyKeys) {
@@ -36,7 +35,7 @@ final class VanillaSupplement {
             }
         }
         if (missing.isEmpty()) {
-            return 0;
+            return;
         }
 
         List<String> locales = new ArrayList<>();
@@ -68,7 +67,6 @@ final class VanillaSupplement {
                     langCode,
                     added);
         }
-        return added;
     }
 
     private static int copyMissingFromMinecraftPack(

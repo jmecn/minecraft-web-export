@@ -2,21 +2,20 @@ package io.github.jmecn.minecraftwebexport.emi.tag;
 
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembers;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembersResult;
 import io.github.jmecn.minecraftwebexport.model.tag.TagValues;
 import io.github.jmecn.minecraftwebexport.model.tag.TagsCatalog;
-import net.minecraft.server.MinecraftServer;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeSet;
+import net.minecraft.server.MinecraftServer;
 
 public final class MembersIndexWriter {
 
@@ -29,7 +28,7 @@ public final class MembersIndexWriter {
     }
 
     public static TagMembersResult export(Path outputDir, MinecraftServer server, Set<String> tagIds) throws IOException {
-        Path tagsDir = Paths.resolve(outputDir, Constants.TAGS_DIR);
+        Path tagsDir = EmiPaths.resolve(outputDir, Constants.TAGS_DIR);
         Files.createDirectories(tagsDir);
 
         int memberRefs = 0;
@@ -112,7 +111,7 @@ public final class MembersIndexWriter {
                 new ArrayList<>(itemTags),
                 new ArrayList<>(blockTags),
                 new ArrayList<>(fluidTags));
-        Path indexFile = Paths.resolve(outputDir, Constants.TAGS_INDEX_FILE);
+        Path indexFile = EmiPaths.resolve(outputDir, Constants.TAGS_INDEX_FILE);
         JsonIO.write(indexFile, catalog);
         return JsonIO.toUtf8Bytes(catalog).length;
     }
@@ -166,7 +165,7 @@ public final class MembersIndexWriter {
         }
 
         Path toTagFilePath(Path outputDir, TagKind kind) {
-            return Paths.resolve(
+            return EmiPaths.resolve(
                     outputDir,
                     Constants.TAGS_DIR + "/" + namespace + "/" + kind.dirName + "/" + path + ".json");
         }

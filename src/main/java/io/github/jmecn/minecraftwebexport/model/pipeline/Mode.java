@@ -1,6 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.pipeline;
-import io.github.jmecn.minecraftwebexport.Constants;
 
+import io.github.jmecn.minecraftwebexport.Constants;
 import java.util.Locale;
 
 public enum Mode {

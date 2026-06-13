@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.ModEntry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -39,10 +39,10 @@ class RoutePackWriterTest {
         assertEquals(1, minecraft.packs().size());
         assertEquals(1, emi.packs().size());
 
-        Path minecraftRoute = Paths.resolve(
+        Path minecraftRoute = EmiPaths.resolve(
                 tempDir,
                 Constants.RECIPES_ROUTES_DIR + "/minecraft/" + minecraft.routes().get(0) + ".json");
-        Path emiRoute = Paths.resolve(
+        Path emiRoute = EmiPaths.resolve(
                 tempDir,
                 Constants.RECIPES_ROUTES_DIR + "/emi/" + emi.routes().get(0) + ".json");
         assertTrue(Files.isRegularFile(minecraftRoute));
@@ -56,7 +56,7 @@ class RoutePackWriterTest {
         assertEquals(0, minecraftRoutes.get("yellow_bed").getAsInt());
         assertEquals(0, emiRoutes.get("/foo/bar").getAsInt());
 
-        Path minecraftPack = Paths.resolve(
+        Path minecraftPack = EmiPaths.resolve(
                 tempDir,
                 Constants.RECIPES_LAYOUT_PACKS_DIR + "/minecraft/" + minecraft.packs().get(0).file() + ".json");
         JsonObject packBody = JsonParser.parseString(Files.readString(minecraftPack)).getAsJsonObject();

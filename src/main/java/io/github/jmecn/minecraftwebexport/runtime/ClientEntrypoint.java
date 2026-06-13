@@ -5,26 +5,14 @@ import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
-import io.github.jmecn.minecraftwebexport.pipeline.Coordinator;
+import io.github.jmecn.minecraftwebexport.pipeline.Pipeline;
+import java.nio.file.Path;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-import java.nio.file.Path;
-import java.util.Objects;
-
 public final class ClientEntrypoint {
-
-    private final Coordinator coordinator;
-
-    public ClientEntrypoint() {
-        this(new Coordinator());
-    }
-
-    ClientEntrypoint(Coordinator coordinator) {
-        this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
-    }
 
     public void armIfEnabled(Path gameDirectory) {
         if (!Boolean.getBoolean(Constants.PROP_EXPORT_ENABLED)) {
@@ -35,8 +23,7 @@ public final class ClientEntrypoint {
         }
         MinecraftForge.EVENT_BUS.register(new AutoExportWhenWorldReady(
                 gameDirectory,
-                System.getProperty(Constants.PROP_EXPORT_OUTPUT_DIR),
-                coordinator));
+                System.getProperty(Constants.PROP_EXPORT_OUTPUT_DIR)));
     }
 
     private static int warmupTicks() {
@@ -47,19 +34,14 @@ public final class ClientEntrypoint {
 
         private final Path gameDirectory;
         private final String outputRootOverride;
-        private final Coordinator coordinator;
 
         private boolean finished;
         private int readyTicks;
         private int failureCount;
 
-        private AutoExportWhenWorldReady(
-                Path gameDirectory,
-                String outputRootOverride,
-                Coordinator coordinator) {
+        private AutoExportWhenWorldReady(Path gameDirectory, String outputRootOverride) {
             this.gameDirectory = gameDirectory;
             this.outputRootOverride = outputRootOverride;
-            this.coordinator = coordinator;
         }
 
         @SubscribeEvent
@@ -87,7 +69,7 @@ public final class ClientEntrypoint {
 
             Path outputRoot = OutputPaths.resolve(gameDirectory, outputRootOverride).rootDir();
             try {
-                ExportResult result = coordinator.run(outputRoot, gameDirectory, client);
+                ExportResult result = Pipeline.run(outputRoot, gameDirectory, client);
                 finished = true;
                 MweMod.LOGGER.info(
                         "{} wrote {} (recipes={}, items={}, tags={}, langs={}, icons={})",

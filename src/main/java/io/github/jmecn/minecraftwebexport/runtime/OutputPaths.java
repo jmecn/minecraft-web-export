@@ -1,7 +1,7 @@
 package io.github.jmecn.minecraftwebexport.runtime;
+
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.pipeline.ModuleRegistry;
-
 import java.nio.file.Path;
 import java.util.Objects;
 

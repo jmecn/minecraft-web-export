@@ -2,10 +2,10 @@ package io.github.jmecn.minecraftwebexport.emi.lang;
 
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 final class GtMaterialFacts {
@@ -218,7 +218,7 @@ final class GtMaterialFacts {
     }
 
     static String tagPrefixLangKey(
-            String langSuffix, String namespace, String materialPath, java.util.Map<String, String> langTable) {
+            String langSuffix, String namespace, String materialPath, Map<String, String> langTable) {
         String plain = "tagprefix." + langSuffix;
         String polymer = "tagprefix.polymer." + langSuffix;
         Optional<Object> materialOpt = material(namespace, materialPath);
@@ -232,7 +232,7 @@ final class GtMaterialFacts {
         return plain;
     }
 
-    private static boolean langKeyPresent(java.util.Map<String, String> langTable, String key) {
+    private static boolean langKeyPresent(Map<String, String> langTable, String key) {
         return langTable != null && langTable.containsKey(key);
     }
 

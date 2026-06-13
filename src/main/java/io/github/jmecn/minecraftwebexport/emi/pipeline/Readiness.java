@@ -1,6 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.pipeline;
 
 import dev.emi.emi.api.EmiApi;
+import dev.emi.emi.api.recipe.EmiRecipeManager;
 import dev.emi.emi.runtime.EmiReloadManager;
 import net.minecraft.client.Minecraft;
 
@@ -34,7 +35,7 @@ public final class Readiness {
         if (!EmiReloadManager.isLoaded()) {
             return false;
         }
-        var manager = EmiApi.getRecipeManager();
+        EmiRecipeManager manager = EmiApi.getRecipeManager();
         return manager != null && !manager.getRecipes().isEmpty();
     }
 }

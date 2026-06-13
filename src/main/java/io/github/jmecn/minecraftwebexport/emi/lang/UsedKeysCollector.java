@@ -4,12 +4,15 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.bundle.Paths;
-import io.github.jmecn.minecraftwebexport.emi.item.NameKeysWriter;
-
+import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
+import io.github.jmecn.minecraftwebexport.emi.item.NameKeysExporter;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
+import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -26,27 +29,17 @@ public final class UsedKeysCollector {
         return Set.copyOf(keys);
     }
 
-    public void collectMeta(JsonObject meta) {
-        if (meta == null) {
+    public void collectMeta(RecipeMeta meta) {
+        if (meta == null || meta.widgets() == null) {
             return;
         }
-        JsonElement widgets = meta.get("widgets");
-        if (widgets == null || !widgets.isJsonArray()) {
-            return;
-        }
-        for (JsonElement element : widgets.getAsJsonArray()) {
-            if (!element.isJsonObject()) {
-                continue;
-            }
-            JsonObject widget = element.getAsJsonObject();
-            if (widget.has("interaction") && widget.get("interaction").isJsonObject()) {
-                collectInteraction(widget.getAsJsonObject("interaction"));
-            }
+        for (RecipeWidget widget : meta.widgets()) {
+            collectInteraction(widget.interaction());
         }
     }
 
     public void collectFromCategoriesIndex(Path outputDir) throws IOException {
-        Path indexFile = Paths.resolve(outputDir, Constants.CATEGORIES_INDEX_FILE);
+        Path indexFile = EmiPaths.resolve(outputDir, Constants.CATEGORIES_INDEX_FILE);
         if (!Files.isRegularFile(indexFile)) {
             return;
         }
@@ -73,7 +66,7 @@ public final class UsedKeysCollector {
     }
 
     public void collectFromItemNameKeys(Path outputDir) throws IOException {
-        for (String key : NameKeysWriter.readNameKeys(outputDir).values()) {
+        for (String key : NameKeysExporter.readNameKeys(outputDir).values()) {
             if (key != null && !key.isBlank()) {
                 keys.add(key);
             }
@@ -81,12 +74,12 @@ public final class UsedKeysCollector {
     }
 
     public void collectFromItemsIndex(Path outputDir) throws IOException {
-        Path indexFile = Paths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
+        Path indexFile = EmiPaths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexFile)) {
             return;
         }
         JsonObject index = JsonParser.parseString(Files.readString(indexFile)).getAsJsonObject();
-        for (var entry : index.entrySet()) {
+        for (Map.Entry<String, JsonElement> entry : index.entrySet()) {
             String ns = entry.getKey();
             if ("schema".equals(ns)) {
                 continue;
@@ -117,7 +110,7 @@ public final class UsedKeysCollector {
     }
 
     public void collectFromTagsIndex(Path outputDir) throws IOException {
-        Path indexFile = Paths.resolve(outputDir, Constants.TAGS_INDEX_FILE);
+        Path indexFile = EmiPaths.resolve(outputDir, Constants.TAGS_INDEX_FILE);
         if (!Files.isRegularFile(indexFile)) {
             return;
         }
@@ -135,40 +128,38 @@ public final class UsedKeysCollector {
         }
     }
 
-    private void collectInteraction(JsonObject interaction) {
+    private void collectInteraction(WidgetInteraction interaction) {
         if (interaction == null) {
             return;
         }
-        String kind = stringProp(interaction, "kind");
+        String kind = interaction.kind();
         if ("item".equals(kind)) {
-            if (interaction.has("id") && interaction.get("id").isJsonPrimitive()) {
-                addRegistryItem(interaction.get("id").getAsString());
+            if (interaction.id() != null) {
+                addRegistryItem(interaction.id());
             }
-            if (interaction.has("nbt")) {
-                collectFluidFromNbt(interaction.get("nbt"));
+            if (interaction.nbt() != null) {
+                collectFluidFromNbt(interaction.nbt());
             }
             return;
         }
         if ("fluid".equals(kind)) {
-            if (interaction.has("id") && interaction.get("id").isJsonPrimitive()) {
-                addRegistryFluid(interaction.get("id").getAsString());
+            if (interaction.id() != null) {
+                addRegistryFluid(interaction.id());
             }
             return;
         }
         if ("tag".equals(kind)) {
-            if (interaction.has("tag") && interaction.get("tag").isJsonPrimitive()) {
-                addTag(interaction.get("tag").getAsString());
+            if (interaction.tag() != null) {
+                addTag(interaction.tag());
             }
-            if (interaction.has("displayId") && interaction.get("displayId").isJsonPrimitive()) {
-                addRegistryItem(interaction.get("displayId").getAsString());
+            if (interaction.displayId() != null) {
+                addRegistryItem(interaction.displayId());
             }
             return;
         }
-        if ("list".equals(kind) && interaction.has("entries") && interaction.get("entries").isJsonArray()) {
-            for (JsonElement entry : interaction.get("entries").getAsJsonArray()) {
-                if (entry.isJsonObject()) {
-                    collectInteraction(entry.getAsJsonObject());
-                }
+        if ("list".equals(kind) && interaction.entries() != null) {
+            for (WidgetInteraction entry : interaction.entries()) {
+                collectInteraction(entry);
             }
         }
     }
@@ -197,12 +188,5 @@ public final class UsedKeysCollector {
         keys.add("tag.item." + dotted);
         keys.add("tag.block." + dotted);
         keys.add("tag.fluid." + dotted);
-    }
-
-    private static String stringProp(JsonObject object, String key) {
-        if (object.has(key) && object.get(key).isJsonPrimitive()) {
-            return object.get(key).getAsString();
-        }
-        return null;
     }
 }

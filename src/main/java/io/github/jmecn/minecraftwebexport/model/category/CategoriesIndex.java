@@ -1,7 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.category;
 
 import io.github.jmecn.minecraftwebexport.Constants;
-
 import java.util.List;
 
 public record CategoriesIndex(

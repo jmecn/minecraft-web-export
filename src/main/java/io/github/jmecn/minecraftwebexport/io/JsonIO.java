@@ -2,7 +2,8 @@ package io.github.jmecn.minecraftwebexport.io;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
+import io.github.jmecn.minecraftwebexport.io.gson.ItemIndexTypeAdapter;
+import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -15,7 +16,9 @@ import java.util.Objects;
 
 public final class JsonIO {
 
-    public static final Gson GSON = new GsonBuilder().create();
+    public static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(ItemIndex.class, new ItemIndexTypeAdapter())
+            .create();
 
     private JsonIO() {}
 

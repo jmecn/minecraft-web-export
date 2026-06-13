@@ -9,8 +9,11 @@ import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import java.util.Set;
+import java.util.TreeSet;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -33,15 +36,15 @@ public final class Visibility {
         return !Boolean.getBoolean(Constants.PROP_SKIP_EMI_VISIBILITY_FILTER);
     }
 
-    public static java.util.Set<String> filterExportableRecipeIds(MinecraftServer server, Iterable<EmiRecipe> recipes) {
-        java.util.Set<String> ids = new java.util.TreeSet<>();
+    public static Set<String> filterExportableRecipeIds(MinecraftServer server, Iterable<EmiRecipe> recipes) {
+        Set<String> ids = new TreeSet<>();
         if (!isEnabled()) {
             for (EmiRecipe recipe : recipes) {
                 if (recipe != null && recipe.getId() != null) {
                     ids.add(recipe.getId().toString());
                 }
             }
-            return java.util.Set.copyOf(ids);
+            return Set.copyOf(ids);
         }
         int skippedDisabled = 0;
         int skippedHiddenTag = 0;
@@ -65,7 +68,7 @@ public final class Visibility {
                 skippedDisabled + skippedHiddenTag,
                 skippedDisabled,
                 skippedHiddenTag);
-        return java.util.Set.copyOf(ids);
+        return Set.copyOf(ids);
     }
 
     public static boolean shouldExportRecipe(EmiRecipe recipe, MinecraftServer server) {
@@ -113,7 +116,7 @@ public final class Visibility {
         if (location == null) {
             return false;
         }
-        var access = server.registryAccess();
+        RegistryAccess access = server.registryAccess();
         Registry<Item> items = access.registryOrThrow(Registries.ITEM);
         Registry<Block> blocks = access.registryOrThrow(Registries.BLOCK);
         Registry<Fluid> fluids = access.registryOrThrow(Registries.FLUID);

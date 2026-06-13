@@ -2,6 +2,7 @@ package io.github.jmecn.minecraftwebexport.emi.recipe;
 
 import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.recipe.EmiRecipe;
+import dev.emi.emi.api.recipe.EmiRecipeManager;
 import net.minecraft.resources.ResourceLocation;
 
 public final class Resolver {
@@ -11,7 +12,7 @@ public final class Resolver {
 
     public static boolean isEmiAvailable() {
         try {
-            Class.forName("dev.emi.emi.api.EmiApi");
+            Class.forName("EmiApi");
             return EmiApi.getRecipeManager() != null;
         } catch (Throwable t) {
             return false;
@@ -19,7 +20,7 @@ public final class Resolver {
     }
 
     public static EmiRecipe resolve(String recipeId) {
-        var manager = EmiApi.getRecipeManager();
+        EmiRecipeManager manager = EmiApi.getRecipeManager();
         if (manager == null) {
             return null;
         }

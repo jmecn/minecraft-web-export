@@ -102,7 +102,7 @@ public final class Constants {
     public static final String PROP_ICON_LOG_STRIDE = "minecraftWebExport.iconLogStride";
     public static final String PROP_ITEMS_INDEX_SCAN_LOG_STRIDE = "minecraftWebExport.itemsIndexScanLogStride";
     public static final String PROP_ITEMS_INDEX_WRITE_LOG_STRIDE = "minecraftWebExport.itemsIndexWriteLogStride";
-    public static final String PROP_RECIPE_CARD_LOG_STRIDE = "minecraftWebExport.recipeCardLogStride";
+    public static final String PROP_RECIPE_LOG_STRIDE = "minecraftWebExport.recipeCardLogStride";
     public static final String PROP_LAYOUT_LOG_STRIDE = "minecraftWebExport.layoutLogStride";
 
     public static final String PROP_SKIP_ITEM_ICON_EXPORT = "minecraftWebExport.skipItemIconExport";

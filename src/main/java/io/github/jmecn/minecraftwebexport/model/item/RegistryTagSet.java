@@ -1,35 +1,37 @@
 package io.github.jmecn.minecraftwebexport.model.item;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public record RegistryTagSet(List<String> items, List<String> blocks, List<String> fluids) {
 
     public RegistryTagSet {
-        items = List.copyOf(items == null ? List.of() : items);
-        blocks = List.copyOf(blocks == null ? List.of() : blocks);
-        fluids = List.copyOf(fluids == null ? List.of() : fluids);
+        items = items == null ? null : List.copyOf(items);
+        blocks = blocks == null ? null : List.copyOf(blocks);
+        fluids = fluids == null ? null : List.copyOf(fluids);
     }
 
     public boolean isEmpty() {
-        return items.isEmpty() && blocks.isEmpty() && fluids.isEmpty();
+        return (items == null || items.isEmpty())
+                && (blocks == null || blocks.isEmpty())
+                && (fluids == null || fluids.isEmpty());
     }
 
     public static RegistryTagSet empty() {
-        return new RegistryTagSet(List.of(), List.of(), List.of());
+        return new RegistryTagSet(null, null, null);
     }
 
-    public java.util.Map<String, Object> toMap() {
-        java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
-        if (!items.isEmpty()) {
-            map.put("items", new ArrayList<>(items));
+    public static RegistryTagSet of(Collection<String> items, Collection<String> blocks, Collection<String> fluids) {
+        return new RegistryTagSet(
+                copyOrNull(items),
+                copyOrNull(blocks),
+                copyOrNull(fluids));
+    }
+
+    private static List<String> copyOrNull(Collection<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
         }
-        if (!blocks.isEmpty()) {
-            map.put("blocks", new ArrayList<>(blocks));
-        }
-        if (!fluids.isEmpty()) {
-            map.put("fluids", new ArrayList<>(fluids));
-        }
-        return map;
+        return List.copyOf(values);
     }
 }

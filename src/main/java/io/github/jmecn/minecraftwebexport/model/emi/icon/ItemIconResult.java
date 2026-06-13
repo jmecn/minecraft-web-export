@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.emi.icon;
 
+
 public record ItemIconResult(
         int itemsWritten,
         int fluidsWritten,

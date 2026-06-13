@@ -1,7 +1,9 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
+import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -18,19 +20,13 @@ class UsedKeysCollectorTest {
 
     @Test
     void collectMetaAddsRegistryKeysNotCategoryFromRecipeMeta() {
-        JsonObject meta = JsonParser.parseString("""
-                {
-                  "category": "emi:anvil",
-                  "widgets": [
-                    {
-                      "interaction": {
-                        "kind": "item",
-                        "id": "gtceu:aluminium_ingot"
-                      }
-                    }
-                  ]
-                }
-                """).getAsJsonObject();
+        RecipeMeta meta = RecipeMeta.of(
+                "emi:anvil",
+                1,
+                1,
+                null,
+                "emi:anvil",
+                List.of(RecipeWidget.of(0, 0, 1, 1, null, WidgetInteraction.item("gtceu:aluminium_ingot", null, null))));
 
         UsedKeysCollector collector = new UsedKeysCollector();
         collector.collectMeta(meta);

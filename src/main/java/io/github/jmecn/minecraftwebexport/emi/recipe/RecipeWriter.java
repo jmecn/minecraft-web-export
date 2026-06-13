@@ -13,12 +13,9 @@ import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.CardWriteResult;
+import io.github.jmecn.minecraftwebexport.model.emi.recipe.RecipeWriteResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.server.MinecraftServer;
-
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,12 +23,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.item.ItemStack;
 
-public final class CardWriter {
+public final class RecipeWriter {
 
-    private CardWriter() {
+    private RecipeWriter() {
     }
-
 
     public static boolean isEnabled() {
         return LayoutBuilder.isEnabled();
@@ -41,7 +41,7 @@ public final class CardWriter {
         return LayoutBuilder.layoutScale();
     }
 
-    public static CardWriteResult export(
+    public static RecipeWriteResult export(
             Path outputDir,
             Minecraft client,
             Set<String> recipeIds,
@@ -50,7 +50,7 @@ public final class CardWriter {
         Set<String> referencedItems = new TreeSet<>();
         Set<String> referencedFluids = new TreeSet<>();
         Set<String> referencedTags = new TreeSet<>();
-        Map<String, net.minecraft.world.item.ItemStack> iconVariants = new LinkedHashMap<>();
+        Map<String, ItemStack> iconVariants = new LinkedHashMap<>();
         Map<String, JsonObject> layoutsByRecipeId = new LinkedHashMap<>();
 
         int written = 0;
@@ -62,7 +62,7 @@ public final class CardWriter {
         long metaBytes = 0;
         int scale = imageScale();
         int total = recipeIds.size();
-        int logStride = ProgressLog.stride(total, Constants.PROP_RECIPE_CARD_LOG_STRIDE, 20, 200);
+        int logStride = ProgressLog.stride(total, Constants.PROP_RECIPE_LOG_STRIDE, 20, 200);
         int progress = 0;
 
         try (OffScreenRendererPool rendererPool = new OffScreenRendererPool()) {
@@ -92,12 +92,12 @@ public final class CardWriter {
                             iconVariants);
                     layoutsByRecipeId.put(recipeId, layout);
 
-                    JsonObject meta = MetaBaker.bake(layout);
+                    RecipeMeta meta = MetaBaker.bake(layout);
                     if (langKeys != null) {
                         langKeys.collectMeta(meta);
                     }
-                    Path metaFile = CardPaths.metaPath(outputDir, recipeId);
-                    Path pngFile = CardPaths.pngPath(outputDir, recipeId);
+                    Path metaFile = RecipePaths.metaPath(outputDir, recipeId);
+                    Path pngFile = RecipePaths.pngPath(outputDir, recipeId);
                     JsonIO.write(metaFile, meta);
                     metaBytes += JsonIO.toUtf8Bytes(meta).length;
 
@@ -107,7 +107,7 @@ public final class CardWriter {
                 } catch (Exception e) {
                     failures++;
                     Log.detailFailure(failures,
-                            "{} card failed for {}: {}",
+                            "{} recipe failed for {}: {}",
                             Log.EMI,
                             recipeId,
                             e);
@@ -116,7 +116,7 @@ public final class CardWriter {
         }
 
         MweMod.LOGGER.info(
-                "{} cards done: {}/{} written ({} png bytes, {} meta bytes), {} missing, {} skipped (visibility), {} failed",
+                "{} recipes done: {}/{} written ({} png bytes, {} meta bytes), {} missing, {} skipped (visibility), {} failed",
                 Log.EMI,
                 written,
                 total,
@@ -126,7 +126,7 @@ public final class CardWriter {
                 skippedVisibility,
                 failures);
 
-        return new CardWriteResult(
+        return new RecipeWriteResult(
                 total,
                 written,
                 missing,
@@ -149,7 +149,7 @@ public final class CardWriter {
             OffScreenRendererPool rendererPool) throws IOException {
         int w = Math.max(1, recipe.getDisplayWidth());
         int h = Math.max(1, recipe.getDisplayHeight());
-        int margin = CardPaths.recipeMargin();
+        int margin = RecipePaths.recipeMargin();
         int logicalW = w + margin;
         int logicalH = h + margin;
         int pixelW = logicalW * scale;
@@ -174,7 +174,7 @@ public final class CardWriter {
         if (ProgressLog.shouldLog(progress, total, logStride)) {
             int pct = ProgressLog.percent(progress, total);
             MweMod.LOGGER.info(
-                    "{} cards {}% {}/{} - {} ok, {} missing, {} fail",
+                    "{} recipes {}% {}/{} - {} ok, {} missing, {} fail",
                     Log.EMI,
                     pct,
                     progress,

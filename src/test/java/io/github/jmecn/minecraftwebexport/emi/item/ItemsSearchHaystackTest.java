@@ -18,7 +18,7 @@ class ItemsSearchHaystackTest {
         var en = new RegistryResolver(
                 Map.of("item.test.iron_ingot", "Iron Ingot"),
                 Map.of());
-        String haystack = SearchIndexWriter.buildHaystack(
+        String haystack = ItemsLangExporter.buildHaystack(
                 "test:iron_ingot",
                 "item",
                 "zh_cn",
@@ -35,7 +35,7 @@ class ItemsSearchHaystackTest {
         var en = new RegistryResolver(
                 Map.of("item.test.iron_ingot", "Iron Ingot"),
                 Map.of());
-        String haystack = SearchIndexWriter.buildHaystack(
+        String haystack = ItemsLangExporter.buildHaystack(
                 "test:iron_ingot",
                 "item",
                 "en_us",

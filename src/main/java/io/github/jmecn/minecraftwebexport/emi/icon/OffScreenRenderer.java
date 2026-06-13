@@ -4,16 +4,16 @@ import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
+import java.io.IOException;
+import java.nio.file.Path;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.FogRenderer;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL12;
-
-import java.io.IOException;
-import java.nio.file.Path;
 
 public class OffScreenRenderer implements AutoCloseable {
 
@@ -37,8 +37,8 @@ public class OffScreenRenderer implements AutoCloseable {
         nativeImage.close();
         frameBuffer.destroyBuffers();
 
-        var minecraft = Minecraft.getInstance();
-        var window = minecraft.getWindow();
+        Minecraft minecraft = Minecraft.getInstance();
+        Window window = minecraft.getWindow();
         RenderSystem.viewport(0, 0, window.getWidth(), window.getHeight());
     }
 
@@ -77,10 +77,10 @@ public class OffScreenRenderer implements AutoCloseable {
     }
 
     public void setupFlatGuiRendering() {
-        var matrix4f = new Matrix4f().setOrtho(0.0f, 16, 16, 0.0f, 1000.0f, 21000.0f);
+        Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, 16, 16, 0.0f, 1000.0f, 21000.0f);
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
 
-        var poseStack = RenderSystem.getModelViewStack();
+        PoseStack poseStack = RenderSystem.getModelViewStack();
         poseStack.setIdentity();
         poseStack.translate(0.0f, 0.0f, -11000.0f);
         RenderSystem.applyModelViewMatrix();
@@ -89,10 +89,10 @@ public class OffScreenRenderer implements AutoCloseable {
     }
 
     public void setupItemRendering() {
-        var matrix4f = new Matrix4f().setOrtho(0.0f, 16, 16, 0.0f, 1000.0f, 21000.0f);
+        Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, 16, 16, 0.0f, 1000.0f, 21000.0f);
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
 
-        var poseStack = RenderSystem.getModelViewStack();
+        PoseStack poseStack = RenderSystem.getModelViewStack();
         poseStack.setIdentity();
         poseStack.translate(0.0f, 0.0f, -11000.0f);
         RenderSystem.applyModelViewMatrix();
@@ -101,10 +101,10 @@ public class OffScreenRenderer implements AutoCloseable {
     }
 
     public void setupGuiEntityRendering(int width, int height) {
-        var matrix4f = new Matrix4f().setOrtho(0.0f, width, height, 0.0f, 1000.0f, 21000.0f);
+        Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, width, height, 0.0f, 1000.0f, 21000.0f);
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
 
-        var poseStack = RenderSystem.getModelViewStack();
+        PoseStack poseStack = RenderSystem.getModelViewStack();
         poseStack.setIdentity();
         poseStack.translate(0.0f, 0.0f, -11000.0f);
         RenderSystem.applyModelViewMatrix();
@@ -130,7 +130,7 @@ public class OffScreenRenderer implements AutoCloseable {
             RenderSystem.setProjectionMatrix(backupProjection, VertexSorting.ORTHOGRAPHIC_Z);
             view.popPose();
             RenderSystem.applyModelViewMatrix();
-            var window = Minecraft.getInstance().getWindow();
+            Window window = Minecraft.getInstance().getWindow();
             RenderSystem.viewport(0, 0, window.getWidth(), window.getHeight());
         }
     }
