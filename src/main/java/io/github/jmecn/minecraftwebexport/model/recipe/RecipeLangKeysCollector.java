@@ -11,10 +11,6 @@ public final class RecipeLangKeysCollector {
 
     private final Set<String> keys = new TreeSet<>();
 
-    public int size() {
-        return keys.size();
-    }
-
     public Set<String> snapshot() {
         return Set.copyOf(keys);
     }

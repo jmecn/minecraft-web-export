@@ -94,18 +94,15 @@ public final class GtceuLabels {
         String normalizedStorage = normalizeStorageKey(storageKey);
         Optional<String> gtKey =
                 fluidTranslationKey(namespace, materialPath, normalizedStorage);
-        if (gtKey.isPresent()) {
-            return gtKey.get();
-        }
-
-        boolean modpackFluid = !GtMaterialPatterns.GTCEU.equals(namespace);
-        return switch (normalizedStorage) {
+        return gtKey.orElseGet(() -> switch (normalizedStorage) {
             case "molten" -> "gtceu.fluid.molten";
             case "plasma" -> "gtceu.fluid.plasma";
-            case "liquid" -> firstPresent(langTable, "gtceu.fluid.liquid_generic", "gtceu.fluid.generic", "gtceu.fluid.liquid_generic");
+            case "liquid" ->
+                    firstPresent(langTable, "gtceu.fluid.liquid_generic", "gtceu.fluid.generic", "gtceu.fluid.liquid_generic");
             case "gas", "primary" -> pickGenericFluidTemplate(langTable);
             default -> pickGenericFluidTemplate(langTable);
-        };
+        });
+
     }
 
     private static String firstPresent(Map<String, String> langTable, String... keys) {
@@ -262,6 +259,26 @@ public final class GtceuLabels {
         return composeFromTemplate("block.bud_indicator", matLabel, translateKey);
     }
 
+    private static String translateSurfaceIndicator(
+            String namespace, String path, Function<String, String> translateKey) {
+        if (!path.endsWith("_indicator") || path.endsWith("_bud_indicator")) {
+            return null;
+        }
+        String materialPath = path.substring(0, path.length() - "_indicator".length());
+        if (materialPath.isEmpty()) {
+            return null;
+        }
+        String matLabel = resolveKey(translateKey, materialKey(namespace, materialPath));
+        if (matLabel == null) {
+            return null;
+        }
+        String composed = composeFromTemplate("block.surface_rock", matLabel, translateKey);
+        if (composed != null) {
+            return composed;
+        }
+        return composeFromTemplate("tagprefix.surface_rock", matLabel, translateKey);
+    }
+
     private static List<GtTagPrefixPattern> buildGtTagPrefixPatterns(Map<String, String> langTable) {
         Set<String> suffixes = new LinkedHashSet<>(GtMaterialPatterns.TAG_PREFIX_PATTERNS.keySet());
         if (langTable != null) {
@@ -378,6 +395,10 @@ public final class GtceuLabels {
         if (budLabel != null) {
             return budLabel;
         }
+        String surfaceLabel = translateSurfaceIndicator(namespace, path, translateKey);
+        if (surfaceLabel != null) {
+            return surfaceLabel;
+        }
         String toolLabel = translateGtToolItem(namespace, path, translateKey, langTable);
         if (toolLabel != null) {
             return toolLabel;
@@ -438,7 +459,6 @@ public final class GtceuLabels {
     private static final Method GT_GET_INSTANCE;
     private static final Method GT_GET_MATERIAL_STRING;
     private static final Method GT_HAS_PROPERTY;
-    private static final Method GT_IS_ELEMENT;
     private static final Object GT_PROPERTY_KEY_POLYMER;
     private static final Object GT_PROPERTY_KEY_FLUID;
     private static final Method GT_GET_PROPERTY;
@@ -458,7 +478,6 @@ public final class GtceuLabels {
             GT_GET_INSTANCE = null;
             GT_GET_MATERIAL_STRING = null;
             GT_HAS_PROPERTY = null;
-            GT_IS_ELEMENT = null;
             GT_PROPERTY_KEY_POLYMER = null;
             GT_PROPERTY_KEY_FLUID = null;
             GT_GET_PROPERTY = null;
@@ -473,7 +492,6 @@ public final class GtceuLabels {
             GT_GET_INSTANCE = requireGtMethod(MANAGER_CLASS, "getInstance");
             GT_GET_MATERIAL_STRING = requireGtMethod(MANAGER_CLASS, "getMaterial", String.class);
             GT_HAS_PROPERTY = requireGtMethod(GT_MATERIAL_TYPE, "hasProperty", GT_PROPERTY_KEY_TYPE);
-            GT_IS_ELEMENT = requireGtMethod(GT_MATERIAL_TYPE, "isElement");
             GT_PROPERTY_KEY_POLYMER = gtStaticField(PROPERTY_KEY_CLASS, "POLYMER");
             GT_PROPERTY_KEY_FLUID = gtStaticField(PROPERTY_KEY_CLASS, "FLUID");
             GT_GET_PROPERTY = requireGtMethod(GT_MATERIAL_TYPE, "getProperty", GT_PROPERTY_KEY_TYPE);

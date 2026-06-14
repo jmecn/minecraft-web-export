@@ -23,7 +23,6 @@ public final class MweConfig {
 
     public static MweClientConfig CLIENT;
     static ForgeConfigSpec CLIENT_SPEC;
-    private static volatile String runtimeExportModeOverride;
 
     private MweConfig() {}
 
@@ -75,10 +74,6 @@ public final class MweConfig {
         return CLIENT_SPEC != null && CLIENT_SPEC.isLoaded();
     }
 
-    public static void setRuntimeExportModeOverride(String mode) {
-        runtimeExportModeOverride = mode;
-    }
-
     private static MweClientConfig client() {
         if (CLIENT == null) {
             ensureForTests();
@@ -97,9 +92,6 @@ public final class MweConfig {
     }
 
     public static String exportMode() {
-        if (runtimeExportModeOverride != null) {
-            return runtimeExportModeOverride.trim();
-        }
         if (jvmHas(JVM_EXPORT_MODE)) {
             return jvmString(JVM_EXPORT_MODE);
         }

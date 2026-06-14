@@ -220,18 +220,6 @@ public final class ItemsLangExporter {
         return asFluid.equals(bare) ? "item" : "fluid";
     }
 
-    public static Set<String> readFluidRegistryIds(Path bundleRoot) throws IOException {
-        Path indexPath = bundleRoot.resolve(Constants.ITEMS_INDEX_FILE);
-        if (!Files.isRegularFile(indexPath)) {
-            return Set.of();
-        }
-        return Set.copyOf(JsonIO.read(indexPath, ItemIndex.class).fluidRegistryIds());
-    }
-
-    private static List<String> readItemIds(Path bundleRoot) throws IOException {
-        return List.copyOf(readIndexedItemIds(bundleRoot));
-    }
-
     public static Set<String> readIndexedItemIds(Path bundleRoot) throws IOException {
         Path indexPath = bundleRoot.resolve(Constants.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {

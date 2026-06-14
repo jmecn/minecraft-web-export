@@ -37,7 +37,7 @@ public final class ExportScopeBuilder {
             }
         }
 
-        Hints hints = mergeModuleHints(modules, scope, merged);
+        Hints hints = mergeModuleHints(modules, scope);
         ExportStrategy strategy = mode == Mode.FULL ? new FullExportStrategy() : new ScopedExportStrategy();
         ExportContext context = strategy.planScope(client, merged);
 
@@ -78,7 +78,7 @@ public final class ExportScopeBuilder {
         return seedRecipeIds.isEmpty() ? Set.of() : Set.copyOf(new java.util.TreeSet<>(seedRecipeIds));
     }
 
-    private static Hints mergeModuleHints(List<Module> modules, Scope scope, Seeds seeds) {
+    private static Hints mergeModuleHints(List<Module> modules, Scope scope) {
         Hints hints = Hints.defaults();
         for (Module module : modules) {
             hints = hints.merge(module.buildHints(scope));

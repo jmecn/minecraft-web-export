@@ -3,6 +3,7 @@ package io.github.jmecn.minecraftwebexport.emi.tag;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
+import io.github.jmecn.minecraftwebexport.emi.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
@@ -20,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import net.minecraft.server.MinecraftServer;
 
 public final class TagIndexWriter {
@@ -49,7 +51,7 @@ public final class TagIndexWriter {
 
             TagContents contents = TagExpander.expandTagContents(server, tagRef);
 
-            TagFileWrite itemWrite = writeTagFile(outputDir, parsed, TagKind.ITEMS, contents.items(), writes);
+            TagFileWrite itemWrite = writeTagFile(outputDir, server, parsed, TagKind.ITEMS, contents.items(), writes);
             if (itemWrite.written()) {
                 itemTagEntries++;
                 itemTags.add(parsed.tagId());
@@ -57,7 +59,7 @@ public final class TagIndexWriter {
                 totalBytes += itemWrite.bytes();
             }
 
-            TagFileWrite blockWrite = writeTagFile(outputDir, parsed, TagKind.BLOCKS, contents.blocks(), writes);
+            TagFileWrite blockWrite = writeTagFile(outputDir, server, parsed, TagKind.BLOCKS, contents.blocks(), writes);
             if (blockWrite.written()) {
                 blockTagEntries++;
                 blockTags.add(parsed.tagId());
@@ -66,7 +68,12 @@ public final class TagIndexWriter {
             }
 
             TagFileWrite fluidWrite = writeTagFile(
-                    outputDir, parsed, TagKind.FLUIDS, filterRedundantFlowingFluids(contents.fluids()), writes);
+                    outputDir,
+                    server,
+                    parsed,
+                    TagKind.FLUIDS,
+                    filterRedundantFlowingFluids(contents.fluids()),
+                    writes);
             if (fluidWrite.written()) {
                 fluidTagEntries++;
                 fluidTags.add(parsed.tagId());
@@ -122,25 +129,41 @@ public final class TagIndexWriter {
         return JsonIO.toUtf8Bytes(catalog).length;
     }
 
+    static Set<String> filterExportableTagMembers(MinecraftServer server, Set<String> values) {
+        return filterTagMembers(values, id -> Visibility.shouldExportRegistryId(server, id));
+    }
+
+    static Set<String> filterTagMembers(Set<String> values, Predicate<String> exportable) {
+        if (values == null || values.isEmpty()) {
+            return Set.of();
+        }
+        LinkedHashSet<String> filtered = new LinkedHashSet<>();
+        for (String id : values) {
+            if (exportable.test(id)) {
+                filtered.add(id);
+            }
+        }
+        return filtered;
+    }
+
     private static TagFileWrite writeTagFile(
             Path outputDir,
+            MinecraftServer server,
             ParsedTagId parsed,
             TagKind kind,
             Set<String> values,
             ExportWriteQueue writes) {
-        if (values == null || values.isEmpty()) {
+        Set<String> exportable = filterExportableTagMembers(server, values);
+        if (exportable.isEmpty()) {
             return TagFileWrite.skipped();
         }
-        TagValues document = new TagValues(new ArrayList<>(values));
+        TagValues document = new TagValues(new ArrayList<>(exportable));
 
         Path outFile = parsed.toTagFilePath(outputDir, kind);
         writes.submitJson(outFile, document);
-        return new TagFileWrite(values.size(), JsonIO.toUtf8Bytes(document).length);
+        return new TagFileWrite(exportable.size(), JsonIO.toUtf8Bytes(document).length);
     }
 
-    /**
-     * Minecraft fluid tags list both still and flowing variants; the web viewer only exports still fluids.
-     */
     static Set<String> filterRedundantFlowingFluids(Set<String> values) {
         if (values == null || values.isEmpty()) {
             return Set.of();

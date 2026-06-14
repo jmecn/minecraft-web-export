@@ -1,6 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
 
-import com.google.gson.JsonArray;
 import com.google.common.collect.Iterables;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -46,7 +45,7 @@ public final class WidgetSerializer {
         }
         for (EmiIngredient ingredient : Iterables.concat(
                 recipe.getInputs(), recipe.getOutputs(), recipe.getCatalysts())) {
-            collectFromIngredient(ingredient, itemIds, fluidIds, tagIds, null);
+            collectFromIngredient(ingredient, itemIds, fluidIds, tagIds);
         }
     }
 
@@ -54,14 +53,13 @@ public final class WidgetSerializer {
             EmiIngredient ingredient,
             Set<String> itemIds,
             Set<String> fluidIds,
-            Set<String> tagIds,
-            Map<String, ItemStack> iconVariants) {
+            Set<String> tagIds) {
         if (ingredient == null || ingredient.isEmpty()) {
             return;
         }
         JsonElement serialized = EmiIngredientSerializer.getSerialized(ingredient);
         collectSerializedTagRefs(normalizeIngredientJson(serialized), tagIds);
-        collectReferencedStacks(ingredient, itemIds, fluidIds, iconVariants);
+        collectReferencedStacks(ingredient, itemIds, fluidIds, null);
     }
 
     static List<RecipeWidget> compileRecipeWidgets(

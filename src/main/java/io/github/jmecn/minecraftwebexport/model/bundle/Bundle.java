@@ -14,7 +14,6 @@ public record Bundle(
         ItemsLangRef itemsLang) {
 
     public Bundle {
-        schema = schema;
         recipeImageFormat = recipeImageFormat == null ? "png" : recipeImageFormat;
         languages = List.copyOf(languages == null ? List.of() : languages);
         missingIconId = Objects.requireNonNull(missingIconId, "missingIconId");

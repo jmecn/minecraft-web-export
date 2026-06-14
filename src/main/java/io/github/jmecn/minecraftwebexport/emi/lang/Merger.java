@@ -78,7 +78,6 @@ public final class Merger {
         }
 
         int languagesWritten = 0;
-        long totalBytes = 0;
         int duplicateWarnings = 0;
         int keysSkipped = 0;
         int keysPerLanguage = 0;
@@ -119,7 +118,6 @@ public final class Merger {
             Path out = langRoot.resolve(langFile);
             writes.submitJson(out, merged);
             languagesWritten++;
-            totalBytes += JsonIO.toUtf8Bytes(merged).length;
             keysPerLanguage = merged.size();
             keysSkipped += stats.keysSkipped;
             duplicateWarnings += stats.duplicateKeyWarnings;

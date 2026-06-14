@@ -57,11 +57,6 @@ public final class Visibility {
         return !isRecipeDisabledByEmi(recipe);
     }
 
-    /**
-     * Aligns with EMI recipe bake ({@code EmiRecipes}): only {@code EmiHidden.isDisabled} drops a recipe.
-     * {@code c:hidden_from_recipe_viewers} hides individual stacks from the item index, not whole recipes
-     * that reference broad tags containing a few hidden members.
-     */
     private static boolean isRecipeDisabledByEmi(EmiRecipe recipe) {
         for (EmiIngredient ingredient : Iterables.concat(
                 recipe.getInputs(), recipe.getOutputs(), recipe.getCatalysts())) {
@@ -95,6 +90,12 @@ public final class Visibility {
         if (items.containsKey(location)) {
             return items.getHolder(itemKey)
                     .map(holder -> isItemHolderHidden(blocks, holder, itemHidden, blockHidden))
+                    .orElse(false);
+        }
+        ResourceKey<Block> blockKey = ResourceKey.create(Registries.BLOCK, location);
+        if (blocks.containsKey(location)) {
+            return blocks.getHolder(blockKey)
+                    .map(holder -> holder.is(blockHidden))
                     .orElse(false);
         }
         ResourceKey<Fluid> fluidKey = ResourceKey.create(Registries.FLUID, location);

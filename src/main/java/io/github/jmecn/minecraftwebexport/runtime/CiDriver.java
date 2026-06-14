@@ -29,11 +29,6 @@ public final class CiDriver {
         return EmiReloadManager.getStatus() == -1;
     }
 
-    public static boolean isReloadInProgress() {
-        int status = EmiReloadManager.getStatus();
-        return status == 1 || (status == 2 && !EmiReloadManager.isLoaded());
-    }
-
     public static String reloadStatusLabel() {
         return switch (EmiReloadManager.getStatus()) {
             case -1 -> "error";

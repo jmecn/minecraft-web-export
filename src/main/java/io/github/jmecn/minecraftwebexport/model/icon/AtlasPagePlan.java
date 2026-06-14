@@ -11,7 +11,4 @@ public record AtlasPagePlan(int cols, int rows) {
         return rows * cellSize;
     }
 
-    public int capacity() {
-        return cols * rows;
-    }
 }

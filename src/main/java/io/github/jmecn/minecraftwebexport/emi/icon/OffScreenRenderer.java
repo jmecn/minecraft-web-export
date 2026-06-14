@@ -9,7 +9,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import java.io.IOException;
-import java.nio.file.Path;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.FogRenderer;
 import org.joml.Matrix4f;
@@ -57,11 +56,6 @@ public class OffScreenRenderer implements AutoCloseable {
                 target.setPixelRGBA(destX + x, destY + y, nativeImage.getPixelRGBA(x, y));
             }
         }
-    }
-
-    public void captureAsPng(Runnable runnable, Path path) throws IOException {
-        renderToBuffer(runnable);
-        nativeImage.writeToFile(path);
     }
 
     private void renderToBuffer(Runnable runnable) {

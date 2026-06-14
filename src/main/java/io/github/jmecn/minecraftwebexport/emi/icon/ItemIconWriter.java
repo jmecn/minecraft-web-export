@@ -15,11 +15,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,12 +27,9 @@ import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -44,7 +38,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.client.model.data.ModelData;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -352,7 +345,6 @@ public final class ItemIconWriter {
             GuiGraphics guiGraphics,
             OffScreenRenderer renderer,
             ItemStack stack) {
-        Set<TextureAtlasSprite> sprites = collectSprites(client, stack);
         Runnable draw = () -> {
             guiGraphics.renderItem(stack, 0, 0);
             guiGraphics.renderItemDecorations(client.font, stack, 0, 0, "");
@@ -366,21 +358,11 @@ public final class ItemIconWriter {
             OffScreenRenderer renderer,
             Item item) {
         ItemStack stack = new ItemStack(item);
-        Set<TextureAtlasSprite> sprites = collectSprites(client, item);
         Runnable draw = () -> {
             guiGraphics.renderItem(stack, 0, 0);
             guiGraphics.renderItemDecorations(client.font, stack, 0, 0, "");
         };
         renderer.captureAsPng(draw);
-    }
-
-    private static Set<TextureAtlasSprite> collectSprites(Minecraft client, ItemStack stack) {
-        BakedModel model = client.getItemRenderer().getModel(stack, null, null, 0);
-        return guessSprites(Set.of(model));
-    }
-
-    private static Set<TextureAtlasSprite> collectSprites(Minecraft client, Item item) {
-        return collectSprites(client, new ItemStack(item));
     }
 
     private static String failureSummary(Throwable error) {
@@ -389,17 +371,6 @@ public final class ItemIconWriter {
             return error.getClass().getSimpleName() + ": " + msg;
         }
         return error.getClass().getSimpleName();
-    }
-
-    private static Set<TextureAtlasSprite> guessSprites(Collection<BakedModel> models) {
-        Set<TextureAtlasSprite> result = Collections.newSetFromMap(new IdentityHashMap<>());
-        RandomSource random = RandomSource.create(0);
-        for (BakedModel model : models) {
-            for (BakedQuad quad : model.getQuads(null, null, random, ModelData.EMPTY, null)) {
-                result.add(quad.getSprite());
-            }
-        }
-        return result;
     }
 
     private static List<ResourceLocation> orderedForPass(

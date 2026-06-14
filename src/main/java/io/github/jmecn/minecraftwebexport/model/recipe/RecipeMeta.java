@@ -13,7 +13,6 @@ public record RecipeMeta(
         List<RecipeWidget> widgets) {
 
     public RecipeMeta {
-        schema = schema;
         widgets = List.copyOf(widgets == null ? List.of() : widgets);
     }
 

@@ -104,7 +104,7 @@ public final class ExportWriteQueue implements AutoCloseable {
         }
     }
 
-    public static long writeJson(Path path, Object value) throws IOException {
+    public static void writeJson(Path path, Object value) throws IOException {
         Path parent = path.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -113,10 +113,10 @@ public final class ExportWriteQueue implements AutoCloseable {
                 Writer writer = new OutputStreamWriter(bytes, StandardCharsets.UTF_8)) {
             JsonIO.GSON.toJson(value, writer);
         }
-        return Files.size(path);
+        Files.size(path);
     }
 
-    public static long writeJsonLine(Path path, Object value) throws IOException {
+    public static void writeJsonLine(Path path, Object value) throws IOException {
         Path parent = path.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -128,10 +128,9 @@ public final class ExportWriteQueue implements AutoCloseable {
                 StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE,
                 StandardOpenOption.APPEND);
-        return line.getBytes(StandardCharsets.UTF_8).length;
     }
 
-    public static long writeBytes(Path path, byte[] data) throws IOException {
+    public static void writeBytes(Path path, byte[] data) throws IOException {
         Path parent = path.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -139,7 +138,6 @@ public final class ExportWriteQueue implements AutoCloseable {
         try (BufferedOutputStream out = new BufferedOutputStream(Files.newOutputStream(path), BUFFER_SIZE)) {
             out.write(data);
         }
-        return data.length;
     }
 
     public static void drain(ThrowingConsumer<ExportWriteQueue> action) throws IOException {

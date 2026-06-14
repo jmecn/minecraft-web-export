@@ -36,15 +36,6 @@ public final class JsonIO {
         return GSON.fromJson(json, type);
     }
 
-    public static void write(Path path, Object value) throws IOException {
-        Objects.requireNonNull(path, "path");
-        Path parent = path.getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
-        }
-        Files.writeString(path, toJson(value), StandardCharsets.UTF_8);
-    }
-
     public static <T> T read(Path path, Class<T> type) throws IOException {
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(type, "type");

@@ -49,6 +49,12 @@ public final class RegistryLangKeys {
             into.add("material." + namespace + "." + path.substring(0, path.length() - "_bud_indicator".length()));
             return;
         }
+        if (path.endsWith("_indicator")) {
+            into.add("block.surface_rock");
+            into.add("tagprefix.surface_rock");
+            into.add("material." + namespace + "." + path.substring(0, path.length() - "_indicator".length()));
+            return;
+        }
         if (addGtToolLangKeys(into, namespace, path)) {
             return;
         }
