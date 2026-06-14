@@ -21,17 +21,18 @@ import io.github.jmecn.minecraftwebexport.model.bundle.Bundle;
 import io.github.jmecn.minecraftwebexport.model.bundle.ItemsLangRef;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ItemIndexExportResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.LangExportResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.TagExportResult;
 import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 
@@ -84,8 +85,10 @@ public final class Pipeline {
             MinecraftServer server = client.getSingleplayerServer();
 
             int tagsIndexed = 0;
+            TagExportResult tagExport = TagExportResult.empty();
             if (server != null && !context.tagIds().isEmpty()) {
-                tagsIndexed = TagIndexWriter.export(outputRoot, server, context.tagIds(), writes);
+                tagExport = TagIndexWriter.export(outputRoot, server, context.tagIds(), writes);
+                tagsIndexed = tagExport.tagRefCount();
                 writes.awaitIdle("after tags index");
             } else if (!context.tagIds().isEmpty()) {
                 MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
@@ -95,44 +98,44 @@ public final class Pipeline {
                     ? CategoryIconWriter.export(outputRoot, client, context.categoryIds(), writes)
                     : 0;
 
-            int itemCount = recipesWritten > 0
-                    ? ItemIndexExporter.export(outputRoot, server, context, writes)
-                    : 0;
+            ItemIndexExportResult itemExport = recipesWritten > 0
+                    ? ItemIndexExporter.export(outputRoot, server, context, tagExport.catalog(), writes)
+                    : ItemIndexExportResult.empty();
+            int itemCount = itemExport.indexedCount();
             writes.awaitIdle("after items index");
 
+            Map<String, String> nameKeys = Map.of();
             if (recipesWritten > 0) {
-                NameKeysExporter.export(outputRoot, client, writes);
+                nameKeys = NameKeysExporter.export(outputRoot, client, itemExport.index(), writes);
             }
             writes.awaitIdle("after name keys");
 
             Set<String> langKeys = LangDerivation.withNameKeys(
                     LangDerivation.derive(context),
-                    NameKeysExporter.readNameKeys(outputRoot));
-            int languagesWritten = Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
+                    nameKeys);
+            LangExportResult langExport =
+                    Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
             writes.awaitIdle("after emi lang");
 
-            List<String> languages = List.of();
+            List<String> languages = langExport.locales();
             List<String> itemsLangLocales = List.of();
-            if (itemCount > 0) {
-                languages = exportedLanguages(outputRoot);
-                if (languages.isEmpty()) {
-                    languages = Languages.resolve(plan.hints()).stream().sorted().toList();
-                }
-                if (!languages.isEmpty()) {
-                    Path bundleRoot = EmiPaths.resolve(outputRoot, "");
-                    itemsLangLocales = ItemsLangExporter.export(
-                            outputRoot,
-                            languages,
-                            ItemsLangExporter.readIndexedItemIds(bundleRoot),
-                            context.fluidRegistryIds(),
-                            writes);
-                }
+            if (itemCount > 0 && !languages.isEmpty()) {
+                itemsLangLocales = ItemsLangExporter.export(
+                        outputRoot,
+                        languages,
+                        itemExport.indexedItemIds(),
+                        context.fluidRegistryIds(),
+                        langExport.tablesByLocale(),
+                        nameKeys,
+                        writes);
             }
             writes.awaitIdle("after items lang");
 
             if (languages.isEmpty()) {
-                languages = exportedLanguages(outputRoot);
+                languages = Languages.resolve(plan.hints()).stream().sorted().toList();
             }
+
+            int languagesWritten = langExport.languagesWritten();
 
             int iconSprites = ItemIconWriter.export(
                     outputRoot,
@@ -209,22 +212,6 @@ public final class Pipeline {
                     tagsIndexed,
                     languagesWritten,
                     iconSprites);
-        }
-    }
-
-    private static List<String> exportedLanguages(Path outputRoot) throws IOException {
-        Path langDir = EmiPaths.resolve(outputRoot, Constants.LANG_DIR);
-        if (!Files.isDirectory(langDir)) {
-            return List.of();
-        }
-        try (Stream<Path> stream = Files.list(langDir)) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .map(path -> path.getFileName().toString())
-                    .filter(name -> name.endsWith(".json"))
-                    .map(name -> name.substring(0, name.length() - 5))
-                    .sorted(Comparator.naturalOrder())
-                    .toList();
         }
     }
 }

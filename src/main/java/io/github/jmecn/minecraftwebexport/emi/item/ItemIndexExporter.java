@@ -10,6 +10,7 @@ import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.item.ExportedTagCatalog;
+import io.github.jmecn.minecraftwebexport.model.pipeline.ItemIndexExportResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndexBuild;
 import io.github.jmecn.minecraftwebexport.model.item.ItemDetail;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIdParts;
@@ -35,15 +36,20 @@ public final class ItemIndexExporter {
     private ItemIndexExporter() {
     }
 
-    public static int export(
-            Path outputDir, MinecraftServer server, ExportContext context, ExportWriteQueue writes)
+    public static ItemIndexExportResult export(
+            Path outputDir,
+            MinecraftServer server,
+            ExportContext context,
+            ExportedTagCatalog exportedTags,
+            ExportWriteQueue writes)
             throws IOException {
         Objects.requireNonNull(writes, "writes");
         if (context.inputs().isEmpty() && context.outputs().isEmpty() && context.itemIds().isEmpty()) {
             MweMod.LOGGER.warn("{} no item refs in export context - skipping items index", Log.EMI_ITEMS);
-            return 0;
+            return ItemIndexExportResult.empty();
         }
-        ItemIndexBuild build = buildFromContext(outputDir, server, context);
+        ExportedTagCatalog tags = exportedTags == null ? ExportedTagCatalog.empty() : exportedTags;
+        ItemIndexBuild build = buildFromContext(server, context, tags);
         return writeIndex(outputDir, server, build, writes);
     }
 
@@ -86,8 +92,7 @@ public final class ItemIndexExporter {
     }
 
     private static ItemIndexBuild buildFromContext(
-            Path outputDir, MinecraftServer server, ExportContext context) throws IOException {
-        ExportedTagCatalog exportedTags = ItemIndexSupport.loadExportedTagCatalog(outputDir);
+            MinecraftServer server, ExportContext context, ExportedTagCatalog exportedTags) {
         Set<String> allItemIds = new TreeSet<>();
         allItemIds.addAll(context.inputs().keySet());
         allItemIds.addAll(context.outputs().keySet());
@@ -105,7 +110,7 @@ public final class ItemIndexExporter {
                 exportedTags);
     }
 
-    private static int writeIndex(
+    private static ItemIndexExportResult writeIndex(
             Path outputDir, MinecraftServer server, ItemIndexBuild build, ExportWriteQueue writes) {
         Objects.requireNonNull(writes, "writes");
         Path itemsIndexFile = EmiPaths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
@@ -195,7 +200,7 @@ public final class ItemIndexExporter {
                 outputRefs,
                 itemsIndexFile);
         int indexedCount = indexBuckets.values().stream().mapToInt(Set::size).sum();
-        return indexedCount;
+        return new ItemIndexExportResult(indexedCount, index, Set.copyOf(indexedItemIds));
     }
 
     static List<String> indexedFluidRegistryIds(Set<String> candidateFluids, Set<String> indexedItemIds) {

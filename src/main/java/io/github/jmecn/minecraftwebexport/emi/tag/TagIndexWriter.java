@@ -12,6 +12,8 @@ import io.github.jmecn.minecraftwebexport.model.tag.ParsedTagId;
 import io.github.jmecn.minecraftwebexport.enums.tag.TagKind;
 import io.github.jmecn.minecraftwebexport.model.tag.TagValues;
 import io.github.jmecn.minecraftwebexport.model.tag.TagsCatalog;
+import io.github.jmecn.minecraftwebexport.model.item.ExportedTagCatalog;
+import io.github.jmecn.minecraftwebexport.model.pipeline.TagExportResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,9 +31,12 @@ public final class TagIndexWriter {
     private TagIndexWriter() {
     }
 
-    public static int export(
+    public static TagExportResult export(
             Path outputDir, MinecraftServer server, Set<String> tagIds, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
+        if (tagIds == null || tagIds.isEmpty()) {
+            return TagExportResult.empty();
+        }
         Path tagsDir = EmiPaths.resolve(outputDir, Constants.TAGS_DIR);
         Files.createDirectories(tagsDir);
 
@@ -96,7 +101,9 @@ public final class TagIndexWriter {
                 registryRefs,
                 totalBytes);
 
-        return tagIds.size();
+        return new TagExportResult(
+                tagIds.size(),
+                new ExportedTagCatalog(Set.copyOf(itemTags), Set.copyOf(blockTags), Set.copyOf(fluidTags)));
     }
 
     private record TagFileWrite(int registryRefs, long bytes) {

@@ -1,8 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
@@ -26,9 +23,7 @@ import java.util.Objects;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.stream.Stream;
 import net.sourceforge.pinyin4j.PinyinHelper;
 import net.sourceforge.pinyin4j.format.HanyuPinyinCaseType;
 import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
@@ -40,13 +35,21 @@ public final class ItemsLangExporter {
     private ItemsLangExporter() {
     }
 
+    /**
+     * Build and queue {@code items-lang/} search indexes using in-memory lang tables and name keys.
+     */
     public static List<String> export(
             Path outputDir,
             List<String> languages,
             Collection<String> itemIds,
             Set<String> fluidRegistryIds,
+            Map<String, Map<String, String>> langTablesByLocale,
+            Map<String, String> nameKeysByRegistryId,
             ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
+        Map<String, Map<String, String>> langTables =
+                langTablesByLocale == null ? Map.of() : langTablesByLocale;
+        Map<String, String> nameKeys = nameKeysByRegistryId == null ? Map.of() : nameKeysByRegistryId;
         Path bundleRoot = EmiPaths.resolve(outputDir, "");
         List<String> sortedItemIds = itemIds.stream()
                 .filter(id -> id != null && !id.isBlank())
@@ -54,7 +57,7 @@ public final class ItemsLangExporter {
                 .distinct()
                 .toList();
         Set<String> fluids = fluidRegistryIds == null ? Set.of() : fluidRegistryIds;
-        List<String> locales = resolveLocales(bundleRoot, languages);
+        List<String> locales = resolveLocales(languages);
         if (sortedItemIds.isEmpty() || locales.isEmpty()) {
             MweMod.LOGGER.warn(
                     "{} skipped: {} items, {} locales",
@@ -67,8 +70,7 @@ public final class ItemsLangExporter {
         Path searchRoot = bundleRoot.resolve(Constants.ITEMS_LANG_DIR);
         Files.createDirectories(searchRoot);
 
-        Map<String, String> enUs = readLangTable(bundleRoot, Constants.DEFAULT_LANGUAGE);
-        Map<String, String> nameKeysByRegistryId = NameKeysExporter.readNameKeys(outputDir);
+        Map<String, String> enUs = langTableForLocale(langTables, Constants.DEFAULT_LANGUAGE);
         List<String> writtenLocales = new ArrayList<>();
 
         for (String locale : locales) {
@@ -79,13 +81,13 @@ public final class ItemsLangExporter {
                     normalized,
                     sortedItemIds.size());
             long startedAt = System.currentTimeMillis();
-            Map<String, String> current = readLangTable(bundleRoot, normalized);
+            Map<String, String> current = langTableForLocale(langTables, normalized);
             Map<String, String> fallback = Constants.DEFAULT_LANGUAGE.equals(normalized)
                     ? Map.of()
                     : enUs;
-            RegistryResolver currentResolver = new RegistryResolver(current, fallback, nameKeysByRegistryId);
+            RegistryResolver currentResolver = new RegistryResolver(current, fallback, nameKeys);
             RegistryResolver enResolver = isChineseLocale(normalized) && !Constants.DEFAULT_LANGUAGE.equals(normalized)
-                    ? new RegistryResolver(enUs, Map.of(), nameKeysByRegistryId)
+                    ? new RegistryResolver(enUs, Map.of(), nameKeys)
                     : null;
 
             List<ItemsLangEntry> entries = new ArrayList<>(sortedItemIds.size());
@@ -220,57 +222,39 @@ public final class ItemsLangExporter {
         return asFluid.equals(bare) ? "item" : "fluid";
     }
 
+    /** Read indexed item ids from a bundle on disk (tools / re-export only). */
     public static Set<String> readIndexedItemIds(Path bundleRoot) throws IOException {
         Path indexPath = bundleRoot.resolve(Constants.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {
             return Set.of();
         }
         ItemIndex index = JsonIO.read(indexPath, ItemIndex.class);
-        Set<String> ids = new TreeSet<>();
-        for (Map.Entry<String, List<String>> entry : index.namespacePaths().entrySet()) {
-            String namespace = entry.getKey();
-            for (String path : entry.getValue()) {
-                if (path == null || path.isEmpty()) {
-                    continue;
-                }
-                ids.add(path.contains(":") ? path : namespace + ":" + path);
-            }
-        }
-        return Set.copyOf(ids);
+        return index.registryItemIds();
     }
 
-    private static List<String> resolveLocales(Path bundleRoot, List<String> languages) throws IOException {
+    private static List<String> resolveLocales(List<String> languages) {
         if (languages != null && !languages.isEmpty()) {
             return languages.stream().map(ItemsLangExporter::normalizeLocale).distinct().sorted().toList();
         }
-        Path langDir = bundleRoot.resolve(Constants.LANG_DIR);
-        if (!Files.isDirectory(langDir)) {
-            return List.of(Constants.DEFAULT_LANGUAGE);
-        }
-        try (Stream<Path> stream = Files.list(langDir)) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .map(path -> path.getFileName().toString())
-                    .filter(name -> name.endsWith(".json"))
-                    .map(name -> normalizeLocale(name.substring(0, name.length() - 5)))
-                    .sorted()
-                    .toList();
-        }
+        return List.of(Constants.DEFAULT_LANGUAGE);
     }
 
-    private static Map<String, String> readLangTable(Path bundleRoot, String locale) throws IOException {
-        Path langPath = bundleRoot.resolve(Constants.LANG_DIR).resolve(locale + ".json");
-        if (!Files.isRegularFile(langPath)) {
+    private static Map<String, String> langTableForLocale(
+            Map<String, Map<String, String>> langTablesByLocale, String locale) {
+        if (langTablesByLocale == null || langTablesByLocale.isEmpty()) {
             return Map.of();
         }
-        JsonObject object = JsonParser.parseString(Files.readString(langPath)).getAsJsonObject();
-        Map<String, String> table = new TreeMap<>();
-        for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
-            if (entry.getValue().isJsonPrimitive()) {
-                table.put(entry.getKey(), entry.getValue().getAsString());
+        String normalized = normalizeLocale(locale);
+        Map<String, String> exact = langTablesByLocale.get(normalized);
+        if (exact != null) {
+            return exact;
+        }
+        for (Map.Entry<String, Map<String, String>> entry : langTablesByLocale.entrySet()) {
+            if (normalizeLocale(entry.getKey()).equals(normalized)) {
+                return entry.getValue();
             }
         }
-        return table;
+        return Map.of();
     }
 
     private static volatile boolean warnedUnavailable;

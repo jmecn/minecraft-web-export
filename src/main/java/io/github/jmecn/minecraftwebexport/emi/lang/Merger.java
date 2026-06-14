@@ -12,6 +12,7 @@ import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.lang.LangMergeStats;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
+import io.github.jmecn.minecraftwebexport.model.pipeline.LangExportResult;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -56,13 +57,13 @@ public final class Merger {
         return key.startsWith("emi.category.");
     }
 
-    public static int exportEmiLang(
+    public static LangExportResult exportEmiLang(
             Path outputDir, Minecraft client, Set<String> onlyKeys, Hints hints, ExportWriteQueue writes)
             throws IOException {
         return exportTo(EmiPaths.resolve(outputDir, Constants.LANG_DIR), client, null, onlyKeys, hints, writes);
     }
 
-    private static int exportTo(
+    private static LangExportResult exportTo(
             Path langRoot,
             Minecraft client,
             Set<String> onlyNamespaces,
@@ -82,6 +83,8 @@ public final class Merger {
         int keysSkipped = 0;
         int keysPerLanguage = 0;
         String mode = onlyKeys == null ? "full" : "filtered";
+        List<String> writtenLocales = new ArrayList<>();
+        Map<String, Map<String, String>> tablesByLocale = new LinkedHashMap<>();
 
         for (String langCode : languages) {
             String langFile = langCode + ".json";
@@ -117,6 +120,8 @@ public final class Merger {
 
             Path out = langRoot.resolve(langFile);
             writes.submitJson(out, merged);
+            writtenLocales.add(langCode);
+            tablesByLocale.put(langCode, Map.copyOf(merged));
             languagesWritten++;
             keysPerLanguage = merged.size();
             keysSkipped += stats.keysSkipped;
@@ -147,7 +152,7 @@ public final class Merger {
                     Log.DETAIL_FAILURE_LIMIT);
         }
 
-        return languagesWritten;
+        return new LangExportResult(languagesWritten, List.copyOf(writtenLocales), Map.copyOf(tablesByLocale));
     }
 
     static boolean matchesLangPath(ResourceLocation location, String langFile) {

@@ -24,23 +24,43 @@ public final class NameKeysExporter {
     private NameKeysExporter() {
     }
 
-    public static void export(Path outputDir, Minecraft client, ExportWriteQueue writes) throws IOException {
+    /**
+     * Resolve registry description keys from an in-memory {@link ItemIndex} and queue the name-keys file.
+     *
+     * @return resolved registry id → lang key (empty when skipped)
+     */
+    public static Map<String, String> export(
+            Path outputDir, Minecraft client, ItemIndex index, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
         if (client == null || client.level == null) {
             MweMod.LOGGER.warn("{} skipped: no client level", Log.ITEM_NAME_KEYS);
-            return;
+            return Map.of();
+        }
+        if (index == null || index.namespacePaths().isEmpty() && index.fluidRegistryIds().isEmpty()) {
+            MweMod.LOGGER.warn("{} skipped: empty item index", Log.ITEM_NAME_KEYS);
+            return Map.of();
         }
 
-        Path bundleRoot = EmiPaths.resolve(outputDir, "");
-        Path indexPath = bundleRoot.resolve(Constants.ITEMS_INDEX_FILE);
-        if (!Files.isRegularFile(indexPath)) {
-            MweMod.LOGGER.warn("{} skipped: missing {}", Log.ITEM_NAME_KEYS, Constants.ITEMS_INDEX_FILE);
-            return;
+        Map<String, String> items = resolveNameKeys(client, index);
+        if (items.isEmpty()) {
+            return Map.of();
         }
 
-        ItemIndex index = JsonIO.read(indexPath, ItemIndex.class);
+        Path out = EmiPaths.resolve(outputDir, Constants.ITEM_NAME_KEYS_FILE);
+        writes.submitJsonLine(out, NameKeys.of(items));
+
+        int fluidCount = (int) items.keySet().stream().filter(id -> index.fluidRegistryIds().contains(id)).count();
+        MweMod.LOGGER.info(
+                "{} {} registry ids ({} fluids) -> {}",
+                Log.ITEM_NAME_KEYS,
+                items.size(),
+                fluidCount,
+                out);
+        return Map.copyOf(items);
+    }
+
+    static Map<String, String> resolveNameKeys(Minecraft client, ItemIndex index) {
         Map<String, String> items = new TreeMap<>();
-        int fluidCount = 0;
         int total = 0;
         for (List<String> paths : index.namespacePaths().values()) {
             total += paths.size();
@@ -76,7 +96,6 @@ public final class NameKeysExporter {
             progress++;
             String registryId = fluidPath.contains(":") ? fluidPath : "minecraft:" + fluidPath;
             items.put(registryId, RegistryKeys.resolveFluidDescriptionKey(client, registryId));
-            fluidCount++;
             if (progress % logStride == 0) {
                 MweMod.LOGGER.info(
                         "{} {}/{} name keys resolved",
@@ -85,22 +104,10 @@ public final class NameKeysExporter {
                         total);
             }
         }
-
-        if (items.isEmpty()) {
-            return;
-        }
-
-        Path out = bundleRoot.resolve(Constants.ITEM_NAME_KEYS_FILE);
-        writes.submitJsonLine(out, NameKeys.of(items));
-
-        MweMod.LOGGER.info(
-                "{} {} registry ids ({} fluids) -> {}",
-                Log.ITEM_NAME_KEYS,
-                items.size(),
-                fluidCount,
-                out);
+        return items;
     }
 
+    /** Read name keys from a bundle already on disk (tools / re-export only). */
     public static Map<String, String> readNameKeys(Path outputDir) throws IOException {
         Path file = EmiPaths.resolve(outputDir, Constants.ITEM_NAME_KEYS_FILE);
         if (!Files.isRegularFile(file)) {

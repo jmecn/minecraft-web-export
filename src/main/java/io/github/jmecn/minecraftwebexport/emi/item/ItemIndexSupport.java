@@ -89,6 +89,10 @@ final class ItemIndexSupport {
         return tagItems;
     }
 
+    /**
+     * Scan tag files already on disk (tools / re-export only).
+     * Export pipeline passes {@link ExportedTagCatalog} in memory from {@link io.github.jmecn.minecraftwebexport.emi.tag.TagIndexWriter}.
+     */
     static ExportedTagCatalog loadExportedTagCatalog(Path outputDir) throws IOException {
         Path tagsRoot = EmiPaths.resolve(outputDir, Constants.TAGS_DIR);
         if (!Files.isDirectory(tagsRoot)) {
