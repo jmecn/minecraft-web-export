@@ -102,7 +102,7 @@ public final class RegistryKeys {
             return itemKey(registryId);
         }
         String descriptionId = new ItemStack(item).getDescriptionId();
-        return descriptionId == null || descriptionId.isBlank() ? itemKey(registryId) : descriptionId;
+        return descriptionId.isBlank() ? itemKey(registryId) : descriptionId;
     }
 
     public static String resolveFluidDescriptionKey(Minecraft client, String registryId) {
@@ -118,11 +118,9 @@ public final class RegistryKeys {
             return fluidKey(registryId);
         }
         Block block = fluid.defaultFluidState().createLegacyBlock().getBlock();
-        if (block != null) {
-            String descriptionId = block.getDescriptionId();
-            if (descriptionId != null && !descriptionId.isBlank()) {
-                return descriptionId;
-            }
+        String descriptionId = block.getDescriptionId();
+        if (!descriptionId.isBlank()) {
+            return descriptionId;
         }
         return fluidKey(registryId);
     }
