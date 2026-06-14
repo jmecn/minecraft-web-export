@@ -1,6 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
 
-import com.google.gson.JsonObject;
 import dev.emi.emi.EmiRenderHelper;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.runtime.EmiDrawContext;
@@ -21,8 +20,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.server.MinecraftServer;
@@ -57,7 +54,6 @@ public final class RecipeWriter {
         int logStride = ProgressLog.stride(total, MweConfig.recipeCardLogStride(), 20, 200);
         int progress = 0;
         MinecraftServer server = client.getSingleplayerServer();
-        Set<String> textureIds = new TreeSet<>();
 
         try (OffScreenRendererPool rendererPool = new OffScreenRendererPool()) {
             for (String recipeId : context.recipeIds()) {
@@ -74,18 +70,13 @@ public final class RecipeWriter {
                     logProgress(progress, total, written, missing, failures, logStride);
                     continue;
                 }
+                RecipeMeta meta = context.recipeMeta(recipeId);
+                if (meta == null) {
+                    missing++;
+                    logProgress(progress, total, written, missing, failures, logStride);
+                    continue;
+                }
                 try {
-                    JsonObject layout = LayoutBuilder.buildLayoutInMemory(
-                            client,
-                            recipe,
-                            recipeId,
-                            textureIds,
-                            context.referencedItems(),
-                            context.referencedFluids(),
-                            context.referencedTags(),
-                            context.iconVariants());
-
-                    RecipeMeta meta = LayoutBuilder.bake(layout);
                     Path metaFile = RecipePaths.metaPath(outputDir, recipeId);
                     Path pngFile = RecipePaths.pngPath(outputDir, recipeId);
                     byte[] metaUtf8 = JsonIO.toUtf8Bytes(meta);

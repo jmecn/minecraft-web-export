@@ -9,37 +9,21 @@ import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.serializer.EmiIngredientSerializer;
-import dev.emi.emi.api.widget.AnimatedTextureWidget;
 import dev.emi.emi.api.widget.Bounds;
-import dev.emi.emi.api.widget.DrawableWidget;
-import dev.emi.emi.api.widget.FillingArrowWidget;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.TankWidget;
-import dev.emi.emi.api.widget.TextWidget;
-import dev.emi.emi.api.widget.TextureWidget;
 import dev.emi.emi.api.widget.TooltipWidget;
 import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.widget.RecipeButtonWidget;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.model.recipe.ChromeAsset;
 import io.github.jmecn.minecraftwebexport.model.recipe.WidgetSerializeContext;
 import java.lang.reflect.Field;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 
@@ -103,46 +87,16 @@ public final class WidgetSerializer {
 
     private static JsonObject serialize(EmiRecipe recipe, Widget widget, Set<String> textureIds, WidgetSerializeContext ctx) {
         try {
-            if (ctx.chromeRoot() == null) {
-                if (isRootWidget(widget)
-                        || isDrawableWidget(widget)) {
-                    return null;
-                }
-                if (!(widget instanceof SlotWidget) && !(widget instanceof TooltipWidget)) {
-                    return null;
-                }
-            }
-            if (isRootWidget(widget)) {
-                return rootChrome(widget, ctx);
-            }
-            if (isDrawableWidget(widget)) {
-                return drawableChrome(widget, ctx);
-            }
             if (widget instanceof TankWidget tank) {
                 return slotLike(recipe, tank, "tank", textureIds, true, ctx);
             }
             if (widget instanceof SlotWidget slot) {
                 return slotLike(recipe, slot, "slot", textureIds, false, ctx);
             }
-            if (widget instanceof FillingArrowWidget arrow) {
-                return ctx.chromeRoot() == null ? null : fillingArrow(arrow, textureIds);
-            }
-            if (widget instanceof AnimatedTextureWidget animated) {
-                return ctx.chromeRoot() == null ? null : animatedTexture(animated, textureIds);
-            }
-            if (widget instanceof TextureWidget texture) {
-                return ctx.chromeRoot() == null ? null : texture(texture, textureIds);
-            }
-            if (widget instanceof TextWidget text) {
-                return ctx.chromeRoot() == null ? null : textWidget(text);
-            }
             if (widget instanceof TooltipWidget tooltip) {
                 return tooltip(tooltip);
             }
-            if (ctx.chromeRoot() == null) {
-                return null;
-            }
-            return rasterChrome(widget, ctx, "raster");
+            return null;
         } catch (Exception e) {
             Log.detailFailure(1,
                     "{} widget {} failed: {}",
@@ -150,47 +104,6 @@ public final class WidgetSerializer {
                     widget.getClass().getName(),
                     e);
             throw new RuntimeException("widget export failed: " + widget.getClass().getName(), e);
-        }
-    }
-
-    private static JsonObject rootChrome(Widget widget, WidgetSerializeContext ctx) throws Exception {
-        JsonObject object = boundsObject(widget.getBounds());
-        object.addProperty("type", "root_chrome");
-        attachChrome(object, widget, ctx);
-        object.addProperty("javaClass", widget.getClass().getName());
-        return object;
-    }
-
-    private static JsonObject drawableChrome(Widget widget, WidgetSerializeContext ctx) throws Exception {
-        JsonObject object = boundsObject(widget.getBounds());
-        object.addProperty("type", "drawable_raster");
-        attachChrome(object, widget, ctx);
-        object.addProperty("javaClass", widget.getClass().getName());
-        return object;
-    }
-
-    private static JsonObject rasterChrome(Widget widget, WidgetSerializeContext ctx, String type) throws Exception {
-        Bounds bounds = widget.getBounds();
-        if (bounds == null || bounds.empty()) {
-            return null;
-        }
-        JsonObject object = boundsObject(bounds);
-        object.addProperty("type", type);
-        attachChrome(object, widget, ctx);
-        object.addProperty("javaClass", widget.getClass().getName());
-        return object;
-    }
-
-    private static void attachChrome(JsonObject object, Widget widget, WidgetSerializeContext ctx) throws Exception {
-        if (ctx.chromeRoot() == null) {
-            return;
-        }
-        ChromeAsset asset = rasterizeWidget(
-                ctx.client(), widget, ctx.chromeRoot(), ctx.chromeHashToRelative());
-        object.addProperty("chrome", asset.exportPath());
-        ctx.chromeWritten()[0]++;
-        if (asset.deduplicated()) {
-            ctx.chromeDeduped()[0]++;
         }
     }
 
@@ -419,117 +332,10 @@ public final class WidgetSerializer {
         return "input";
     }
 
-    private static JsonObject texture(TextureWidget widget, Set<String> textureIds) {
-        ResourceLocation texture = readField(widget, "texture", ResourceLocation.class);
-        if (texture != null) {
-            textureIds.add(texture.toString());
-        }
-        JsonObject object = boundsObject(widget.getBounds());
-        object.addProperty("type", "texture");
-        if (texture != null) {
-            object.addProperty("texture", texture.toString());
-        }
-        putTextureFields(widget, object);
-        return object;
-    }
-
-    private static JsonObject animatedTexture(AnimatedTextureWidget widget, Set<String> textureIds) {
-        ResourceLocation texture = readField(widget, "texture", ResourceLocation.class);
-        if (texture != null) {
-            textureIds.add(texture.toString());
-        }
-        JsonObject object = boundsObject(widget.getBounds());
-        object.addProperty("type", "animated_texture");
-        if (texture != null) {
-            object.addProperty("texture", texture.toString());
-        }
-        putTextureFields(widget, object);
-        Integer time = readField(widget, "time", Integer.class);
-        if (time != null) {
-            object.addProperty("time", time);
-        }
-        object.addProperty("horizontal", readBooleanField(widget, "horizontal"));
-        object.addProperty("endToStart", readBooleanField(widget, "endToStart"));
-        object.addProperty("fullToEmpty", readBooleanField(widget, "fullToEmpty"));
-        return object;
-    }
-
-    private static JsonObject fillingArrow(FillingArrowWidget widget, Set<String> textureIds) {
-        textureIds.add("emi:textures/gui/widgets.png");
-        JsonObject object = boundsObject(widget.getBounds());
-        object.addProperty("type", "filling_arrow");
-        Integer time = readField(widget, "time", Integer.class);
-        if (time != null) {
-            object.addProperty("time", time);
-        }
-        return object;
-    }
-
-    private static JsonObject textWidget(TextWidget widget) {
-        JsonObject object = boundsObject(widget.getBounds());
-        object.addProperty("type", "text");
-        FormattedCharSequence text = readField(widget, "text", FormattedCharSequence.class);
-        if (text != null) {
-            String plain = formattedCharSequenceToString(text);
-            if (!plain.isEmpty()) {
-                object.addProperty("text", plain);
-            }
-        }
-        Integer color = readField(widget, "color", Integer.class);
-        if (color != null) {
-            object.addProperty("color", color);
-        }
-        object.addProperty("shadow", readBooleanField(widget, "shadow"));
-        TextWidget.Alignment horizontal = readField(widget, "horizontalAlignment", TextWidget.Alignment.class);
-        TextWidget.Alignment vertical = readField(widget, "verticalAlignment", TextWidget.Alignment.class);
-        if (horizontal != null) {
-            object.addProperty("horizontalAlign", horizontal.name());
-        }
-        if (vertical != null) {
-            object.addProperty("verticalAlign", vertical.name());
-        }
-        Integer baseX = readField(widget, "x", Integer.class);
-        Integer baseY = readField(widget, "y", Integer.class);
-        if (baseX != null) {
-            object.addProperty("baseX", baseX);
-        }
-        if (baseY != null) {
-            object.addProperty("baseY", baseY);
-        }
-        return object;
-    }
-
     private static JsonObject tooltip(TooltipWidget widget) {
         JsonObject object = boundsObject(widget.getBounds());
         object.addProperty("type", "tooltip");
         return object;
-    }
-
-    private static void putTextureFields(TextureWidget widget, JsonObject object) {
-        Integer u = readField(widget, "u", Integer.class);
-        Integer v = readField(widget, "v", Integer.class);
-        Integer textureWidth = readField(widget, "textureWidth", Integer.class);
-        Integer textureHeight = readField(widget, "textureHeight", Integer.class);
-        Integer regionWidth = readField(widget, "regionWidth", Integer.class);
-        Integer regionHeight = readField(widget, "regionHeight", Integer.class);
-        if (u != null) {
-            object.addProperty("u", u);
-        }
-        if (v != null) {
-            object.addProperty("v", v);
-        }
-        if (textureWidth != null) {
-            object.addProperty("texW", textureWidth);
-        }
-        if (textureHeight != null) {
-            object.addProperty("texH", textureHeight);
-        }
-        if (regionWidth != null) {
-            object.addProperty("regionW", regionWidth);
-        }
-        if (regionHeight != null) {
-            object.addProperty("regionH", regionHeight);
-        }
     }
 
     private static JsonObject boundsObject(Bounds bounds) {
@@ -539,15 +345,6 @@ public final class WidgetSerializer {
         object.addProperty("w", bounds.width());
         object.addProperty("h", bounds.height());
         return object;
-    }
-
-    private static String formattedCharSequenceToString(FormattedCharSequence text) {
-        StringBuilder builder = new StringBuilder();
-        text.accept((index, style, codePoint) -> {
-            builder.appendCodePoint(codePoint);
-            return true;
-        });
-        return builder.toString();
     }
 
     private static boolean readBooleanField(Object target, String name) {
@@ -574,65 +371,5 @@ public final class WidgetSerializer {
             }
         }
         return null;
-    }
-
-    private static ChromeAsset rasterizeWidget(
-            Minecraft client,
-            Widget widget,
-            Path chromeRoot,
-            Map<String, String> hashToRelative) throws IOException {
-        Bounds bounds = widget.getBounds();
-        if (bounds == null || bounds.empty()) {
-            throw new IOException("widget bounds empty: " + widget.getClass().getName());
-        }
-        int width = Math.max(1, bounds.width());
-        int height = Math.max(1, bounds.height());
-        int scale = LayoutBuilder.layoutScale();
-        int pixelWidth = width * scale;
-        int pixelHeight = height * scale;
-
-        try (OffScreenRenderer offScreen = new OffScreenRenderer(pixelWidth, pixelHeight)) {
-            GuiGraphics graphics = new GuiGraphics(client, client.renderBuffers().bufferSource());
-            byte[] png = offScreen.captureAsPng(() -> offScreen.runWithEmiRecipeMatrices(width, height, () -> {
-                graphics.pose().pushPose();
-                graphics.pose().translate(-bounds.x(), -bounds.y(), 0);
-                widget.render(graphics, -10_000, -10_000, 0);
-                graphics.flush();
-                graphics.pose().popPose();
-            }));
-
-            String hash = sha256(png);
-            String relative = hashToRelative.get(hash);
-            boolean deduped = relative != null;
-            if (relative == null) {
-                relative = "sh/" + hash.substring(0, 2) + "/" + hash + ".png";
-                Path out = chromeRoot.resolve(relative);
-                Files.createDirectories(out.getParent());
-                Files.write(out, png);
-                hashToRelative.put(hash, relative);
-            }
-            String exportPath = Constants.CHROME_DIR + "/" + relative.replace('\\', '/');
-            return new ChromeAsset(exportPath, deduped);
-        }
-    }
-
-    private static boolean isRootWidget(Widget widget) {
-        return widget.getClass().getName().endsWith("RootWidget");
-    }
-
-    private static boolean isDrawableWidget(Widget widget) {
-        if (widget instanceof DrawableWidget) {
-            return true;
-        }
-        return widget.getClass().getName().endsWith(".DrawableWidget");
-    }
-
-    private static String sha256(byte[] data) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(data);
-            return HexFormat.of().formatHex(digest);
-        } catch (Exception e) {
-            throw new RuntimeException("SHA-256 unavailable", e);
-        }
     }
 }

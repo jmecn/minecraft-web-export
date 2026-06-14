@@ -1,6 +1,5 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 
-import com.google.gson.JsonObject;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
@@ -15,7 +14,6 @@ import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeLangKeysCollector;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import java.util.Set;
-import java.util.TreeSet;
 import net.minecraft.client.Minecraft;
 
 public final class RecipeGraphBuilder {
@@ -46,21 +44,18 @@ public final class RecipeGraphBuilder {
                 continue;
             }
 
-            JsonObject layout = LayoutBuilder.buildLayoutInMemory(
-                    client,
+            RecipeMeta meta = LayoutBuilder.compileMeta(
                     recipe,
                     recipeId,
-                    new TreeSet<>(),
                     context.referencedItems(),
                     context.referencedFluids(),
                     context.referencedTags(),
                     context.iconVariants());
-
-            RecipeMeta meta = LayoutBuilder.bake(layout);
+            context.putRecipeMeta(recipeId, meta);
             langCollector.collectMeta(meta);
-            ItemIndexExporter.accumulateRecipeRefsFromLayout(
+            ItemIndexExporter.accumulateRecipeRefsFromMeta(
                     recipeId,
-                    layout,
+                    meta,
                     context.inputs(),
                     context.outputs(),
                     context.fluidRegistryIds());

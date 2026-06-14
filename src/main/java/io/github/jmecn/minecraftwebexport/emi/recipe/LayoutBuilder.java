@@ -13,16 +13,10 @@ import dev.emi.emi.api.widget.WidgetHolder;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
@@ -43,45 +37,29 @@ public final class LayoutBuilder {
         return MweConfig.recipeLayoutScale();
     }
 
-    public static JsonObject buildLayoutInMemory(
-            Minecraft client,
+    public static RecipeMeta compileMeta(
             EmiRecipe recipe,
             String recipeId,
-            Set<String> textureIds,
             Set<String> referencedItems,
             Set<String> referencedFluids,
             Set<String> referencedTags,
             Map<String, ItemStack> iconVariants) {
-        int[] chromeWritten = {0};
-        int[] chromeDedupedCount = {0};
-        return buildLayout(
-                client,
+        return bake(buildLayout(
                 recipe,
                 recipeId,
-                textureIds,
                 referencedItems,
                 referencedFluids,
                 referencedTags,
-                iconVariants,
-                null,
-                new HashMap<>(),
-                chromeWritten,
-                chromeDedupedCount);
+                iconVariants));
     }
 
     private static JsonObject buildLayout(
-            Minecraft client,
             EmiRecipe recipe,
             String recipeId,
-            Set<String> textureIds,
             Set<String> referencedItems,
             Set<String> referencedFluids,
             Set<String> referencedTags,
-            Map<String, ItemStack> iconVariants,
-            Path chromeRoot,
-            Map<String, String> chromeHashToRelative,
-            int[] chromeWritten,
-            int[] chromeDedupedCount) {
+            Map<String, ItemStack> iconVariants) {
         int displayWidth = Math.max(1, recipe.getDisplayWidth());
         int displayHeight = Math.max(1, recipe.getDisplayHeight());
 
@@ -107,16 +85,11 @@ public final class LayoutBuilder {
 
         JsonArray widgetArray = new JsonArray();
         WidgetSerializeContext context = new WidgetSerializeContext(
-                client,
-                chromeRoot,
-                chromeHashToRelative,
-                chromeWritten,
-                chromeDedupedCount,
                 referencedItems,
                 referencedFluids,
                 referencedTags,
                 iconVariants);
-        WidgetSerializer.serializeWidgets(recipe, widgets, textureIds, context, widgetArray::add);
+        WidgetSerializer.serializeWidgets(recipe, widgets, new java.util.TreeSet<>(), context, widgetArray::add);
 
         JsonObject panel = new JsonObject();
         panel.addProperty("width", displayWidth);

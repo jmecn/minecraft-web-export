@@ -1,6 +1,7 @@
 package io.github.jmecn.minecraftwebexport.model.pipeline;
 
 import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -34,6 +35,7 @@ public final class ExportContext {
     private final Set<String> referencedTags = new TreeSet<>();
     private final Set<String> recipeLangKeys = new TreeSet<>();
     private final Map<String, ItemStack> iconVariants = new LinkedHashMap<>();
+    private final Map<String, RecipeMeta> recipeMetas = new LinkedHashMap<>();
 
     public ExportContext(Mode mode) {
         this.mode = Objects.requireNonNull(mode, "mode");
@@ -105,6 +107,20 @@ public final class ExportContext {
 
     public Map<String, ItemStack> iconVariants() {
         return iconVariants;
+    }
+
+    public void putRecipeMeta(String recipeId, RecipeMeta meta) {
+        if (recipeId != null && !recipeId.isBlank() && meta != null) {
+            recipeMetas.put(recipeId, meta);
+        }
+    }
+
+    public RecipeMeta recipeMeta(String recipeId) {
+        return recipeMetas.get(recipeId);
+    }
+
+    public Map<String, RecipeMeta> recipeMetas() {
+        return Collections.unmodifiableMap(recipeMetas);
     }
 
     public static final class Builder {

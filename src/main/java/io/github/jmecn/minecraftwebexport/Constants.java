@@ -21,7 +21,6 @@ public final class Constants {
     public static final String EMI_ROOT = "emi";
     public static final String BUNDLE_FILE = "bundle.json";
     public static final String RECIPES_DIR = "recipes";
-    public static final String CHROME_DIR = "chrome";
     public static final String TEXTURES_DIR = "textures";
     public static final String TEXTURE_MANIFEST_FILE = "manifest.json";
     public static final String ICONS_DIR = "icons";

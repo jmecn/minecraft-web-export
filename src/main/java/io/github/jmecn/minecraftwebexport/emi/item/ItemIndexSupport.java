@@ -12,6 +12,8 @@ import io.github.jmecn.minecraftwebexport.model.item.ItemIdParts;
 import io.github.jmecn.minecraftwebexport.model.item.RegistryTagSet;
 import io.github.jmecn.minecraftwebexport.model.tag.TagFileRef;
 import io.github.jmecn.minecraftwebexport.enums.tag.TagKind;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
+import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -294,26 +296,64 @@ final class ItemIndexSupport {
         return value;
     }
 
-    static JsonArray readWidgets(JsonObject layout) {
-        JsonElement widgetsElement = layout.get("widgets");
-        if (widgetsElement != null && widgetsElement.isJsonArray()) {
-            return widgetsElement.getAsJsonArray();
+    static String categoryFromMeta(RecipeMeta meta, String recipeId) {
+        if (meta != null && meta.category() != null && !meta.category().isBlank()) {
+            return meta.category();
         }
-        return new JsonArray();
+        return categoryFromRecipeId(recipeId);
     }
 
-    static String readCategoryId(JsonObject layout, String recipeId) {
-        if (layout != null && layout.has("category") && layout.get("category").isJsonPrimitive()) {
-            String category = layout.get("category").getAsString().trim();
-            if (!category.isEmpty()) {
-                return category;
-            }
-        }
+    static String categoryFromRecipeId(String recipeId) {
         int slash = recipeId.indexOf('/');
         if (slash > 0) {
             return recipeId.substring(0, slash);
         }
         return "emi:unknown";
+    }
+
+    static void collectInteractionIds(
+            WidgetInteraction interaction,
+            Set<String> out,
+            Set<String> fluidRegistryIds) {
+        if (interaction == null) {
+            return;
+        }
+        String kind = interaction.kind();
+        if ("item".equals(kind)) {
+            addCanonicalId(interaction.id(), out);
+            return;
+        }
+        if ("fluid".equals(kind)) {
+            addFluidRegistryId(interaction.id(), out, fluidRegistryIds);
+            return;
+        }
+        if ("tag".equals(kind)) {
+            if (interaction.displayId() != null) {
+                addCanonicalId(interaction.displayId(), out);
+            }
+            return;
+        }
+        if ("list".equals(kind) && interaction.entries() != null) {
+            for (WidgetInteraction entry : interaction.entries()) {
+                collectInteractionIds(entry, out, fluidRegistryIds);
+            }
+        }
+    }
+
+    static Map<String, Map<String, Set<String>>> bucketForRole(
+            String role,
+            Map<String, Map<String, Set<String>>> inputs,
+            Map<String, Map<String, Set<String>>> outputs) {
+        if (role == null) {
+            return null;
+        }
+        if ("output".equals(role)) {
+            return outputs;
+        }
+        if ("input".equals(role) || "catalyst".equals(role)) {
+            return inputs;
+        }
+        return null;
     }
 
     static Map<String, List<String>> categoryBuckets(Map<String, Set<String>> byCategory) {
@@ -330,24 +370,6 @@ final class ItemIndexSupport {
             total += refs.size();
         }
         return total;
-    }
-
-    static Map<String, Map<String, Set<String>>> bucketForRole(
-            JsonObject widget,
-            Map<String, Map<String, Set<String>>> inputs,
-            Map<String, Map<String, Set<String>>> outputs) {
-        JsonElement roleElement = widget.get("role");
-        if (roleElement == null || !roleElement.isJsonPrimitive()) {
-            return null;
-        }
-        String role = roleElement.getAsString();
-        if ("output".equals(role)) {
-            return outputs;
-        }
-        if ("input".equals(role) || "catalyst".equals(role)) {
-            return inputs;
-        }
-        return null;
     }
 
     static void addRecipeRefs(

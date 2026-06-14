@@ -1,8 +1,5 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
@@ -20,9 +17,10 @@ import io.github.jmecn.minecraftwebexport.model.item.ItemIdParts;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
 import io.github.jmecn.minecraftwebexport.model.item.RegistryTagSet;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,35 +51,24 @@ public final class ItemIndexExporter {
         return ItemIndexSupport.collectRegistryTagIds(server, itemIds);
     }
 
-    public static void accumulateRecipeRefsFromLayout(
+    public static void accumulateRecipeRefsFromMeta(
             String recipeId,
-            JsonObject layout,
+            RecipeMeta meta,
             Map<String, Map<String, Set<String>>> inputs,
             Map<String, Map<String, Set<String>>> outputs,
             Set<String> fluidRegistryIds) {
-        if (ItemIndexSupport.isEmiTagDisplayRecipe(recipeId)) {
+        if (ItemIndexSupport.isEmiTagDisplayRecipe(recipeId) || meta == null) {
             return;
         }
-        String categoryId = ItemIndexSupport.readCategoryId(layout, recipeId);
-        JsonArray widgets = ItemIndexSupport.readWidgets(layout);
-        for (JsonElement widgetElement : widgets) {
-            if (!widgetElement.isJsonObject()) {
-                continue;
-            }
-            JsonObject widget = widgetElement.getAsJsonObject();
+        String categoryId = ItemIndexSupport.categoryFromMeta(meta, recipeId);
+        for (RecipeWidget widget : meta.widgets()) {
             Map<String, Map<String, Set<String>>> bucket =
-                    ItemIndexSupport.bucketForRole(widget, inputs, outputs);
+                    ItemIndexSupport.bucketForRole(widget.role(), inputs, outputs);
             if (bucket == null) {
                 continue;
             }
             Set<String> ids = new TreeSet<>();
-            if (widget.has("tagDisplayItem") && widget.get("tagDisplayItem").isJsonPrimitive()) {
-                ItemIndexSupport.addCanonicalId(widget.get("tagDisplayItem").getAsString(), ids);
-            }
-            if (widget.has("ingredient")) {
-                ItemIndexSupport.collectIngredientIds(
-                        widget.get("ingredient"), ids, new HashMap<>(), fluidRegistryIds, null);
-            }
+            ItemIndexSupport.collectInteractionIds(widget.interaction(), ids, fluidRegistryIds);
             ItemIndexSupport.addRecipeRefs(bucket, categoryId, ids, recipeId);
         }
     }

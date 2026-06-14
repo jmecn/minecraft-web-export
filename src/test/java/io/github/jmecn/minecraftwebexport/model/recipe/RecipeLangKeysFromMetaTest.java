@@ -1,16 +1,12 @@
-package io.github.jmecn.minecraftwebexport.pipeline;
+package io.github.jmecn.minecraftwebexport.model.recipe;
 
-import io.github.jmecn.minecraftwebexport.model.recipe.RecipeLangKeysCollector;
-import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
-import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
-import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class RecipeGraphBuilderLangKeysTest {
+class RecipeLangKeysFromMetaTest {
 
     @Test
     void collectMetaAddsRegistryKeysNotCategoryFromRecipeMeta() {
