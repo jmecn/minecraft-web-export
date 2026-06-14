@@ -18,10 +18,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Async disk writes for export. Rendering stays on the Minecraft render thread; JSON, PNG bytes,
- * and other file output are serialized and flushed on a small worker pool.
- */
 public final class ExportWriteQueue implements AutoCloseable {
 
     private static final int BUFFER_SIZE = 1024 * 1024;
@@ -146,7 +142,6 @@ public final class ExportWriteQueue implements AutoCloseable {
         return data.length;
     }
 
-    /** Runs {@code action} with a fresh queue and blocks until all submitted writes finish. */
     public static void drain(ThrowingConsumer<ExportWriteQueue> action) throws IOException {
         Objects.requireNonNull(action, "action");
         try (ExportWriteQueue queue = new ExportWriteQueue()) {

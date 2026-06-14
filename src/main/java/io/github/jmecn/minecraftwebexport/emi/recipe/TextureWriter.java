@@ -6,7 +6,7 @@ import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.TextureWriteResult;
+import io.github.jmecn.minecraftwebexport.model.recipe.TextureWriteResult;
 import io.github.jmecn.minecraftwebexport.model.recipe.TextureManifest;
 import java.io.IOException;
 import java.io.InputStream;

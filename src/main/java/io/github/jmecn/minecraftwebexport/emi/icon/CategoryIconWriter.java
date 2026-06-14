@@ -8,18 +8,18 @@ import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.data.EmiRecipeCategoryProperties;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
-import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
+import io.github.jmecn.minecraftwebexport.emi.lang.LangDerivation;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.category.CategoriesIndex;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryEntry;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryIconSprite;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.CategoryIconResult;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasBuildResult;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasPagePlan;
+import io.github.jmecn.minecraftwebexport.model.icon.CategoryIconResult;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -34,10 +34,6 @@ import net.minecraft.world.item.ItemStack;
 public final class CategoryIconWriter {
 
     private CategoryIconWriter() {
-    }
-
-    public static boolean isEnabled() {
-        return !MweConfig.skipCategoryIconExport();
     }
 
     public static CategoryIconResult export(
@@ -67,7 +63,7 @@ public final class CategoryIconWriter {
         int failures = 0;
         long atlasIndexBytes = 0;
 
-        if (isEnabled() && !categories.isEmpty()) {
+        if (!categories.isEmpty()) {
             int cell = AtlasBuilder.categoryIconCellSize();
             int atlasMax = AtlasBuilder.atlasMaxSize();
             Path iconsRoot = EmiPaths.resolve(outputRoot, Constants.CATEGORY_ICONS_DIR);
@@ -114,7 +110,7 @@ public final class CategoryIconWriter {
                     }
                 }
                 bufferSource.endBatch();
-                AtlasBuilder.AtlasResult atlasResult = atlas.finish();
+                AtlasBuildResult atlasResult = atlas.finish();
                 atlasIndexBytes = atlasResult.indexBytes();
             }
         }
@@ -140,7 +136,7 @@ public final class CategoryIconWriter {
         String categoryId = category.getId().toString();
         int priority = EmiRecipeCategoryProperties.getOrder(category);
         Integer priorityField = priority != 0 ? priority : null;
-        return new CategoryEntry(categoryId, order, priorityField, LangKeys.resolveNameKey(category), null);
+        return new CategoryEntry(categoryId, order, priorityField, LangDerivation.resolveNameKey(category), null);
     }
 
     private static boolean renderWorkstationFallback(

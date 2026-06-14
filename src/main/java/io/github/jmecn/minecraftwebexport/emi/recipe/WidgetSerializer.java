@@ -24,7 +24,8 @@ import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
+import io.github.jmecn.minecraftwebexport.model.recipe.ChromeAsset;
+import io.github.jmecn.minecraftwebexport.model.recipe.WidgetSerializeContext;
 import java.lang.reflect.Field;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,18 +44,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 
 public final class WidgetSerializer {
-
-    record Context(
-            Minecraft client,
-            Path chromeRoot,
-            Map<String, String> chromeHashToRelative,
-            int[] chromeWritten,
-            int[] chromeDeduped,
-            Set<String> referencedItems,
-            Set<String> referencedFluids,
-            Set<String> referencedTags,
-            Map<String, ItemStack> iconVariants) {
-    }
 
     private WidgetSerializer() {
     }
@@ -95,7 +84,7 @@ public final class WidgetSerializer {
             EmiRecipe recipe,
             List<Widget> widgets,
             Set<String> textureIds,
-            Context ctx,
+            WidgetSerializeContext ctx,
             Consumer<JsonObject> sink) {
         for (Widget widget : widgets) {
             if (shouldSkipWidget(widget)) {
@@ -112,16 +101,14 @@ public final class WidgetSerializer {
         return widget instanceof RecipeButtonWidget;
     }
 
-    private static JsonObject serialize(EmiRecipe recipe, Widget widget, Set<String> textureIds, Context ctx) {
+    private static JsonObject serialize(EmiRecipe recipe, Widget widget, Set<String> textureIds, WidgetSerializeContext ctx) {
         try {
             if (ctx.chromeRoot() == null) {
                 if (isRootWidget(widget)
                         || isDrawableWidget(widget)) {
                     return null;
                 }
-                if (!(widget instanceof SlotWidget)
-                        && !(widget instanceof TankWidget)
-                        && !(widget instanceof TooltipWidget)) {
+                if (!(widget instanceof SlotWidget) && !(widget instanceof TooltipWidget)) {
                     return null;
                 }
             }
@@ -166,7 +153,7 @@ public final class WidgetSerializer {
         }
     }
 
-    private static JsonObject rootChrome(Widget widget, Context ctx) throws Exception {
+    private static JsonObject rootChrome(Widget widget, WidgetSerializeContext ctx) throws Exception {
         JsonObject object = boundsObject(widget.getBounds());
         object.addProperty("type", "root_chrome");
         attachChrome(object, widget, ctx);
@@ -174,7 +161,7 @@ public final class WidgetSerializer {
         return object;
     }
 
-    private static JsonObject drawableChrome(Widget widget, Context ctx) throws Exception {
+    private static JsonObject drawableChrome(Widget widget, WidgetSerializeContext ctx) throws Exception {
         JsonObject object = boundsObject(widget.getBounds());
         object.addProperty("type", "drawable_raster");
         attachChrome(object, widget, ctx);
@@ -182,7 +169,7 @@ public final class WidgetSerializer {
         return object;
     }
 
-    private static JsonObject rasterChrome(Widget widget, Context ctx, String type) throws Exception {
+    private static JsonObject rasterChrome(Widget widget, WidgetSerializeContext ctx, String type) throws Exception {
         Bounds bounds = widget.getBounds();
         if (bounds == null || bounds.empty()) {
             return null;
@@ -194,7 +181,7 @@ public final class WidgetSerializer {
         return object;
     }
 
-    private static void attachChrome(JsonObject object, Widget widget, Context ctx) throws Exception {
+    private static void attachChrome(JsonObject object, Widget widget, WidgetSerializeContext ctx) throws Exception {
         if (ctx.chromeRoot() == null) {
             return;
         }
@@ -213,7 +200,7 @@ public final class WidgetSerializer {
             String type,
             Set<String> textureIds,
             boolean tank,
-            Context ctx) {
+            WidgetSerializeContext ctx) {
         Bounds bounds = slot.getBounds();
         JsonObject object = boundsObject(bounds);
         object.addProperty("type", type);

@@ -6,12 +6,12 @@ import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.recipe.WidgetSerializer;
 import io.github.jmecn.minecraftwebexport.emi.recipe.Resolver;
-import io.github.jmecn.minecraftwebexport.emi.tag.ClosureExpander;
-import io.github.jmecn.minecraftwebexport.model.emi.tag.TagExpansion;
+import io.github.jmecn.minecraftwebexport.emi.tag.TagExpander;
+import io.github.jmecn.minecraftwebexport.model.tag.TagExpansion;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
-import io.github.jmecn.minecraftwebexport.pipeline.Planner;
+import io.github.jmecn.minecraftwebexport.pipeline.ExportScopeBuilder;
 import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.client.Minecraft;
@@ -21,7 +21,7 @@ public final class FullExportStrategy implements ExportStrategy {
 
     @Override
     public ExportContext planScope(Minecraft client, Seeds seeds) {
-        Set<String> recipeIds = Planner.collectExportableRecipeIds(client);
+        Set<String> recipeIds = ExportScopeBuilder.collectExportableRecipeIds(client);
         MinecraftServer server = client.getSingleplayerServer();
 
         Set<String> categoryIds = new TreeSet<>();
@@ -60,7 +60,6 @@ public final class FullExportStrategy implements ExportStrategy {
                 .categoryIds(categoryIds)
                 .itemIds(itemIds)
                 .fluidIds(fluidIds)
-                .blockIds(blockIds)
                 .tagIds(tagIds)
                 .build();
     }
@@ -84,7 +83,7 @@ public final class FullExportStrategy implements ExportStrategy {
             Set<String> nextFluids = new TreeSet<>(fluids);
             Set<String> nextBlocks = new TreeSet<>(blocks);
             if (!nextTags.isEmpty()) {
-                TagExpansion expansion = ClosureExpander.expand(server, nextTags);
+                TagExpansion expansion = TagExpander.expand(server, nextTags);
                 nextItems.addAll(expansion.items());
                 nextFluids.addAll(expansion.fluids());
                 nextBlocks.addAll(expansion.blocks());

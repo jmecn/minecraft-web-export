@@ -5,10 +5,10 @@ import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.runtime.EmiHidden;
-import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.enums.pipeline.RecipeExclusion;
 import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.core.Holder;
@@ -32,30 +32,18 @@ public final class Visibility {
     private Visibility() {
     }
 
-    public static boolean isEnabled() {
-        return !MweConfig.skipEmiVisibilityFilter();
-    }
-
     public static Set<String> filterExportableRecipeIds(MinecraftServer server, Iterable<EmiRecipe> recipes) {
         Set<String> ids = new TreeSet<>();
-        if (!isEnabled()) {
-            for (EmiRecipe recipe : recipes) {
-                if (recipe != null && recipe.getId() != null) {
-                    ids.add(recipe.getId().toString());
-                }
-            }
-            return Set.copyOf(ids);
-        }
         int skippedDisabled = 0;
         int skippedHiddenTag = 0;
         for (EmiRecipe recipe : recipes) {
             if (recipe == null || recipe.getId() == null) {
                 continue;
             }
-            Exclusion reason = exclusionReason(recipe, server);
-            if (reason == Exclusion.DISABLED_STACK) {
+            RecipeExclusion reason = exclusionReason(recipe, server);
+            if (reason == RecipeExclusion.DISABLED_STACK) {
                 skippedDisabled++;
-            } else if (reason == Exclusion.HIDDEN_TAG) {
+            } else if (reason == RecipeExclusion.HIDDEN_TAG) {
                 skippedHiddenTag++;
             } else {
                 ids.add(recipe.getId().toString());
@@ -72,44 +60,35 @@ public final class Visibility {
     }
 
     public static boolean shouldExportRecipe(EmiRecipe recipe, MinecraftServer server) {
-        return exclusionReason(recipe, server) == Exclusion.NONE;
+        return exclusionReason(recipe, server) == RecipeExclusion.NONE;
     }
 
     public static boolean shouldExportRegistryId(MinecraftServer server, String registryId) {
         return !isRegistryIdHiddenFromRecipeViewers(server, registryId);
     }
 
-    private enum Exclusion {
-        NONE,
-        DISABLED_STACK,
-        HIDDEN_TAG
-    }
-
-    private static Exclusion exclusionReason(EmiRecipe recipe, MinecraftServer server) {
-        if (!isEnabled()) {
-            return Exclusion.NONE;
-        }
+    private static RecipeExclusion exclusionReason(EmiRecipe recipe, MinecraftServer server) {
         for (EmiIngredient ingredient : Iterables.concat(
                 recipe.getInputs(), recipe.getOutputs(), recipe.getCatalysts())) {
             if (ingredient == null || ingredient.isEmpty()) {
                 continue;
             }
             if (EmiHidden.isDisabled(ingredient)) {
-                return Exclusion.DISABLED_STACK;
+                return RecipeExclusion.DISABLED_STACK;
             }
             if (server != null) {
                 for (EmiStack stack : ingredient.getEmiStacks()) {
                     if (isEmiStackHiddenFromRecipeViewers(server, stack)) {
-                        return Exclusion.HIDDEN_TAG;
+                        return RecipeExclusion.HIDDEN_TAG;
                     }
                 }
             }
         }
-        return Exclusion.NONE;
+        return RecipeExclusion.NONE;
     }
 
     static boolean isRegistryIdHiddenFromRecipeViewers(MinecraftServer server, String registryId) {
-        if (!isEnabled() || server == null || registryId == null || registryId.isBlank()) {
+        if (server == null || registryId == null || registryId.isBlank()) {
             return false;
         }
         ResourceLocation location = ResourceLocation.tryParse(RegistryKeys.normalizeRegistryId(registryId));

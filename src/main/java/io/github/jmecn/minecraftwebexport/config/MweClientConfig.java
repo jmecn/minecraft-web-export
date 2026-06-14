@@ -11,22 +11,11 @@ public final class MweClientConfig {
     public final ForgeConfigSpec.ConfigValue<String> exportMode;
     public final ForgeConfigSpec.ConfigValue<String> exportLanguages;
     public final ForgeConfigSpec.ConfigValue<String> excludedNamespaces;
-    public final ForgeConfigSpec.BooleanValue exportEmiLayout;
     public final ForgeConfigSpec.IntValue recipeLayoutScale;
 
     public final ForgeConfigSpec.IntValue worldDelayTicks;
     public final ForgeConfigSpec.IntValue timeoutSeconds;
     public final ForgeConfigSpec.ConfigValue<String> worldName;
-
-    public final ForgeConfigSpec.BooleanValue skipItemIconExport;
-    public final ForgeConfigSpec.BooleanValue skipFluidIconExport;
-    public final ForgeConfigSpec.BooleanValue skipLangExport;
-    public final ForgeConfigSpec.BooleanValue skipCategoryIconExport;
-    public final ForgeConfigSpec.BooleanValue skipEmiVisibilityFilter;
-    public final ForgeConfigSpec.BooleanValue skipItemNameKeysExport;
-    public final ForgeConfigSpec.BooleanValue skipTagMembersIndexExport;
-    public final ForgeConfigSpec.BooleanValue skipItemsSearchExport;
-    public final ForgeConfigSpec.BooleanValue skipEmiLayoutExport;
 
     public final ForgeConfigSpec.IntValue iconLogStride;
     public final ForgeConfigSpec.IntValue itemsIndexWriteLogStride;
@@ -50,7 +39,7 @@ public final class MweClientConfig {
                 .comment("Optional absolute output root. Empty uses the default under the game directory.")
                 .define("outputDir", "");
         exportMode = builder
-                .comment("Export scope: full (all EMI-visible recipes) or scoped (seed closure only).")
+                .comment("Export scope: full (all EMI-visible recipes) or scoped (seed refs only).")
                 .define("mode", "full");
         exportLanguages = builder
                 .comment("Comma-separated language codes to export. Empty exports en_us only.")
@@ -58,9 +47,6 @@ public final class MweClientConfig {
         excludedNamespaces = builder
                 .comment("Extra comma-separated namespaces excluded from export.")
                 .define("excludedNamespaces", "");
-        exportEmiLayout = builder
-                .comment("Write EMI recipe layout JSON during export.")
-                .define("exportEmiLayout", true);
         recipeLayoutScale = builder
                 .comment("Recipe layout render scale.")
                 .defineInRange("recipeLayoutScale", Constants.DEFAULT_RECIPE_LAYOUT_SCALE, 1, 8);
@@ -76,18 +62,6 @@ public final class MweClientConfig {
         worldName = builder
                 .comment("Singleplayer save name used by CI export.")
                 .define("worldName", Constants.CI_DEFAULT_EXPORT_WORLD_NAME);
-        builder.pop();
-
-        builder.push("features");
-        skipItemIconExport = builder.define("skipItemIconExport", false);
-        skipFluidIconExport = builder.define("skipFluidIconExport", false);
-        skipLangExport = builder.define("skipLangExport", false);
-        skipCategoryIconExport = builder.define("skipCategoryIconExport", false);
-        skipEmiVisibilityFilter = builder.define("skipEmiVisibilityFilter", false);
-        skipItemNameKeysExport = builder.define("skipItemNameKeysExport", false);
-        skipTagMembersIndexExport = builder.define("skipTagMembersIndexExport", false);
-        skipItemsSearchExport = builder.define("skipItemsSearchExport", false);
-        skipEmiLayoutExport = builder.define("skipEmiLayoutExport", false);
         builder.pop();
 
         builder.push("logging");

@@ -2,6 +2,9 @@ package io.github.jmecn.minecraftwebexport.emi.lang;
 
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import io.github.jmecn.minecraftwebexport.model.lang.GtFluidPath;
+import io.github.jmecn.minecraftwebexport.model.lang.GtTagPrefixPattern;
+import io.github.jmecn.minecraftwebexport.model.lang.GtToolPattern;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -15,9 +18,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 public final class GtceuLabels {
-
-    private record GtToolPattern(String toolName, String pattern, String templateKey) {
-    }
 
     private GtceuLabels() {
     }
@@ -73,23 +73,20 @@ public final class GtceuLabels {
         return null;
     }
 
-    private record FluidPath(String storageKey, String materialPath) {
-    }
-
-    private static FluidPath parseFluidPath(String path) {
+    private static GtFluidPath parseFluidPath(String path) {
         if (path.startsWith("molten_")) {
-            return new FluidPath("molten", path.substring("molten_".length()));
+            return new GtFluidPath("molten", path.substring("molten_".length()));
         }
         if (path.endsWith("_plasma")) {
-            return new FluidPath("plasma", path.substring(0, path.length() - "_plasma".length()));
+            return new GtFluidPath("plasma", path.substring(0, path.length() - "_plasma".length()));
         }
         if (path.startsWith("liquid_")) {
-            return new FluidPath("liquid", path.substring("liquid_".length()));
+            return new GtFluidPath("liquid", path.substring("liquid_".length()));
         }
         if (path.endsWith("_gas")) {
-            return new FluidPath("gas", path.substring(0, path.length() - "_gas".length()));
+            return new GtFluidPath("gas", path.substring(0, path.length() - "_gas".length()));
         }
-        return new FluidPath("primary", path);
+        return new GtFluidPath("primary", path);
     }
 
     private static String pickFluidTemplateKey(
@@ -155,7 +152,7 @@ public final class GtceuLabels {
         if (flatFluid != null) {
             return flatFluid;
         }
-        FluidPath parsed = parseFluidPath(path);
+        GtFluidPath parsed = parseFluidPath(path);
         String matLabel = resolveMaterialLabel(namespace, parsed.materialPath(), path, translateKey);
         if (matLabel == null) {
             return resolveKey(translateKey, materialKey(namespace, path));
@@ -167,9 +164,6 @@ public final class GtceuLabels {
         }
         String fallback = resolveKey(translateKey, materialKey(namespace, path));
         return fallback != null ? fallback : resolveKey(translateKey, materialKey(namespace, parsed.materialPath()));
-    }
-
-    private record TagPrefixPattern(String langSuffix, String pattern, String langKey) {
     }
 
     private static List<GtToolPattern> buildGtToolPatterns(Map<String, String> langTable) {
@@ -268,7 +262,7 @@ public final class GtceuLabels {
         return composeFromTemplate("block.bud_indicator", matLabel, translateKey);
     }
 
-    private static List<TagPrefixPattern> buildTagPrefixPatterns(Map<String, String> langTable) {
+    private static List<GtTagPrefixPattern> buildGtTagPrefixPatterns(Map<String, String> langTable) {
         Set<String> suffixes = new LinkedHashSet<>(GtMaterialPatterns.TAG_PREFIX_PATTERNS.keySet());
         if (langTable != null) {
             for (String key : langTable.keySet()) {
@@ -277,12 +271,12 @@ public final class GtceuLabels {
                 }
             }
         }
-        List<TagPrefixPattern> patterns = new ArrayList<>();
+        List<GtTagPrefixPattern> patterns = new ArrayList<>();
         for (String langSuffix : suffixes) {
             String pattern = GtMaterialPatterns.TAG_PREFIX_PATTERNS.getOrDefault(langSuffix, "%s_" + langSuffix);
-            patterns.add(new TagPrefixPattern(langSuffix, pattern, "tagprefix." + langSuffix));
+            patterns.add(new GtTagPrefixPattern(langSuffix, pattern, "tagprefix." + langSuffix));
         }
-        patterns.sort(Comparator.comparingInt((TagPrefixPattern p) -> p.pattern().length()).reversed());
+        patterns.sort(Comparator.comparingInt((GtTagPrefixPattern p) -> p.pattern().length()).reversed());
         return patterns;
     }
 
@@ -324,7 +318,7 @@ public final class GtceuLabels {
         if (!itemTemplate.contains("%s")) {
             return itemTemplate;
         }
-        for (TagPrefixPattern entry : buildTagPrefixPatterns(langTable)) {
+        for (GtTagPrefixPattern entry : buildGtTagPrefixPatterns(langTable)) {
             String materialPath = GtMaterialPatterns.extractMaterial(path, entry.pattern());
             if (materialPath == null) {
                 continue;
@@ -397,7 +391,7 @@ public final class GtceuLabels {
                 return formatTemplate(bucketTemplate, fluidLabel);
             }
         }
-        for (TagPrefixPattern entry : buildTagPrefixPatterns(langTable)) {
+        for (GtTagPrefixPattern entry : buildGtTagPrefixPatterns(langTable)) {
             String materialPath = GtMaterialPatterns.extractMaterial(path, entry.pattern());
             if (materialPath == null) {
                 continue;

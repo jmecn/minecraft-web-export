@@ -6,9 +6,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
-import io.github.jmecn.minecraftwebexport.emi.tag.ClosureExpander;
-import io.github.jmecn.minecraftwebexport.model.emi.item.ExportedTagCatalog;
+import io.github.jmecn.minecraftwebexport.emi.tag.TagExpander;
+import io.github.jmecn.minecraftwebexport.model.item.ExportedTagCatalog;
+import io.github.jmecn.minecraftwebexport.model.item.ItemIdParts;
 import io.github.jmecn.minecraftwebexport.model.item.RegistryTagSet;
+import io.github.jmecn.minecraftwebexport.model.tag.TagFileRef;
+import io.github.jmecn.minecraftwebexport.enums.tag.TagKind;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -248,7 +251,7 @@ final class ItemIndexSupport {
             Map<String, Set<String>> tagItems,
             MinecraftServer server) {
         if (server != null) {
-            out.addAll(ClosureExpander.expand(server, Set.of(tagId)).items());
+            out.addAll(TagExpander.expand(server, Set.of(tagId)).items());
             return;
         }
         out.addAll(tagItems.getOrDefault(tagId, Set.of()));
@@ -361,65 +364,5 @@ final class ItemIndexSupport {
 
     static boolean isEmiTagDisplayRecipe(String recipeId) {
         return recipeId != null && recipeId.startsWith("emi:/tag/");
-    }
-
-    enum TagKind {
-        ITEMS("items"),
-        BLOCKS("blocks"),
-        FLUIDS("fluids");
-
-        private final String dirName;
-
-        TagKind(String dirName) {
-            this.dirName = dirName;
-        }
-    }
-
-    record TagFileRef(TagKind kind, String namespace, String path) {
-        static TagFileRef fromPath(Path tagsRoot, Path file) {
-            Path relative = tagsRoot.relativize(file);
-            if (relative.getNameCount() < 3) {
-                return null;
-            }
-            String namespace = relative.getName(0).toString();
-            String kindName = relative.getName(1).toString();
-            TagKind kind = switch (kindName) {
-                case "items" -> TagKind.ITEMS;
-                case "blocks" -> TagKind.BLOCKS;
-                case "fluids" -> TagKind.FLUIDS;
-                default -> null;
-            };
-            if (kind == null) {
-                return null;
-            }
-            Path pathPart = relative.subpath(2, relative.getNameCount());
-            String path = pathPart.toString().replace('\\', '/');
-            if (!path.endsWith(".json")) {
-                return null;
-            }
-            path = path.substring(0, path.length() - ".json".length());
-            return new TagFileRef(kind, namespace, path);
-        }
-
-        String tagId() {
-            return namespace + ":" + path;
-        }
-    }
-
-    record IdParts(String namespace, String path) {
-        static IdParts parse(String fullId) {
-            if (fullId == null || fullId.isBlank()) {
-                return null;
-            }
-            int sep = fullId.indexOf(':');
-            if (sep <= 0 || sep >= fullId.length() - 1) {
-                return null;
-            }
-            return new IdParts(fullId.substring(0, sep), fullId.substring(sep + 1));
-        }
-
-        Path toItemFile(Path outputDir) {
-            return EmiPaths.resolve(outputDir, "items/" + namespace + "/" + path + ".json");
-        }
     }
 }

@@ -10,7 +10,8 @@ import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
+import io.github.jmecn.minecraftwebexport.model.lang.LangMergeResult;
+import io.github.jmecn.minecraftwebexport.model.lang.LangMergeStats;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -41,16 +42,6 @@ public final class Merger {
     private Merger() {
     }
 
-
-    static final class MergeStats {
-        int keysSkipped;
-        int duplicateKeyWarnings;
-        int resourceLayersRead;
-    }
-
-    public static boolean isEnabled() {
-        return !MweConfig.skipLangExport();
-    }
 
     static boolean shouldMergeLangKey(String key, Set<String> onlyKeys) {
         if (onlyKeys == null) {
@@ -92,13 +83,13 @@ public final class Merger {
         int duplicateWarnings = 0;
         int keysSkipped = 0;
         int keysPerLanguage = 0;
-        String mode = onlyKeys == null ? "full" : "closure";
+        String mode = onlyKeys == null ? "full" : "filtered";
 
         for (String langCode : languages) {
             String langFile = langCode + ".json";
             Map<String, String> merged = new TreeMap<>();
             Map<ResourceLocation, List<Resource>> stacks = collectLangStacks(client, langFile, onlyNamespaces);
-            MergeStats stats = new MergeStats();
+            LangMergeStats stats = new LangMergeStats();
 
             if (stacks.isEmpty()) {
                 MweMod.LOGGER.warn(
@@ -145,7 +136,7 @@ public final class Merger {
 
         if (onlyKeys != null) {
             MweMod.LOGGER.info(
-                    "{} closure key filter: {} requested, ~{} keys per language file, {} entries skipped while scanning",
+                    "{} filtered key filter: {} requested, ~{} keys per language file, {} entries skipped while scanning",
                     Log.LANG,
                     onlyKeys.size(),
                     keysPerLanguage,
@@ -182,7 +173,7 @@ public final class Merger {
             Map<String, String> merged,
             Map<ResourceLocation, List<Resource>> stacks,
             Set<String> onlyKeys,
-            MergeStats stats) {
+            LangMergeStats stats) {
         Map<String, ResourceLocation> keyOrigin = new HashMap<>();
         for (Map.Entry<ResourceLocation, List<Resource>> stackEntry : stacks.entrySet()) {
             ResourceLocation location = stackEntry.getKey();
@@ -339,7 +330,7 @@ public final class Merger {
             return 0;
         }
         Map<String, String> minecraftMerged = new TreeMap<>();
-        mergeLangStacksInto(minecraftMerged, stacks, null, new MergeStats());
+        mergeLangStacksInto(minecraftMerged, stacks, null, new LangMergeStats());
         int added = 0;
         Set<String> found = new TreeSet<>();
         for (String key : missing) {

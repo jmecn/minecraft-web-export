@@ -8,7 +8,9 @@ import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryIconSprite;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasBuildResult;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasPagePlan;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasPageBuffer;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasIndex;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasPage;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasSpriteEntry;
@@ -120,8 +122,8 @@ final class AtlasBuilder implements AutoCloseable {
     private final Map<String, Integer> usageWeights;
 
     private final ExportWriteQueue writes;
-    private final List<PageInfo> pages = new ArrayList<>();
-    private final Map<String, SpriteRef> items = new LinkedHashMap<>();
+    private final List<AtlasPageBuffer> pages = new ArrayList<>();
+    private final Map<String, AtlasSpriteEntry> items = new LinkedHashMap<>();
 
     private NativeImage currentPage;
     private int pageIndex;
@@ -161,7 +163,7 @@ final class AtlasBuilder implements AutoCloseable {
     }
 
     CategoryIconSprite spriteFor(String itemId) {
-        SpriteRef ref = items.get(itemId);
+        AtlasSpriteEntry ref = items.get(itemId);
         if (ref == null) {
             return null;
         }
@@ -182,16 +184,15 @@ final class AtlasBuilder implements AutoCloseable {
 
         frame.copyPixelsTo(currentPage, cursorX, cursorY);
         int usage = usageWeights != null ? usageWeights.getOrDefault(itemId, 0) : 0;
-        items.put(itemId, new SpriteRef(pageIndex, cursorX, cursorY, usage));
+        items.put(itemId, usageWeights != null && usage > 0
+                ? new AtlasSpriteEntry(pageIndex, cursorX, cursorY, usage)
+                : new AtlasSpriteEntry(pageIndex, cursorX, cursorY));
         cursorX += cellSize;
         extentX = Math.max(extentX, cursorX);
         extentY = Math.max(extentY, cursorY + cellSize);
     }
 
-    record AtlasResult(int itemsPlaced, int pageCount, long indexBytes, long pngBytes, long cssBytes) {
-    }
-
-    AtlasResult finish() throws IOException {
+    AtlasBuildResult finish() throws IOException {
         if (currentPage != null && (!items.isEmpty() || cursorX > 0 || cursorY > 0)) {
             flushPageToDisk();
         } else if (currentPage != null) {
@@ -202,7 +203,7 @@ final class AtlasBuilder implements AutoCloseable {
         Files.createDirectories(outputDir);
 
         long pngBytes = pendingPngBytes;
-        for (PageInfo page : pages) {
+        for (AtlasPageBuffer page : pages) {
             Path out = outputDir.resolve(page.fileName());
             if (Files.exists(out)) {
                 pngBytes += Files.size(out);
@@ -210,17 +211,10 @@ final class AtlasBuilder implements AutoCloseable {
         }
 
         List<AtlasPage> pageList = new ArrayList<>();
-        for (PageInfo page : pages) {
+        for (AtlasPageBuffer page : pages) {
             pageList.add(new AtlasPage(page.fileName(), page.width(), page.height()));
         }
-        Map<String, AtlasSpriteEntry> spriteEntries = new LinkedHashMap<>();
-        for (Map.Entry<String, SpriteRef> entry : items.entrySet()) {
-            SpriteRef ref = entry.getValue();
-            AtlasSpriteEntry sprite = usageWeights != null && !usageWeights.isEmpty()
-                    ? new AtlasSpriteEntry(ref.page(), ref.x(), ref.y(), ref.usage())
-                    : new AtlasSpriteEntry(ref.page(), ref.x(), ref.y());
-            spriteEntries.put(entry.getKey(), sprite);
-        }
+        Map<String, AtlasSpriteEntry> spriteEntries = new LinkedHashMap<>(items);
         String sort = usageWeights != null && !usageWeights.isEmpty() ? "usageDesc" : null;
         AtlasIndex indexRoot = AtlasIndex.of(cellSize, sort, pageList, spriteEntries);
 
@@ -241,7 +235,7 @@ final class AtlasBuilder implements AutoCloseable {
                 pngBytes,
                 css.length());
 
-        return new AtlasResult(items.size(), pages.size(), indexJsonBytes, pngBytes, css.length());
+        return new AtlasBuildResult(items.size(), pages.size(), indexJsonBytes, pngBytes, css.length());
     }
 
     @Override
@@ -307,7 +301,7 @@ final class AtlasBuilder implements AutoCloseable {
         } finally {
             trimmed.close();
         }
-        pages.add(new PageInfo(pageIndex, fileName, usedWidth, usedHeight));
+        pages.add(new AtlasPageBuffer(pageIndex, fileName, usedWidth, usedHeight));
         pageIndex++;
     }
 
@@ -334,9 +328,9 @@ final class AtlasBuilder implements AutoCloseable {
         sb.append("  --cell: ").append(cellSize).append(";\n");
         sb.append("}\n\n");
 
-        for (Map.Entry<String, SpriteRef> entry : items.entrySet()) {
-            SpriteRef ref = entry.getValue();
-            PageInfo page = pages.get(ref.page());
+        for (Map.Entry<String, AtlasSpriteEntry> entry : items.entrySet()) {
+            AtlasSpriteEntry ref = entry.getValue();
+            AtlasPageBuffer page = pages.get(ref.page());
             sb.append('.').append(cssClass).append("[data-item=\"")
                     .append(escapeCssAttr(entry.getKey()))
                     .append("\"] {\n");
@@ -356,11 +350,5 @@ final class AtlasBuilder implements AutoCloseable {
 
     private static String escapeCssAttr(String id) {
         return id.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
-
-    private record SpriteRef(int page, int x, int y, int usage) {
-    }
-
-    private record PageInfo(int index, String fileName, int width, int height) {
     }
 }

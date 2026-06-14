@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
 import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
+import io.github.jmecn.minecraftwebexport.model.recipe.WidgetSerializeContext;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.api.widget.WidgetHolder;
@@ -36,14 +37,6 @@ public final class LayoutBuilder {
 
     static int progressLogStride(int total) {
         return ProgressLog.stride(total, MweConfig.layoutLogStride(), 20, 200);
-    }
-
-
-    public static boolean isEnabled() {
-        if (MweConfig.skipEmiLayoutExport()) {
-            return false;
-        }
-        return MweConfig.exportEmiLayout();
     }
 
     public static int layoutScale() {
@@ -113,7 +106,7 @@ public final class LayoutBuilder {
         recipe.addWidgets(holder);
 
         JsonArray widgetArray = new JsonArray();
-        WidgetSerializer.Context context = new WidgetSerializer.Context(
+        WidgetSerializeContext context = new WidgetSerializeContext(
                 client,
                 chromeRoot,
                 chromeHashToRelative,

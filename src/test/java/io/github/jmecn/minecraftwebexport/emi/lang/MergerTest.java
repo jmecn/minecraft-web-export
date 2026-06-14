@@ -24,12 +24,12 @@ class MergerTest {
     }
 
     @Test
-    void shouldMergeLangKeyAllowsClosureMaterialKeys() {
-        Set<String> closure = Set.of("material.tfg.latex", "tagprefix.ingot", "tag.item.c.latex");
-        assertTrue(Merger.shouldMergeLangKey("material.tfg.latex", closure));
-        assertTrue(Merger.shouldMergeLangKey("tagprefix.ingot", closure));
-        assertTrue(Merger.shouldMergeLangKey("tag.item.c.latex", closure));
-        assertFalse(Merger.shouldMergeLangKey("item.tfg.unused_ingot", closure));
+    void shouldMergeLangKeyAllowsDerivedMaterialKeys() {
+        Set<String> onlyKeys = Set.of("material.tfg.latex", "tagprefix.ingot", "tag.item.c.latex");
+        assertTrue(Merger.shouldMergeLangKey("material.tfg.latex", onlyKeys));
+        assertTrue(Merger.shouldMergeLangKey("tagprefix.ingot", onlyKeys));
+        assertTrue(Merger.shouldMergeLangKey("tag.item.c.latex", onlyKeys));
+        assertFalse(Merger.shouldMergeLangKey("item.tfg.unused_ingot", onlyKeys));
     }
 
     @Test

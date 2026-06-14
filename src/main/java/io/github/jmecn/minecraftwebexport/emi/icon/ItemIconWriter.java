@@ -4,14 +4,15 @@ import com.google.common.io.MoreFiles;
 import com.google.common.io.RecursiveDeleteOption;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.AtlasPagePlan;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.ItemIconResult;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasBuildResult;
+import io.github.jmecn.minecraftwebexport.model.icon.AtlasPagePlan;
+import io.github.jmecn.minecraftwebexport.model.icon.ItemIconResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,15 +55,6 @@ public final class ItemIconWriter {
     private ItemIconWriter() {
     }
 
-
-    public static boolean isEnabled() {
-        return !MweConfig.skipItemIconExport();
-    }
-
-    public static boolean fluidsEnabled() {
-        return !MweConfig.skipFluidIconExport();
-    }
-
     public static ItemIconResult export(
             Path outputDir,
             Minecraft client,
@@ -103,7 +95,7 @@ public final class ItemIconWriter {
             ExportWriteQueue writes) {
         int cell = AtlasBuilder.iconCellSize();
         int atlasMax = AtlasBuilder.atlasMaxSize();
-        boolean exportFluids = fluidsEnabled() && (onlyFluidIds == null || !onlyFluidIds.isEmpty());
+        boolean exportFluids = onlyFluidIds == null || !onlyFluidIds.isEmpty();
 
         List<ResourceLocation> itemOrder = orderedForPass(onlyItemIds, item -> true, usageWeights);
         List<String> fluidOrder = exportFluids ? orderedFluidIds(onlyFluidIds) : new ArrayList<>();
@@ -111,7 +103,7 @@ public final class ItemIconWriter {
 
         if (onlyItemIds != null) {
             MweMod.LOGGER.info(
-                    "{} closure: {} items, {} fluids, {} nbt variants at {}px -> {}",
+                    "{} export set: {} items, {} fluids, {} nbt variants at {}px -> {}",
                     Log.ICONS,
                     onlyItemIds.size(),
                     fluidOrder.size(),
@@ -160,7 +152,7 @@ public final class ItemIconWriter {
         int variantsPlaced = 0;
         int variantFailures = 0;
 
-        AtlasBuilder.AtlasResult atlasResult;
+        AtlasBuildResult atlasResult;
         try (OffScreenRenderer renderer = new OffScreenRenderer(cell, cell);
              AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights, writes)) {
             MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();

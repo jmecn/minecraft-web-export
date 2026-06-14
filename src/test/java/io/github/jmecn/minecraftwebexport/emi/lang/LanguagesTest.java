@@ -28,7 +28,7 @@ class LanguagesTest {
     @Test
     void prefersExportHintsOverConfig() {
         MweConfigTestSupport.apply(Map.of("export.languages", "de_de"));
-        Hints hints = new Hints(Map.of(), Map.of(), List.of(), false, List.of("zh_cn"));
+        Hints hints = new Hints(List.of("zh_cn"));
         assertEquals(Set.of("zh_cn", "en_us"), Languages.resolve(hints));
     }
 

@@ -3,33 +3,33 @@ package io.github.jmecn.minecraftwebexport.pipeline;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
-import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
 import io.github.jmecn.minecraftwebexport.emi.icon.CategoryIconWriter;
 import io.github.jmecn.minecraftwebexport.emi.icon.ItemIconWriter;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemsLangExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.NameKeysExporter;
-import io.github.jmecn.minecraftwebexport.emi.lang.ClosureKeys;
+import io.github.jmecn.minecraftwebexport.emi.lang.LangDerivation;
 import io.github.jmecn.minecraftwebexport.emi.lang.Languages;
 import io.github.jmecn.minecraftwebexport.emi.lang.Merger;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RecipePaths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RecipeWriter;
 import io.github.jmecn.minecraftwebexport.emi.recipe.TextureWriter;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.emi.tag.MembersIndexWriter;
+import io.github.jmecn.minecraftwebexport.emi.tag.TagIndexWriter;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.model.bundle.Bundle;
 import io.github.jmecn.minecraftwebexport.model.bundle.ItemsLangRef;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.CategoryIconResult;
-import io.github.jmecn.minecraftwebexport.model.emi.icon.ItemIconResult;
-import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
-import io.github.jmecn.minecraftwebexport.model.emi.item.ItemsLangExportResult;
-import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.RecipeWriteResult;
-import io.github.jmecn.minecraftwebexport.model.emi.tag.TagMembersResult;
+import io.github.jmecn.minecraftwebexport.model.icon.CategoryIconResult;
+import io.github.jmecn.minecraftwebexport.model.icon.ItemIconResult;
+import io.github.jmecn.minecraftwebexport.model.item.ItemIndexResult;
+import io.github.jmecn.minecraftwebexport.model.item.ItemsLangExportResult;
+import io.github.jmecn.minecraftwebexport.model.lang.LangMergeResult;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWriteResult;
+import io.github.jmecn.minecraftwebexport.model.tag.TagIndexResult;
+import io.github.jmecn.minecraftwebexport.model.pipeline.EmiRunStats;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
@@ -41,11 +41,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Stream;
-import dev.emi.emi.api.EmiApi;
-import dev.emi.emi.api.recipe.EmiRecipeCategory;
-import dev.emi.emi.api.recipe.EmiRecipeManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 
@@ -67,7 +63,7 @@ public final class Pipeline {
             module.beforeEmiExport(scope, client);
         }
 
-        Plan plan = Planner.plan(client, mode, modules, scope);
+        Plan plan = ExportScopeBuilder.plan(client, mode, modules, scope);
         ExportContext context = plan.context();
         Seeds mergedSeeds = plan.mode() == Mode.FULL ? Seeds.empty() : plan.sourceSeeds();
 
@@ -104,7 +100,7 @@ public final class Pipeline {
         Set<String> recipeIds = context.recipeIds();
 
         try (ExportWriteQueue writes = new ExportWriteQueue()) {
-            RelationPlanner.buildRelations(client, context);
+            RecipeGraphBuilder.buildGraph(client, context);
             RecipePaths.ensureRecipeDirectories(outputRoot, recipeIds);
 
             RecipeWriteResult recipes = RecipeWriter.export(outputRoot, client, context, writes);
@@ -112,11 +108,11 @@ public final class Pipeline {
 
             MinecraftServer server = client.getSingleplayerServer();
 
-            TagMembersResult tags = new TagMembersResult(
+            TagIndexResult tags = new TagIndexResult(
                     0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
-            if (server != null && MembersIndexWriter.isEnabled() && !context.tagIds().isEmpty()) {
-                tags = MembersIndexWriter.export(outputRoot, server, context.tagIds(), writes);
-            } else if (!context.tagIds().isEmpty() && server == null) {
+            if (server != null && !context.tagIds().isEmpty()) {
+                tags = TagIndexWriter.export(outputRoot, server, context.tagIds(), writes);
+            } else if (!context.tagIds().isEmpty()) {
                 MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
             }
 
@@ -129,20 +125,18 @@ public final class Pipeline {
                     : new ItemIndexResult(0, 0, 0, 0);
             writes.awaitIdle("after items index");
 
-            if (recipes.written() > 0 && NameKeysExporter.isEnabled()) {
+            if (recipes.written() > 0) {
                 NameKeysExporter.export(outputRoot, client, writes);
             }
             writes.awaitIdle("after name keys");
 
-            Set<String> langKeys = deriveLangKeys(context);
-            LangMergeResult langs = Merger.isEnabled()
-                    ? Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes)
-                    : emptyLangResult();
+            Set<String> langKeys = LangDerivation.derive(context);
+            LangMergeResult langs = Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
             writes.awaitIdle("after emi lang");
 
             List<String> languages = List.of();
             ItemsLangExportResult itemsLang = ItemsLangExportResult.EMPTY;
-            if (items.itemCount() > 0 && ItemsLangExporter.isEnabled()) {
+            if (items.itemCount() > 0) {
                 languages = exportedLanguages(outputRoot);
                 if (languages.isEmpty()) {
                     languages = Languages.resolve(plan.hints()).stream().sorted().toList();
@@ -162,16 +156,14 @@ public final class Pipeline {
                 languages = exportedLanguages(outputRoot);
             }
 
-            ItemIconResult icons = ItemIconWriter.isEnabled()
-                    ? ItemIconWriter.export(
-                            outputRoot,
-                            client,
-                            context.itemIds(),
-                            context.fluidIds(),
-                            null,
-                            context.iconVariants(),
-                            writes)
-                    : emptyIconResult();
+            ItemIconResult icons = ItemIconWriter.export(
+                    outputRoot,
+                    client,
+                    context.itemIds(),
+                    context.fluidIds(),
+                    null,
+                    context.iconVariants(),
+                    writes);
 
             ItemsLangRef itemsLangRef = itemsLang.locales().isEmpty()
                     ? null
@@ -212,7 +204,7 @@ public final class Pipeline {
             int recipesRequested,
             CategoryIconResult categories,
             ItemIndexResult items,
-            TagMembersResult tags,
+            TagIndexResult tags,
             LangMergeResult langs,
             ItemIconResult icons) {
         if (mode == Mode.SCOPED) {
@@ -240,23 +232,6 @@ public final class Pipeline {
         }
     }
 
-    private record EmiRunStats(
-            int recipesRequested,
-            int recipesWritten,
-            int itemIndexCount,
-            int tagIndexCount,
-            int languagesWritten,
-            int iconsWritten) {
-    }
-
-    private static LangMergeResult emptyLangResult() {
-        return new LangMergeResult(0, 0, 0, 0, 0, 0);
-    }
-
-    private static ItemIconResult emptyIconResult() {
-        return new ItemIconResult(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
-
     private static List<String> exportedLanguages(Path outputRoot) throws IOException {
         Path langDir = EmiPaths.resolve(outputRoot, Constants.LANG_DIR);
         if (!Files.isDirectory(langDir)) {
@@ -271,44 +246,5 @@ public final class Pipeline {
                     .sorted(Comparator.naturalOrder())
                     .toList();
         }
-    }
-
-    private static Set<String> deriveLangKeys(ExportContext context) {
-        Set<String> keys = new TreeSet<>(context.seedLangKeys());
-        if (!context.recipeLangKeys().isEmpty()) {
-            keys.addAll(context.recipeLangKeys());
-        }
-        keys = new TreeSet<>(ClosureKeys.mergeClosureLangKeys(keys, context.itemIds(), context.fluidIds()));
-        keys = new TreeSet<>(ClosureKeys.mergeTagLangKeys(keys, context.tagIds()));
-        keys.addAll(categoryLangKeys(context.categoryIds()));
-        return Set.copyOf(keys);
-    }
-
-    private static Set<String> categoryLangKeys(Set<String> categoryIds) {
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            return Set.of();
-        }
-        EmiRecipeManager manager = EmiApi.getRecipeManager();
-        if (manager == null) {
-            Set<String> keys = new TreeSet<>();
-            for (String categoryId : categoryIds) {
-                keys.add(LangKeys.emiCategoryLangKey(categoryId));
-            }
-            return Set.copyOf(keys);
-        }
-        Set<String> keys = new TreeSet<>();
-        for (EmiRecipeCategory category : manager.getCategories()) {
-            if (category == null || category.getId() == null) {
-                continue;
-            }
-            String categoryId = category.getId().toString();
-            if (categoryIds.contains(categoryId)) {
-                keys.add(LangKeys.resolveNameKey(category));
-            }
-        }
-        for (String categoryId : categoryIds) {
-            keys.add(LangKeys.emiCategoryLangKey(categoryId));
-        }
-        return Set.copyOf(keys);
     }
 }

@@ -1,14 +1,13 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
 
 import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.emi.item.NameKeysResult;
+import io.github.jmecn.minecraftwebexport.model.item.NameKeysResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
 import io.github.jmecn.minecraftwebexport.model.item.NameKeys;
 import net.minecraft.client.Minecraft;
@@ -24,10 +23,6 @@ import java.util.TreeMap;
 public final class NameKeysExporter {
 
     private NameKeysExporter() {
-    }
-
-    public static boolean isEnabled() {
-        return !MweConfig.skipItemNameKeysExport();
     }
 
     public static NameKeysResult export(Path outputDir, Minecraft client, ExportWriteQueue writes) throws IOException {

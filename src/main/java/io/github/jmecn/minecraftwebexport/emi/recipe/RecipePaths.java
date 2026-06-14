@@ -2,6 +2,7 @@ package io.github.jmecn.minecraftwebexport.emi.recipe;
 
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeIdParts;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,9 +11,6 @@ import java.util.Set;
 public final class RecipePaths {
 
     private RecipePaths() {
-    }
-
-    public record RecipeIdParts(String namespace, String path) {
     }
 
     public static RecipeIdParts splitRecipeId(String recipeId) {

@@ -12,10 +12,11 @@ import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.emi.item.ExportedTagCatalog;
-import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexBuild;
-import io.github.jmecn.minecraftwebexport.model.emi.item.ItemIndexResult;
+import io.github.jmecn.minecraftwebexport.model.item.ExportedTagCatalog;
+import io.github.jmecn.minecraftwebexport.model.item.ItemIndexBuild;
+import io.github.jmecn.minecraftwebexport.model.item.ItemIndexResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemDetail;
+import io.github.jmecn.minecraftwebexport.model.item.ItemIdParts;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
 import io.github.jmecn.minecraftwebexport.model.item.RegistryTagSet;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
@@ -127,7 +128,7 @@ public final class ItemIndexExporter {
                 skippedHiddenItems++;
                 continue;
             }
-            ItemIndexSupport.IdParts item = ItemIndexSupport.IdParts.parse(itemId);
+            ItemIdParts item = ItemIdParts.parse(itemId);
             if (item == null) {
                 continue;
             }

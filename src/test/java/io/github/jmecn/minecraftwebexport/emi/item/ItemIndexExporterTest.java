@@ -5,7 +5,7 @@ import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

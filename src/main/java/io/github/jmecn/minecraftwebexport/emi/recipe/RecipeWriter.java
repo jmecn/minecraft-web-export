@@ -12,9 +12,9 @@ import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.emi.recipe.RecipeWriteResult;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWriteResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
+import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -34,10 +34,6 @@ public final class RecipeWriter {
     private RecipeWriter() {
     }
 
-    public static boolean isEnabled() {
-        return LayoutBuilder.isEnabled();
-    }
-
     public static int imageScale() {
         return LayoutBuilder.layoutScale();
     }
@@ -49,10 +45,6 @@ public final class RecipeWriter {
     public static RecipeWriteResult export(
             Path outputDir, Minecraft client, ExportContext context, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
-        if (!isEnabled()) {
-            MweMod.LOGGER.info("{} recipe export disabled by configuration", Log.EMI);
-            return emptyResult(context.recipeIds().size());
-        }
 
         int written = 0;
         int missing = 0;
@@ -130,10 +122,6 @@ public final class RecipeWriter {
                 failures);
 
         return new RecipeWriteResult(total, written, missing, failures, pngBytes, metaBytes, scale);
-    }
-
-    private static RecipeWriteResult emptyResult(int requested) {
-        return new RecipeWriteResult(requested, 0, 0, 0, 0, 0, imageScale());
     }
 
     private static int renderRecipePng(

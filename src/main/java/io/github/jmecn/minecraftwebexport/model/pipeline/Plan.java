@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.pipeline;
 
+import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import java.util.Objects;
 
 public record Plan(ExportContext context, Hints hints, Seeds sourceSeeds) {

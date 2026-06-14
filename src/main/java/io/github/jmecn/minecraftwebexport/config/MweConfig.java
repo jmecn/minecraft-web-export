@@ -48,15 +48,12 @@ public final class MweConfig {
                     mode = "full"
                     languages = ""
                     excludedNamespaces = ""
-                    exportEmiLayout = true
                     recipeLayoutScale = %d
 
                     [ci]
                     worldDelayTicks = %d
                     timeoutSeconds = %d
                     worldName = "%s"
-
-                    [features]
 
                     [logging]
 
@@ -147,10 +144,6 @@ public final class MweConfig {
         return client().exportEnabled.get();
     }
 
-    public static boolean exportEmiLayout() {
-        return client().exportEmiLayout.get();
-    }
-
     public static int recipeLayoutScale() {
         return Math.max(1, client().recipeLayoutScale.get());
     }
@@ -176,42 +169,6 @@ public final class MweConfig {
         }
         String raw = client().worldName.get().trim();
         return raw.isEmpty() ? Constants.CI_DEFAULT_EXPORT_WORLD_NAME : raw;
-    }
-
-    public static boolean skipItemIconExport() {
-        return client().skipItemIconExport.get();
-    }
-
-    public static boolean skipFluidIconExport() {
-        return client().skipFluidIconExport.get();
-    }
-
-    public static boolean skipLangExport() {
-        return client().skipLangExport.get();
-    }
-
-    public static boolean skipCategoryIconExport() {
-        return client().skipCategoryIconExport.get();
-    }
-
-    public static boolean skipEmiVisibilityFilter() {
-        return client().skipEmiVisibilityFilter.get();
-    }
-
-    public static boolean skipItemNameKeysExport() {
-        return client().skipItemNameKeysExport.get();
-    }
-
-    public static boolean skipTagMembersIndexExport() {
-        return client().skipTagMembersIndexExport.get();
-    }
-
-    public static boolean skipItemsSearchExport() {
-        return client().skipItemsSearchExport.get();
-    }
-
-    public static boolean skipEmiLayoutExport() {
-        return client().skipEmiLayoutExport.get();
     }
 
     public static int iconLogStride() {
@@ -269,7 +226,7 @@ public final class MweConfig {
     public static String parseExportMode(String raw) {
         String normalized = raw.trim().toLowerCase(Locale.ROOT);
         return switch (normalized) {
-            case "scoped", "closure" -> "scoped";
+            case "scoped" -> "scoped";
             default -> "full";
         };
     }

@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.model.pipeline;
 
+import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -22,7 +23,6 @@ public final class ExportContext {
     private final Set<String> categoryIds = new TreeSet<>();
     private final Set<String> itemIds = new TreeSet<>();
     private final Set<String> fluidIds = new TreeSet<>();
-    private final Set<String> blockIds = new TreeSet<>();
     private final Set<String> tagIds = new TreeSet<>();
     private final Set<String> seedLangKeys = new TreeSet<>();
 
@@ -65,10 +65,6 @@ public final class ExportContext {
 
     public Set<String> fluidIds() {
         return Collections.unmodifiableSet(fluidIds);
-    }
-
-    public Set<String> blockIds() {
-        return Collections.unmodifiableSet(blockIds);
     }
 
     public Set<String> tagIds() {
@@ -170,13 +166,6 @@ public final class ExportContext {
         public Builder addFluidId(String id) {
             if (id != null && !id.isBlank()) {
                 context.fluidIds.add(id);
-            }
-            return this;
-        }
-
-        public Builder blockIds(Set<String> values) {
-            if (values != null) {
-                context.blockIds.addAll(values);
             }
             return this;
         }
