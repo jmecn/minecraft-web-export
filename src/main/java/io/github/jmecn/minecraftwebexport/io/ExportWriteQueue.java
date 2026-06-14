@@ -93,6 +93,17 @@ public final class ExportWriteQueue implements AutoCloseable {
     }
 
     public void awaitIdle() {
+        awaitIdle(null);
+    }
+
+    public void awaitIdle(String phase) {
+        int count = pending.size();
+        if (count == 0) {
+            return;
+        }
+        String label = phase == null || phase.isBlank() ? "export" : phase;
+        MweMod.LOGGER.info("{} flushing {} pending disk writes ({}) ...", Log.EMI, count, label);
+        long startedAt = System.nanoTime();
         RuntimeException failure = null;
         for (Future<?> future : pending) {
             try {
@@ -105,6 +116,13 @@ public final class ExportWriteQueue implements AutoCloseable {
             }
         }
         pending.clear();
+        long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+        MweMod.LOGGER.info(
+                "{} disk writes flushed: {} tasks, {} ms ({})",
+                Log.EMI,
+                count,
+                elapsedMs,
+                label);
         if (failure != null) {
             throw failure;
         }

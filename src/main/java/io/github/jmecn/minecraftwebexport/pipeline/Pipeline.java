@@ -122,18 +122,18 @@ public final class Pipeline {
             ItemIndexResult items = recipes.written() > 0
                     ? ItemIndexExporter.export(outputRoot, server, context, writes)
                     : new ItemIndexResult(0, 0, 0, 0);
-            writes.awaitIdle();
+            writes.awaitIdle("after items index");
 
             if (recipes.written() > 0 && NameKeysExporter.isEnabled()) {
                 NameKeysExporter.export(outputRoot, client, writes);
             }
-            writes.awaitIdle();
+            writes.awaitIdle("after name keys");
 
             Set<String> langKeys = LangPlanner.deriveLangKeys(context);
             LangMergeResult langs = Merger.isEnabled()
                     ? Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes)
                     : emptyLangResult();
-            writes.awaitIdle();
+            writes.awaitIdle("after emi lang");
 
             List<String> languages = List.of();
             ItemsLangExportResult itemsLang = ItemsLangExportResult.EMPTY;
@@ -151,7 +151,7 @@ public final class Pipeline {
                             writes);
                 }
             }
-            writes.awaitIdle();
+            writes.awaitIdle("after items lang");
 
             if (languages.isEmpty()) {
                 languages = exportedLanguages(outputRoot);
@@ -180,7 +180,7 @@ public final class Pipeline {
             writes.submitJson(EmiPaths.resolve(outputRoot, Constants.BUNDLE_FILE), bundle);
 
             TextureWriter.export(outputRoot, client, Set.of(), writes);
-            writes.awaitIdle();
+            writes.awaitIdle("final");
 
             logCompletion(plan.mode(), recipes, recipeIds.size(), categories, items, tags, langs, icons);
 

@@ -28,6 +28,8 @@ import net.minecraft.server.MinecraftServer;
 
 public final class RecipeWriter {
 
+    private static final int RECIPE_WRITE_FLUSH_STRIDE = 5_000;
+
     private RecipeWriter() {
     }
 
@@ -96,6 +98,9 @@ public final class RecipeWriter {
                     pngBytes += renderRecipePng(client, recipe, scale, pngFile, rendererPool, writes);
                     written++;
                     logProgress(progress, total, written, missing, failures, logStride);
+                    if (progress % RECIPE_WRITE_FLUSH_STRIDE == 0) {
+                        writes.awaitIdle("recipes " + progress + "/" + total);
+                    }
                 } catch (Exception e) {
                     failures++;
                     Log.detailFailure(failures,
@@ -105,6 +110,7 @@ public final class RecipeWriter {
                             e);
                 }
             }
+            writes.awaitIdle("recipes final");
         }
 
         MweMod.LOGGER.info(

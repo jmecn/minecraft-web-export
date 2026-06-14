@@ -47,6 +47,15 @@ public final class NameKeysExporter {
         ItemIndex index = JsonIO.read(indexPath, ItemIndex.class);
         Map<String, String> items = new TreeMap<>();
         int fluidCount = 0;
+        int total = 0;
+        for (List<String> paths : index.namespacePaths().values()) {
+            total += paths.size();
+        }
+        total += index.fluidRegistryIds().size();
+        int progress = 0;
+        int logStride = 5_000;
+
+        MweMod.LOGGER.info("{} resolving name keys for {} registry ids ...", Log.ITEM_NAME_KEYS, total);
 
         for (Map.Entry<String, List<String>> entry : index.namespacePaths().entrySet()) {
             String namespace = entry.getKey();
@@ -54,17 +63,33 @@ public final class NameKeysExporter {
                 if (path == null || path.isEmpty()) {
                     continue;
                 }
+                progress++;
                 String registryId = path.contains(":") ? path : namespace + ":" + path;
                 items.put(registryId, RegistryKeys.resolveItemDescriptionKey(client, registryId));
+                if (progress % logStride == 0) {
+                    MweMod.LOGGER.info(
+                            "{} {}/{} name keys resolved",
+                            Log.ITEM_NAME_KEYS,
+                            progress,
+                            total);
+                }
             }
         }
         for (String fluidPath : index.fluidRegistryIds()) {
             if (fluidPath == null || fluidPath.isEmpty()) {
                 continue;
             }
+            progress++;
             String registryId = fluidPath.contains(":") ? fluidPath : "minecraft:" + fluidPath;
             items.put(registryId, RegistryKeys.resolveFluidDescriptionKey(client, registryId));
             fluidCount++;
+            if (progress % logStride == 0) {
+                MweMod.LOGGER.info(
+                        "{} {}/{} name keys resolved",
+                        Log.ITEM_NAME_KEYS,
+                        progress,
+                        total);
+            }
         }
 
         if (items.isEmpty()) {
