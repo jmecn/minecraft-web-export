@@ -19,13 +19,11 @@ public final class ScopedExportStrategy implements ExportStrategy {
 
     @Override
     public ExportContext planScope(Minecraft client, Seeds seeds) {
-        Set<String> availableRecipes = ExportScopeBuilder.collectExportableRecipeIds(client);
-        Set<String> recipeIds = ExportScopeBuilder.resolveRecipeIds(Mode.SCOPED, seeds.recipeIds(), availableRecipes);
+        Set<String> recipeIds = ExportScopeBuilder.resolveRecipeIds(seeds.recipeIds());
 
         Set<String> categoryIds = new TreeSet<>();
         Set<String> itemIds = new TreeSet<>(seeds.itemIds());
-        Set<String> fluidIds = new TreeSet<>(seeds.fluidIds());
-        Set<String> blockIds = new TreeSet<>(seeds.blockIds());
+        Set<String> fluidIds = new TreeSet<>();
         Set<String> tagIds = new TreeSet<>(seeds.tagIds());
 
         for (String recipeId : recipeIds) {
@@ -41,7 +39,6 @@ public final class ScopedExportStrategy implements ExportStrategy {
             TagExpansion expansion = TagExpander.expand(server, tagIds);
             itemIds.addAll(expansion.items());
             fluidIds.addAll(expansion.fluids());
-            blockIds.addAll(expansion.blocks());
             tagIds.addAll(expansion.tags());
         } else if (server == null && !seeds.tagIds().isEmpty()) {
             MweMod.LOGGER.warn("[export] tag expansion skipped: no integrated server (seedTags={})", seeds.tagIds().size());
@@ -53,7 +50,6 @@ public final class ScopedExportStrategy implements ExportStrategy {
                 .itemIds(itemIds)
                 .fluidIds(fluidIds)
                 .tagIds(tagIds)
-                .seedLangKeys(seeds.langKeys())
                 .build();
     }
 }

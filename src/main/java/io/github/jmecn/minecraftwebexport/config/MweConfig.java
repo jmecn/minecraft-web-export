@@ -71,23 +71,12 @@ public final class MweConfig {
         }
     }
 
-    public static void clearForTests() {
-        CLIENT = null;
-        CLIENT_SPEC = null;
-        runtimeExportModeOverride = null;
-        MweClientBootstrap.clearForTests();
-    }
-
     private static boolean configReady() {
         return CLIENT_SPEC != null && CLIENT_SPEC.isLoaded();
     }
 
     public static void setRuntimeExportModeOverride(String mode) {
         runtimeExportModeOverride = mode;
-    }
-
-    public static void clearRuntimeExportModeOverride() {
-        runtimeExportModeOverride = null;
     }
 
     private static MweClientConfig client() {

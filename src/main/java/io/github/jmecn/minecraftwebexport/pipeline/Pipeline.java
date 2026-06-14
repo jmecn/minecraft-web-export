@@ -19,20 +19,11 @@ import io.github.jmecn.minecraftwebexport.emi.tag.TagIndexWriter;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.model.bundle.Bundle;
 import io.github.jmecn.minecraftwebexport.model.bundle.ItemsLangRef;
-import io.github.jmecn.minecraftwebexport.model.icon.CategoryIconResult;
-import io.github.jmecn.minecraftwebexport.model.icon.ItemIconResult;
-import io.github.jmecn.minecraftwebexport.model.item.ItemIndexResult;
-import io.github.jmecn.minecraftwebexport.model.item.ItemsLangExportResult;
-import io.github.jmecn.minecraftwebexport.model.lang.LangMergeResult;
-import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWriteResult;
-import io.github.jmecn.minecraftwebexport.model.tag.TagIndexResult;
-import io.github.jmecn.minecraftwebexport.model.pipeline.EmiRunStats;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Plan;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
-import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,38 +55,23 @@ public final class Pipeline {
         }
 
         Plan plan = ExportScopeBuilder.plan(client, mode, modules, scope);
-        ExportContext context = plan.context();
-        Seeds mergedSeeds = plan.mode() == Mode.FULL ? Seeds.empty() : plan.sourceSeeds();
 
         if (plan.mode() == Mode.SCOPED) {
             MweMod.LOGGER.info(
                     "[export] scoped export via modules {} (recipes={})",
                     modules.stream().map(Module::moduleId).toList(),
-                    context.recipeIds().size());
+                    plan.context().recipeIds().size());
         }
 
-        EmiRunStats stats = exportEmi(outputRoot, client, plan);
-
-        ExportResult result = ExportResult.from(
-                scope,
-                plan,
-                outputRoot,
-                stats.recipesRequested(),
-                stats.recipesWritten(),
-                stats.itemIndexCount(),
-                stats.tagIndexCount(),
-                stats.languagesWritten(),
-                stats.iconsWritten(),
-                mergedSeeds,
-                modules);
+        ExportResult result = exportEmi(outputRoot, client, plan);
 
         for (Module module : modules) {
-            module.exportExtras(scope, result);
+            module.exportExtras(scope);
         }
         return result;
     }
 
-    private static EmiRunStats exportEmi(Path outputRoot, Minecraft client, Plan plan) throws IOException {
+    private static ExportResult exportEmi(Path outputRoot, Minecraft client, Plan plan) throws IOException {
         ExportContext context = plan.context();
         Set<String> recipeIds = context.recipeIds();
 
@@ -103,46 +79,45 @@ public final class Pipeline {
             RecipeGraphBuilder.buildGraph(client, context);
             RecipePaths.ensureRecipeDirectories(outputRoot, recipeIds);
 
-            RecipeWriteResult recipes = RecipeWriter.export(outputRoot, client, context, writes);
+            int recipesWritten = RecipeWriter.export(outputRoot, client, context, writes);
             client.renderBuffers().bufferSource().endBatch();
 
             MinecraftServer server = client.getSingleplayerServer();
 
-            TagIndexResult tags = new TagIndexResult(
-                    0, 0, 0, 0, 0, 0, 0, Set.of(), Set.of(), Set.of());
+            int tagsIndexed = 0;
             if (server != null && !context.tagIds().isEmpty()) {
-                tags = TagIndexWriter.export(outputRoot, server, context.tagIds(), writes);
+                tagsIndexed = TagIndexWriter.export(outputRoot, server, context.tagIds(), writes);
             } else if (!context.tagIds().isEmpty()) {
                 MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
             }
 
-            CategoryIconResult categories = recipes.written() > 0
+            int categoryCount = recipesWritten > 0
                     ? CategoryIconWriter.export(outputRoot, client, context.categoryIds(), writes)
-                    : new CategoryIconResult(0, 0, 0, 0, 0);
+                    : 0;
 
-            ItemIndexResult items = recipes.written() > 0
+            int itemCount = recipesWritten > 0
                     ? ItemIndexExporter.export(outputRoot, server, context, writes)
-                    : new ItemIndexResult(0, 0, 0, 0);
+                    : 0;
             writes.awaitIdle("after items index");
 
-            if (recipes.written() > 0) {
+            if (recipesWritten > 0) {
                 NameKeysExporter.export(outputRoot, client, writes);
             }
             writes.awaitIdle("after name keys");
 
             Set<String> langKeys = LangDerivation.derive(context);
-            LangMergeResult langs = Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
+            int languagesWritten = Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
             writes.awaitIdle("after emi lang");
 
             List<String> languages = List.of();
-            ItemsLangExportResult itemsLang = ItemsLangExportResult.EMPTY;
-            if (items.itemCount() > 0) {
+            List<String> itemsLangLocales = List.of();
+            if (itemCount > 0) {
                 languages = exportedLanguages(outputRoot);
                 if (languages.isEmpty()) {
                     languages = Languages.resolve(plan.hints()).stream().sorted().toList();
                 }
                 if (!languages.isEmpty()) {
-                    itemsLang = ItemsLangExporter.export(
+                    itemsLangLocales = ItemsLangExporter.export(
                             outputRoot,
                             languages,
                             indexedItemIds(context),
@@ -156,7 +131,7 @@ public final class Pipeline {
                 languages = exportedLanguages(outputRoot);
             }
 
-            ItemIconResult icons = ItemIconWriter.export(
+            int iconSprites = ItemIconWriter.export(
                     outputRoot,
                     client,
                     context.itemIds(),
@@ -165,29 +140,38 @@ public final class Pipeline {
                     context.iconVariants(),
                     writes);
 
-            ItemsLangRef itemsLangRef = itemsLang.locales().isEmpty()
+            ItemsLangRef itemsLangRef = itemsLangLocales.isEmpty()
                     ? null
-                    : new ItemsLangRef(Constants.ITEMS_LANG_DIR, List.copyOf(itemsLang.locales()));
+                    : new ItemsLangRef(Constants.ITEMS_LANG_DIR, List.copyOf(itemsLangLocales));
             Bundle bundle = Bundle.of(
-                    recipes.imageScale(),
-                    recipes.written(),
+                    RecipeWriter.imageScale(),
+                    recipesWritten,
                     languages,
                     Constants.MISSING_ICON_REGISTRY_ID,
                     itemsLangRef);
             writes.submitJson(EmiPaths.resolve(outputRoot, Constants.BUNDLE_FILE), bundle);
 
-            TextureWriter.export(outputRoot, client, Set.of(), writes);
+            TextureWriter.export(outputRoot, client, writes);
             writes.awaitIdle("final");
 
-            logCompletion(plan.mode(), recipes, recipeIds.size(), categories, items, tags, langs, icons);
-
-            return new EmiRunStats(
+            logCompletion(
+                    plan.mode(),
+                    recipesWritten,
                     recipeIds.size(),
-                    recipes.written(),
-                    items.itemCount(),
-                    tags.tagsIndexed(),
-                    langs.languagesWritten(),
-                    icons.totalSpritesWritten());
+                    categoryCount,
+                    itemCount,
+                    tagsIndexed,
+                    languagesWritten,
+                    iconSprites);
+
+            return ExportResult.from(
+                    outputRoot,
+                    recipeIds.size(),
+                    recipesWritten,
+                    itemCount,
+                    tagsIndexed,
+                    languagesWritten,
+                    iconSprites);
         }
     }
 
@@ -200,35 +184,35 @@ public final class Pipeline {
 
     private static void logCompletion(
             Mode mode,
-            RecipeWriteResult recipes,
+            int recipesWritten,
             int recipesRequested,
-            CategoryIconResult categories,
-            ItemIndexResult items,
-            TagIndexResult tags,
-            LangMergeResult langs,
-            ItemIconResult icons) {
+            int categoryCount,
+            int itemCount,
+            int tagsIndexed,
+            int languagesWritten,
+            int iconSprites) {
         if (mode == Mode.SCOPED) {
             MweMod.LOGGER.info(
-                    "{} scoped export complete: {}/{} layouts, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    "{} scoped export complete: {}/{} recipes, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     Log.EMI,
-                    recipes.written(),
+                    recipesWritten,
                     recipesRequested,
-                    categories.categoryCount(),
-                    items.itemCount(),
-                    tags.tagsIndexed(),
-                    langs.languagesWritten(),
-                    icons.totalSpritesWritten());
+                    categoryCount,
+                    itemCount,
+                    tagsIndexed,
+                    languagesWritten,
+                    iconSprites);
         } else {
             MweMod.LOGGER.info(
                     "{} export complete: {}/{} recipes, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     Log.EMI,
-                    recipes.written(),
+                    recipesWritten,
                     recipesRequested,
-                    categories.categoryCount(),
-                    items.itemCount(),
-                    tags.tagsIndexed(),
-                    langs.languagesWritten(),
-                    icons.totalSpritesWritten());
+                    categoryCount,
+                    itemCount,
+                    tagsIndexed,
+                    languagesWritten,
+                    iconSprites);
         }
     }
 

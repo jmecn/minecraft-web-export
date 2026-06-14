@@ -12,17 +12,17 @@ import dev.emi.emi.api.stack.serializer.EmiIngredientSerializer;
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.TankWidget;
-import dev.emi.emi.api.widget.TooltipWidget;
 import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.widget.RecipeButtonWidget;
 import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.model.recipe.WidgetSerializeContext;
+import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
+import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
@@ -50,7 +50,7 @@ public final class WidgetSerializer {
         }
     }
 
-    public static void collectFromIngredient(
+    static void collectFromIngredient(
             EmiIngredient ingredient,
             Set<String> itemIds,
             Set<String> fluidIds,
@@ -64,37 +64,33 @@ public final class WidgetSerializer {
         collectReferencedStacks(ingredient, itemIds, fluidIds, iconVariants);
     }
 
-    static void serializeWidgets(
+    static List<RecipeWidget> compileRecipeWidgets(
             EmiRecipe recipe,
             List<Widget> widgets,
-            Set<String> textureIds,
-            WidgetSerializeContext ctx,
-            Consumer<JsonObject> sink) {
+            Map<String, ItemStack> iconVariants) {
+        List<RecipeWidget> compiled = new ArrayList<>();
         for (Widget widget : widgets) {
             if (shouldSkipWidget(widget)) {
                 continue;
             }
-            JsonObject json = serialize(recipe, widget, textureIds, ctx);
-            if (json != null) {
-                sink.accept(json);
+            RecipeWidget recipeWidget = compileWidget(recipe, widget, iconVariants);
+            if (recipeWidget != null) {
+                compiled.add(recipeWidget);
             }
         }
+        return compiled;
     }
 
-    private static boolean shouldSkipWidget(Widget widget) {
-        return widget instanceof RecipeButtonWidget;
-    }
-
-    private static JsonObject serialize(EmiRecipe recipe, Widget widget, Set<String> textureIds, WidgetSerializeContext ctx) {
+    private static RecipeWidget compileWidget(
+            EmiRecipe recipe,
+            Widget widget,
+            Map<String, ItemStack> iconVariants) {
         try {
             if (widget instanceof TankWidget tank) {
-                return slotLike(recipe, tank, "tank", textureIds, true, ctx);
+                return compileSlot(recipe, tank, iconVariants);
             }
             if (widget instanceof SlotWidget slot) {
-                return slotLike(recipe, slot, "slot", textureIds, false, ctx);
-            }
-            if (widget instanceof TooltipWidget tooltip) {
-                return tooltip(tooltip);
+                return compileSlot(recipe, slot, iconVariants);
             }
             return null;
         } catch (Exception e) {
@@ -107,118 +103,75 @@ public final class WidgetSerializer {
         }
     }
 
-    private static JsonObject slotLike(
+    private static RecipeWidget compileSlot(
             EmiRecipe recipe,
             SlotWidget slot,
-            String type,
-            Set<String> textureIds,
-            boolean tank,
-            WidgetSerializeContext ctx) {
-        Bounds bounds = slot.getBounds();
-        JsonObject object = boundsObject(bounds);
-        object.addProperty("type", type);
-        object.addProperty("role", inferSlotRole(slot));
-        object.addProperty("large", readBooleanField(slot, "output"));
-        object.addProperty("catalyst", readBooleanField(slot, "catalyst"));
-        object.addProperty("drawBack", readBooleanField(slot, "drawBack"));
-        object.addProperty("custom", readBooleanField(slot, "custom"));
-
-        ResourceLocation customTexture = readField(slot, "textureId", ResourceLocation.class);
-        if (customTexture != null) {
-            object.addProperty("backgroundTexture", customTexture.toString());
-            textureIds.add(customTexture.toString());
-            Integer u = readField(slot, "u", Integer.class);
-            Integer v = readField(slot, "v", Integer.class);
-            if (u != null) {
-                object.addProperty("backgroundU", u);
-            }
-            if (v != null) {
-                object.addProperty("backgroundV", v);
-            }
-        }
-
-        if (tank) {
-            Long capacity = readField(slot, "capacity", Long.class);
-            if (capacity != null) {
-                object.addProperty("capacity", capacity);
-            }
-        }
-
+            Map<String, ItemStack> iconVariants) {
         EmiIngredient stack = slot.getStack();
-        if (stack != null && !stack.isEmpty()) {
-            JsonElement ingredient = normalizeIngredientJson(EmiIngredientSerializer.getSerialized(stack));
-            enrichIngredientIconKeys(ingredient, stack);
-            object.add("ingredient", ingredient);
-            collectSerializedTagRefs(ingredient, ctx.referencedTags());
-            collectReferenced(stack, ctx.referencedItems(), ctx.referencedFluids(), ctx.iconVariants());
-            attachRemainderHint(object, stack);
-            attachTagDisplayItem(object, stack);
+        if (stack == null || stack.isEmpty()) {
+            return null;
+        }
+        JsonElement ingredient = normalizeIngredientJson(EmiIngredientSerializer.getSerialized(stack));
+        collectIconVariants(stack, iconVariants);
+        String tagDisplayItem = tagDisplayItemFor(stack);
+        WidgetInteraction interaction = RecipeInteractionMapper.interactionFromSlotJson(
+                slotIngredientJson(ingredient, tagDisplayItem));
+        if (interaction == null) {
+            return null;
+        }
+        Bounds bounds = slot.getBounds();
+        return RecipeWidget.of(
+                bounds.x(),
+                bounds.y(),
+                bounds.width(),
+                bounds.height(),
+                inferSlotRole(slot),
+                interaction);
+    }
+
+    private static JsonObject slotIngredientJson(JsonElement ingredient, String tagDisplayItem) {
+        JsonObject object = new JsonObject();
+        object.add("ingredient", ingredient);
+        if (tagDisplayItem != null) {
+            object.addProperty("tagDisplayItem", tagDisplayItem);
         }
         return object;
     }
 
-    private static void attachRemainderHint(JsonObject object, EmiIngredient ingredient) {
-        for (EmiStack stack : ingredient.getEmiStacks()) {
-            EmiStack remainder = stack.getRemainder();
-            if (!remainder.isEmpty()) {
-                object.addProperty("remainderIcon", remainder.equals(stack) ? "self" : "other");
-                return;
-            }
-        }
-    }
-
-    private static void attachTagDisplayItem(JsonObject object, EmiIngredient ingredient) {
+    private static String tagDisplayItemFor(EmiIngredient ingredient) {
         for (EmiStack stack : ingredient.getEmiStacks()) {
             String key = StackKey.forEmiStack(stack);
             if (key != null) {
-                object.addProperty("tagDisplayItem", key);
-                return;
+                return key;
+            }
+        }
+        return null;
+    }
+
+    private static void collectIconVariants(EmiIngredient ingredient, Map<String, ItemStack> iconVariants) {
+        if (iconVariants == null) {
+            return;
+        }
+        for (EmiStack emiStack : ingredient.getEmiStacks()) {
+            String iconKey = StackKey.forEmiStack(emiStack);
+            if (!StackKey.isVariantKey(iconKey)) {
+                continue;
+            }
+            ItemStack stack = StackKey.toItemStack(emiStack);
+            if (!stack.isEmpty()) {
+                iconVariants.put(iconKey, stack);
             }
         }
     }
 
-    private static void enrichIngredientIconKeys(JsonElement ingredientJson, EmiIngredient ingredient) {
-        if (ingredientJson == null || ingredient == null) {
-            return;
-        }
-        List<EmiStack> stacks = ingredient.getEmiStacks();
-        if (ingredientJson.isJsonObject()) {
-            attachIconKeyToObject(ingredientJson.getAsJsonObject(), stacks.isEmpty() ? null : stacks.get(0));
-        } else if (ingredientJson.isJsonArray()) {
-            JsonArray array = ingredientJson.getAsJsonArray();
-            for (int i = 0; i < array.size() && i < stacks.size(); i++) {
-                if (array.get(i).isJsonObject()) {
-                    attachIconKeyToObject(array.get(i).getAsJsonObject(), stacks.get(i));
-                }
-            }
-        }
-    }
-
-    private static void attachIconKeyToObject(JsonObject object, EmiStack stack) {
-        if (stack == null) {
-            return;
-        }
-        String key = StackKey.forEmiStack(stack);
-        if (key != null && shouldAttachIconKey(object, key)) {
-            object.addProperty("iconKey", key);
-        }
-    }
-
-    private static boolean shouldAttachIconKey(JsonObject ingredientObject, String key) {
-        if (StackKey.isVariantKey(key)) {
-            return true;
-        }
-        if (ingredientObject == null || !ingredientObject.has("id") || !ingredientObject.get("id").isJsonPrimitive()) {
-            return false;
-        }
-        return !key.equals(ingredientObject.get("id").getAsString());
-    }
-
-    private static void collectReferenced(
+    static void collectReferencedStacks(
             EmiIngredient ingredient,
             Set<String> items,
             Set<String> fluids,
             Map<String, ItemStack> iconVariants) {
+        if (ingredient == null || ingredient.isEmpty()) {
+            return;
+        }
         for (EmiStack emiStack : ingredient.getEmiStacks()) {
             ResourceLocation id = emiStack.getId();
             if (id == null) {
@@ -233,23 +186,17 @@ public final class WidgetSerializer {
                 } else {
                     items.add(id.toString());
                 }
-                String iconKey = StackKey.forEmiStack(emiStack);
-                if (iconVariants != null && StackKey.isVariantKey(iconKey)) {
-                    ItemStack stack = StackKey.toItemStack(emiStack);
-                    if (!stack.isEmpty()) {
-                        iconVariants.put(iconKey, stack);
+                if (iconVariants != null) {
+                    String iconKey = StackKey.forEmiStack(emiStack);
+                    if (StackKey.isVariantKey(iconKey)) {
+                        ItemStack stack = StackKey.toItemStack(emiStack);
+                        if (!stack.isEmpty()) {
+                            iconVariants.put(iconKey, stack);
+                        }
                     }
                 }
             }
         }
-    }
-
-    static void collectReferencedStacks(
-            EmiIngredient ingredient,
-            Set<String> items,
-            Set<String> fluids,
-            Map<String, ItemStack> iconVariants) {
-        collectReferenced(ingredient, items, fluids, iconVariants);
     }
 
     static JsonElement normalizeIngredientJson(JsonElement ingredient) {
@@ -322,7 +269,7 @@ public final class WidgetSerializer {
         }
     }
 
-    private static String inferSlotRole(SlotWidget slot) {
+    static String inferSlotRole(SlotWidget slot) {
         if (readBooleanField(slot, "catalyst")) {
             return "catalyst";
         }
@@ -332,19 +279,8 @@ public final class WidgetSerializer {
         return "input";
     }
 
-    private static JsonObject tooltip(TooltipWidget widget) {
-        JsonObject object = boundsObject(widget.getBounds());
-        object.addProperty("type", "tooltip");
-        return object;
-    }
-
-    private static JsonObject boundsObject(Bounds bounds) {
-        JsonObject object = new JsonObject();
-        object.addProperty("x", bounds.x());
-        object.addProperty("y", bounds.y());
-        object.addProperty("w", bounds.width());
-        object.addProperty("h", bounds.height());
-        return object;
+    private static boolean shouldSkipWidget(Widget widget) {
+        return widget instanceof RecipeButtonWidget;
     }
 
     private static boolean readBooleanField(Object target, String name) {

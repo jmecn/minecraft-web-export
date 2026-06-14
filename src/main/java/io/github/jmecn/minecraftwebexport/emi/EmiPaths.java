@@ -12,8 +12,4 @@ public final class EmiPaths {
     public static Path resolve(Path exportRoot, String emiRelative) {
         return exportRoot.resolve(Constants.EMI_ROOT).resolve(emiRelative.replace('/', File.separatorChar));
     }
-
-    public static Path langFile(Path exportRoot, String locale) {
-        return resolve(exportRoot, Constants.LANG_DIR + "/" + locale + ".json");
-    }
 }

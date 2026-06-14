@@ -39,8 +39,4 @@ public final class MweClientBootstrap {
         armed = true;
         new CiDriver(gameDirectory, MweConfig.exportOutputDir()).register();
     }
-
-    static void clearForTests() {
-        armed = false;
-    }
 }

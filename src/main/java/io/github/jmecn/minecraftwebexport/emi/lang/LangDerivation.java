@@ -17,12 +17,12 @@ public final class LangDerivation {
     }
 
     public static Set<String> derive(ExportContext context) {
-        Set<String> keys = new TreeSet<>(context.seedLangKeys());
+        Set<String> keys = new TreeSet<>();
         if (!context.recipeLangKeys().isEmpty()) {
             keys.addAll(context.recipeLangKeys());
         }
-        keys = new TreeSet<>(RegistryLangKeys.mergeItemFluidLangKeys(keys, context.itemIds(), context.fluidIds()));
-        keys = new TreeSet<>(RegistryLangKeys.mergeTagLangKeys(keys, context.tagIds()));
+        keys.addAll(RegistryLangKeys.langKeysForItemFluids(context.itemIds(), context.fluidIds()));
+        keys.addAll(RegistryLangKeys.langKeysForTags(context.tagIds()));
         keys.addAll(categoryLangKeys(context.categoryIds()));
         return Set.copyOf(keys);
     }

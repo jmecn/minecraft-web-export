@@ -1,6 +1,7 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 
 import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.Visibility;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
@@ -70,39 +71,23 @@ public final class ExportScopeBuilder {
             MweMod.LOGGER.info("[export] mode=full, recipes={}", context.recipeIds().size());
         }
 
-        return new Plan(context, hints, mode == Mode.FULL ? Seeds.empty() : merged);
+        return new Plan(context, hints);
     }
 
-    public static Set<String> filterRecipeIds(Set<String> seedRecipeIds, Set<String> availableRecipeIds) {
-        if (seedRecipeIds.isEmpty()) {
-            return Set.of();
-        }
-        Set<String> filtered = new java.util.TreeSet<>();
-        for (String id : seedRecipeIds) {
-            if (availableRecipeIds.contains(id)) {
-                filtered.add(id);
-            }
-        }
-        return Set.copyOf(filtered);
-    }
-
-    public static Set<String> resolveRecipeIds(Mode mode, Set<String> seedRecipeIds, Set<String> availableRecipeIds) {
-        if (mode == Mode.SCOPED) {
-            return seedRecipeIds.isEmpty() ? Set.of() : Set.copyOf(new java.util.TreeSet<>(seedRecipeIds));
-        }
-        return filterRecipeIds(seedRecipeIds, availableRecipeIds);
+    public static Set<String> resolveRecipeIds(Set<String> seedRecipeIds) {
+        return seedRecipeIds.isEmpty() ? Set.of() : Set.copyOf(new java.util.TreeSet<>(seedRecipeIds));
     }
 
     private static Hints mergeModuleHints(List<Module> modules, Scope scope, Seeds seeds) {
         Hints hints = Hints.defaults();
         for (Module module : modules) {
-            hints = hints.merge(module.buildHints(scope, seeds));
+            hints = hints.merge(module.buildHints(scope));
         }
         return hints;
     }
 
     public static Set<String> collectExportableRecipeIds(Minecraft client) {
-        return io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility.filterExportableRecipeIds(
+        return Visibility.filterExportableRecipeIds(
                 client == null ? null : client.getSingleplayerServer(),
                 dev.emi.emi.api.EmiApi.getRecipeManager() == null
                         ? List.of()

@@ -7,8 +7,6 @@ import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.tag.TagContents;
-import io.github.jmecn.minecraftwebexport.model.tag.TagIndexResult;
-import io.github.jmecn.minecraftwebexport.model.tag.TagWriteOutcome;
 import io.github.jmecn.minecraftwebexport.model.tag.ParsedTagId;
 import io.github.jmecn.minecraftwebexport.enums.tag.TagKind;
 import io.github.jmecn.minecraftwebexport.model.tag.TagValues;
@@ -29,7 +27,7 @@ public final class TagIndexWriter {
     private TagIndexWriter() {
     }
 
-    public static TagIndexResult export(
+    public static int export(
             Path outputDir, MinecraftServer server, Set<String> tagIds, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
         Path tagsDir = EmiPaths.resolve(outputDir, Constants.TAGS_DIR);
@@ -51,29 +49,29 @@ public final class TagIndexWriter {
 
             TagContents contents = TagExpander.expandTagContents(server, tagRef);
 
-            TagWriteOutcome itemOutcome = writeTagFile(outputDir, parsed, TagKind.ITEMS, contents.items(), writes);
-            if (itemOutcome.written()) {
+            TagFileWrite itemWrite = writeTagFile(outputDir, parsed, TagKind.ITEMS, contents.items(), writes);
+            if (itemWrite.written()) {
                 itemTagEntries++;
                 itemTags.add(parsed.tagId());
-                registryRefs += itemOutcome.registryRefs();
-                totalBytes += itemOutcome.bytes();
+                registryRefs += itemWrite.registryRefs();
+                totalBytes += itemWrite.bytes();
             }
 
-            TagWriteOutcome blockOutcome = writeTagFile(outputDir, parsed, TagKind.BLOCKS, contents.blocks(), writes);
-            if (blockOutcome.written()) {
+            TagFileWrite blockWrite = writeTagFile(outputDir, parsed, TagKind.BLOCKS, contents.blocks(), writes);
+            if (blockWrite.written()) {
                 blockTagEntries++;
                 blockTags.add(parsed.tagId());
-                registryRefs += blockOutcome.registryRefs();
-                totalBytes += blockOutcome.bytes();
+                registryRefs += blockWrite.registryRefs();
+                totalBytes += blockWrite.bytes();
             }
 
-            TagWriteOutcome fluidOutcome = writeTagFile(
+            TagFileWrite fluidWrite = writeTagFile(
                     outputDir, parsed, TagKind.FLUIDS, filterRedundantFlowingFluids(contents.fluids()), writes);
-            if (fluidOutcome.written()) {
+            if (fluidWrite.written()) {
                 fluidTagEntries++;
                 fluidTags.add(parsed.tagId());
-                registryRefs += fluidOutcome.registryRefs();
-                totalBytes += fluidOutcome.bytes();
+                registryRefs += fluidWrite.registryRefs();
+                totalBytes += fluidWrite.bytes();
             }
         }
 
@@ -91,17 +89,19 @@ public final class TagIndexWriter {
                 registryRefs,
                 totalBytes);
 
-        return new TagIndexResult(
-                tagIds.size(),
-                itemTagEntries,
-                blockTagEntries,
-                fluidTagEntries,
-                registryRefs,
-                totalBytes - catalogBytes,
-                catalogBytes,
-                Set.copyOf(itemTags),
-                Set.copyOf(blockTags),
-                Set.copyOf(fluidTags));
+        return tagIds.size();
+    }
+
+    private record TagFileWrite(int registryRefs, long bytes) {
+        private static final TagFileWrite SKIPPED = new TagFileWrite(0, 0);
+
+        static TagFileWrite skipped() {
+            return SKIPPED;
+        }
+
+        boolean written() {
+            return registryRefs > 0;
+        }
     }
 
     static long writeTagsCatalog(
@@ -122,20 +122,20 @@ public final class TagIndexWriter {
         return JsonIO.toUtf8Bytes(catalog).length;
     }
 
-    private static TagWriteOutcome writeTagFile(
+    private static TagFileWrite writeTagFile(
             Path outputDir,
             ParsedTagId parsed,
             TagKind kind,
             Set<String> values,
             ExportWriteQueue writes) {
         if (values == null || values.isEmpty()) {
-            return TagWriteOutcome.EMPTY;
+            return TagFileWrite.skipped();
         }
         TagValues document = new TagValues(new ArrayList<>(values));
 
         Path outFile = parsed.toTagFilePath(outputDir, kind);
         writes.submitJson(outFile, document);
-        return new TagWriteOutcome(true, values.size(), JsonIO.toUtf8Bytes(document).length);
+        return new TagFileWrite(values.size(), JsonIO.toUtf8Bytes(document).length);
     }
 
     /**

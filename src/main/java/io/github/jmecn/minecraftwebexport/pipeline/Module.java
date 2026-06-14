@@ -1,6 +1,5 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 
-import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Seeds;
@@ -16,10 +15,10 @@ public interface Module {
 
     Seeds collectSeeds(Scope scope);
 
-    default Hints buildHints(Scope scope, Seeds mergedSeeds) {
+    default Hints buildHints(Scope scope) {
         return Hints.defaults();
     }
 
-    default void exportExtras(Scope scope, ExportResult result) throws IOException {
+    default void exportExtras(Scope scope) throws IOException {
     }
 }

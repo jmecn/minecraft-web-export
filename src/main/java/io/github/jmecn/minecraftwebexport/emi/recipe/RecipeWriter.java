@@ -6,12 +6,11 @@ import dev.emi.emi.runtime.EmiDrawContext;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
+import io.github.jmecn.minecraftwebexport.emi.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWriteResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
@@ -35,11 +34,7 @@ public final class RecipeWriter {
         return LayoutBuilder.layoutScale();
     }
 
-    static long dimKey(int width, int height) {
-        return OffScreenRendererPool.dimKey(width, height);
-    }
-
-    public static RecipeWriteResult export(
+    public static int export(
             Path outputDir, Minecraft client, ExportContext context, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
 
@@ -112,7 +107,7 @@ public final class RecipeWriter {
                 skippedVisibility,
                 failures);
 
-        return new RecipeWriteResult(total, written, missing, failures, pngBytes, metaBytes, scale);
+        return written;
     }
 
     private static int renderRecipePng(

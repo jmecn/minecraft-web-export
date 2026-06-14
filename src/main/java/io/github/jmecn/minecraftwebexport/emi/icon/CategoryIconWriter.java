@@ -13,13 +13,10 @@ import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.lang.LangDerivation;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
-import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.category.CategoriesIndex;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryEntry;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryIconSprite;
-import io.github.jmecn.minecraftwebexport.model.icon.AtlasBuildResult;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasPagePlan;
-import io.github.jmecn.minecraftwebexport.model.icon.CategoryIconResult;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -36,14 +33,14 @@ public final class CategoryIconWriter {
     private CategoryIconWriter() {
     }
 
-    public static CategoryIconResult export(
+    public static int export(
             Path outputRoot, Minecraft client, Set<String> categoryIds, ExportWriteQueue writes)
             throws IOException {
         Objects.requireNonNull(writes, "writes");
         EmiRecipeManager manager = EmiApi.getRecipeManager();
         if (manager == null) {
             MweMod.LOGGER.warn("{} EMI recipe manager unavailable - skipping category icons", Log.EMI);
-            return new CategoryIconResult(0, 0, 0, 0, 0);
+            return 0;
         }
 
         List<EmiRecipeCategory> registered = manager.getCategories();
@@ -61,7 +58,6 @@ public final class CategoryIconWriter {
 
         int placed = 0;
         int failures = 0;
-        long atlasIndexBytes = 0;
 
         if (!categories.isEmpty()) {
             int cell = AtlasBuilder.categoryIconCellSize();
@@ -110,8 +106,7 @@ public final class CategoryIconWriter {
                     }
                 }
                 bufferSource.endBatch();
-                AtlasBuildResult atlasResult = atlas.finish();
-                atlasIndexBytes = atlasResult.indexBytes();
+                atlas.finish();
             }
         }
 
@@ -119,7 +114,6 @@ public final class CategoryIconWriter {
         CategoriesIndex index = CategoriesIndex.of(cellSize, Constants.CATEGORY_ICONS_DIR, categories);
         Path indexFile = EmiPaths.resolve(outputRoot, Constants.CATEGORIES_INDEX_FILE);
         writes.submitJson(indexFile, index);
-        long indexBytes = JsonIO.toUtf8Bytes(index).length;
 
         MweMod.LOGGER.info(
                 "{} {} categories, {} icons placed, {} failed -> {}",
@@ -129,7 +123,7 @@ public final class CategoryIconWriter {
                 failures,
                 Constants.CATEGORIES_INDEX_FILE);
 
-        return new CategoryIconResult(categories.size(), placed, failures, indexBytes, atlasIndexBytes);
+        return categories.size();
     }
 
     private static CategoryEntry buildCategoryEntry(EmiRecipeCategory category, int order) {

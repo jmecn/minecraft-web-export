@@ -6,7 +6,6 @@ import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
-import io.github.jmecn.minecraftwebexport.model.recipe.TextureWriteResult;
 import io.github.jmecn.minecraftwebexport.model.recipe.TextureManifest;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,8 +29,7 @@ public final class TextureWriter {
     }
 
 
-    public static TextureWriteResult export(
-            Path outputDir, Minecraft client, Set<String> textureIds, ExportWriteQueue writes) throws IOException {
+    public static void export(Path outputDir, Minecraft client, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
         Path texRoot = EmiPaths.resolve(outputDir, Constants.TEXTURES_DIR);
         if (Files.exists(texRoot)) {
@@ -46,7 +44,7 @@ public final class TextureWriter {
         }
         Files.createDirectories(texRoot);
 
-        Set<String> all = new TreeSet<>(textureIds);
+        Set<String> all = new TreeSet<>();
         all.add("emi:textures/gui/widgets.png");
         all.add("emi:textures/gui/background.png");
 
@@ -58,7 +56,7 @@ public final class TextureWriter {
         ResourceManager resourceManager = client.getResourceManager();
         for (String idString : all) {
             ResourceLocation id = ResourceLocation.parse(idString);
-            String relative = textureRelativePath(id);
+            String relative = textureRelativePath(id.toString());
             Path out = texRoot.resolve(relative);
             Files.createDirectories(out.getParent());
 
@@ -97,14 +95,9 @@ public final class TextureWriter {
                 all.size(),
                 bytes,
                 missing);
-        return new TextureWriteResult(all.size(), written, missing, bytes);
     }
 
-    static String textureRelativePath(ResourceLocation id) {
-        return textureRelativePath(id.toString());
-    }
-
-    static String textureRelativePath(String id) {
+    private static String textureRelativePath(String id) {
         int colon = id.indexOf(':');
         if (colon < 0) {
             return id;

@@ -10,7 +10,6 @@ import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.lang.LangMergeResult;
 import io.github.jmecn.minecraftwebexport.model.lang.LangMergeStats;
 import io.github.jmecn.minecraftwebexport.model.pipeline.Hints;
 import java.io.IOException;
@@ -57,13 +56,13 @@ public final class Merger {
         return key.startsWith("emi.category.");
     }
 
-    public static LangMergeResult exportEmiLang(
+    public static int exportEmiLang(
             Path outputDir, Minecraft client, Set<String> onlyKeys, Hints hints, ExportWriteQueue writes)
             throws IOException {
         return exportTo(EmiPaths.resolve(outputDir, Constants.LANG_DIR), client, null, onlyKeys, hints, writes);
     }
 
-    private static LangMergeResult exportTo(
+    private static int exportTo(
             Path langRoot,
             Minecraft client,
             Set<String> onlyNamespaces,
@@ -150,13 +149,7 @@ public final class Merger {
                     Log.DETAIL_FAILURE_LIMIT);
         }
 
-        return new LangMergeResult(
-                languagesWritten,
-                totalBytes,
-                duplicateWarnings,
-                onlyKeys != null ? onlyKeys.size() : 0,
-                keysSkipped,
-                keysPerLanguage);
+        return languagesWritten;
     }
 
     static boolean matchesLangPath(ResourceLocation location, String langFile) {

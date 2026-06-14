@@ -13,39 +13,13 @@ public final class RecipePaths {
     private RecipePaths() {
     }
 
-    public static RecipeIdParts splitRecipeId(String recipeId) {
-        if (recipeId == null || recipeId.isBlank()) {
-            return null;
-        }
-        int sep = recipeId.indexOf(':');
-        if (sep <= 0 || sep >= recipeId.length() - 1) {
-            return null;
-        }
-        return new RecipeIdParts(recipeId.substring(0, sep), recipeId.substring(sep + 1));
-    }
-
-    public static RecipeIdParts requireParts(String recipeId) {
-        RecipeIdParts parts = splitRecipeId(recipeId);
-        if (parts == null) {
-            throw new IllegalArgumentException("invalid recipe id: " + recipeId);
-        }
-        return parts;
-    }
-
-    public static String pathSafe(String path) {
-        if (path == null || path.isEmpty()) {
-            return "unknown";
-        }
-        return path.replace('/', '_');
-    }
-
     public static void ensureRecipeDirectories(Path exportRoot, Set<String> recipeIds) throws IOException {
         if (recipeIds == null || recipeIds.isEmpty()) {
             return;
         }
         Set<String> namespaces = new java.util.TreeSet<>();
         for (String recipeId : recipeIds) {
-            RecipeIdParts parts = splitRecipeId(recipeId);
+            RecipeIdParts parts = RecipeIdParts.parse(recipeId);
             if (parts != null) {
                 namespaces.add(parts.namespace());
             }
@@ -56,17 +30,17 @@ public final class RecipePaths {
     }
 
     public static Path pngPath(Path exportRoot, String recipeId) {
-        RecipeIdParts parts = requireParts(recipeId);
+        RecipeIdParts parts = RecipeIdParts.require(recipeId);
         return EmiPaths.resolve(
                 exportRoot,
-                Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".png");
+                Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + parts.pathSafe() + ".png");
     }
 
     public static Path metaPath(Path exportRoot, String recipeId) {
-        RecipeIdParts parts = requireParts(recipeId);
+        RecipeIdParts parts = RecipeIdParts.require(recipeId);
         return EmiPaths.resolve(
                 exportRoot,
-                Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".json");
+                Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + parts.pathSafe() + ".json");
     }
 
     public static int recipeMargin() {

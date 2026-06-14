@@ -4,14 +4,13 @@ import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
+import io.github.jmecn.minecraftwebexport.emi.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.item.ExportedTagCatalog;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndexBuild;
-import io.github.jmecn.minecraftwebexport.model.item.ItemIndexResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemDetail;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIdParts;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
@@ -35,13 +34,13 @@ public final class ItemIndexExporter {
     private ItemIndexExporter() {
     }
 
-    public static ItemIndexResult export(
+    public static int export(
             Path outputDir, MinecraftServer server, ExportContext context, ExportWriteQueue writes)
             throws IOException {
         Objects.requireNonNull(writes, "writes");
         if (context.inputs().isEmpty() && context.outputs().isEmpty() && context.itemIds().isEmpty()) {
             MweMod.LOGGER.warn("{} no item refs in export context - skipping items index", Log.EMI_ITEMS);
-            return new ItemIndexResult(0, 0, 0, 0);
+            return 0;
         }
         ItemIndexBuild build = buildFromContext(outputDir, server, context);
         return writeIndex(outputDir, server, build, writes);
@@ -92,7 +91,7 @@ public final class ItemIndexExporter {
                 exportedTags);
     }
 
-    private static ItemIndexResult writeIndex(
+    private static int writeIndex(
             Path outputDir, MinecraftServer server, ItemIndexBuild build, ExportWriteQueue writes) {
         Objects.requireNonNull(writes, "writes");
         Path itemsIndexFile = EmiPaths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
@@ -172,7 +171,6 @@ public final class ItemIndexExporter {
                 outputRefs,
                 itemsIndexFile);
         int indexedCount = indexBuckets.values().stream().mapToInt(Set::size).sum();
-        long indexBytes = JsonIO.toUtf8Bytes(index).length;
-        return new ItemIndexResult(indexedCount, inputRefs, outputRefs, indexBytes);
+        return indexedCount;
     }
 }

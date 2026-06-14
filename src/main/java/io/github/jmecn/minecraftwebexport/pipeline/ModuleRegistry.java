@@ -30,8 +30,4 @@ public final class ModuleRegistry {
     public static List<Module> modules() {
         return Collections.unmodifiableList(new ArrayList<>(MODULES));
     }
-
-    static void clearForTests() {
-        MODULES.clear();
-    }
 }

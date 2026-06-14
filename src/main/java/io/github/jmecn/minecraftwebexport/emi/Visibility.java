@@ -1,4 +1,4 @@
-package io.github.jmecn.minecraftwebexport.emi.pipeline;
+package io.github.jmecn.minecraftwebexport.emi;
 
 import com.google.common.collect.Iterables;
 import dev.emi.emi.api.recipe.EmiRecipe;

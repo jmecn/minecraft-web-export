@@ -121,13 +121,8 @@ public final class RegistryLangKeys {
         return false;
     }
 
-    public static String extractMaterial(String path, String pattern) {
-        return GtMaterialPatterns.extractMaterial(path, pattern);
-    }
-
-    public static Set<String> mergeItemFluidLangKeys(
-            Set<String> seedLangKeys, Set<String> itemIds, Set<String> fluidIds) {
-        Set<String> merged = new TreeSet<>(seedLangKeys == null ? Set.of() : seedLangKeys);
+    public static Set<String> langKeysForItemFluids(Set<String> itemIds, Set<String> fluidIds) {
+        Set<String> merged = new TreeSet<>();
         for (String itemId : itemIds == null ? Set.<String>of() : itemIds) {
             addForItem(merged, itemId);
         }
@@ -150,8 +145,8 @@ public final class RegistryLangKeys {
         into.add("tag.fluid." + dotted);
     }
 
-    public static Set<String> mergeTagLangKeys(Set<String> seedLangKeys, Set<String> tagIds) {
-        Set<String> merged = new TreeSet<>(seedLangKeys == null ? Set.of() : seedLangKeys);
+    public static Set<String> langKeysForTags(Set<String> tagIds) {
+        Set<String> merged = new TreeSet<>();
         for (String tagId : tagIds == null ? Set.<String>of() : tagIds) {
             addForTag(merged, tagId);
         }

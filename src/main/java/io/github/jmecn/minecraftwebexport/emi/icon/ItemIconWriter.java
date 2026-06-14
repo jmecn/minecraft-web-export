@@ -10,9 +10,7 @@ import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
-import io.github.jmecn.minecraftwebexport.model.icon.AtlasBuildResult;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasPagePlan;
-import io.github.jmecn.minecraftwebexport.model.icon.ItemIconResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,7 +53,7 @@ public final class ItemIconWriter {
     private ItemIconWriter() {
     }
 
-    public static ItemIconResult export(
+    public static int export(
             Path outputDir,
             Minecraft client,
             Set<String> onlyItemIds,
@@ -63,14 +61,14 @@ public final class ItemIconWriter {
             Map<String, Integer> usageWeights,
             Map<String, ItemStack> iconVariants) {
         try (ExportWriteQueue writes = new ExportWriteQueue()) {
-            ItemIconResult result = export(
+            int sprites = export(
                     outputDir, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants, writes);
             writes.awaitIdle();
-            return result;
+            return sprites;
         }
     }
 
-    public static ItemIconResult export(
+    public static int export(
             Path outputDir,
             Minecraft client,
             Set<String> onlyItemIds,
@@ -85,7 +83,7 @@ public final class ItemIconWriter {
         return exportImpl(iconsRoot, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants, writes);
     }
 
-    private static ItemIconResult exportImpl(
+    private static int exportImpl(
             Path iconsRoot,
             Minecraft client,
             Set<String> onlyItemIds,
@@ -152,7 +150,7 @@ public final class ItemIconWriter {
         int variantsPlaced = 0;
         int variantFailures = 0;
 
-        AtlasBuildResult atlasResult;
+        int atlasPages;
         try (OffScreenRenderer renderer = new OffScreenRenderer(cell, cell);
              AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights, writes)) {
             MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
@@ -259,20 +257,22 @@ public final class ItemIconWriter {
                 }
             }
 
-            atlasResult = atlas.finish();
+            atlasPages = atlas.finish();
         } catch (IOException e) {
             throw new RuntimeException("icon atlas export failed", e);
         }
 
+        int spritesWritten = itemsPlaced + variantsPlaced + fluidsPlaced;
         int totalFailures = itemFailures + fluidFailures + variantFailures;
         MweMod.LOGGER.info(
-                "{} done: {} items, {} nbt variants, {} fluids ({} skipped no still), {} pages, {} failures at {}",
+                "{} done: {} items, {} nbt variants, {} fluids ({} skipped no still), {} sprites, {} pages, {} failures at {}",
                 Log.ICONS,
                 itemsPlaced,
                 variantsPlaced,
                 fluidsPlaced,
                 fluidsSkipped,
-                atlasResult.pageCount(),
+                spritesWritten,
+                atlasPages,
                 totalFailures,
                 iconsRoot);
         if (totalFailures > Log.DETAIL_FAILURE_LIMIT) {
@@ -283,16 +283,7 @@ public final class ItemIconWriter {
                     Log.DETAIL_FAILURE_LIMIT);
         }
 
-        return new ItemIconResult(
-                itemsPlaced + variantsPlaced,
-                fluidsPlaced,
-                atlasResult.pageCount(),
-                itemFailures + variantFailures,
-                fluidFailures,
-                fluidsSkipped,
-                atlasResult.pngBytes(),
-                atlasResult.indexBytes(),
-                atlasResult.cssBytes());
+        return spritesWritten;
     }
 
     private static List<String> orderedFluidIds(Set<String> onlyFluidIds) {

@@ -25,14 +25,10 @@ public final class ExportContext {
     private final Set<String> itemIds = new TreeSet<>();
     private final Set<String> fluidIds = new TreeSet<>();
     private final Set<String> tagIds = new TreeSet<>();
-    private final Set<String> seedLangKeys = new TreeSet<>();
 
     private final Map<String, Map<String, Set<String>>> inputs = new TreeMap<>();
     private final Map<String, Map<String, Set<String>>> outputs = new TreeMap<>();
     private final Set<String> fluidRegistryIds = new TreeSet<>();
-    private final Set<String> referencedItems = new TreeSet<>();
-    private final Set<String> referencedFluids = new TreeSet<>();
-    private final Set<String> referencedTags = new TreeSet<>();
     private final Set<String> recipeLangKeys = new TreeSet<>();
     private final Map<String, ItemStack> iconVariants = new LinkedHashMap<>();
     private final Map<String, RecipeMeta> recipeMetas = new LinkedHashMap<>();
@@ -73,10 +69,6 @@ public final class ExportContext {
         return Collections.unmodifiableSet(tagIds);
     }
 
-    public Set<String> seedLangKeys() {
-        return Collections.unmodifiableSet(seedLangKeys);
-    }
-
     public Map<String, Map<String, Set<String>>> inputs() {
         return inputs;
     }
@@ -87,18 +79,6 @@ public final class ExportContext {
 
     public Set<String> fluidRegistryIds() {
         return fluidRegistryIds;
-    }
-
-    public Set<String> referencedItems() {
-        return referencedItems;
-    }
-
-    public Set<String> referencedFluids() {
-        return referencedFluids;
-    }
-
-    public Set<String> referencedTags() {
-        return referencedTags;
     }
 
     public Set<String> recipeLangKeys() {
@@ -119,10 +99,6 @@ public final class ExportContext {
         return recipeMetas.get(recipeId);
     }
 
-    public Map<String, RecipeMeta> recipeMetas() {
-        return Collections.unmodifiableMap(recipeMetas);
-    }
-
     public static final class Builder {
         private final ExportContext context;
 
@@ -137,23 +113,9 @@ public final class ExportContext {
             return this;
         }
 
-        public Builder addRecipeId(String id) {
-            if (id != null && !id.isBlank()) {
-                context.recipeIds.add(id);
-            }
-            return this;
-        }
-
         public Builder categoryIds(Set<String> values) {
             if (values != null) {
                 context.categoryIds.addAll(values);
-            }
-            return this;
-        }
-
-        public Builder addCategoryId(String id) {
-            if (id != null && !id.isBlank()) {
-                context.categoryIds.add(id);
             }
             return this;
         }
@@ -165,13 +127,6 @@ public final class ExportContext {
             return this;
         }
 
-        public Builder addItemId(String id) {
-            if (id != null && !id.isBlank()) {
-                context.itemIds.add(id);
-            }
-            return this;
-        }
-
         public Builder fluidIds(Set<String> values) {
             if (values != null) {
                 context.fluidIds.addAll(values);
@@ -179,30 +134,9 @@ public final class ExportContext {
             return this;
         }
 
-        public Builder addFluidId(String id) {
-            if (id != null && !id.isBlank()) {
-                context.fluidIds.add(id);
-            }
-            return this;
-        }
-
         public Builder tagIds(Set<String> values) {
             if (values != null) {
                 context.tagIds.addAll(values);
-            }
-            return this;
-        }
-
-        public Builder addTagId(String id) {
-            if (id != null && !id.isBlank()) {
-                context.tagIds.add(id);
-            }
-            return this;
-        }
-
-        public Builder seedLangKeys(Set<String> values) {
-            if (values != null) {
-                context.seedLangKeys.addAll(values);
             }
             return this;
         }

@@ -14,7 +14,6 @@ public final class Constants {
     public static final int ITEMS_LANG_SCHEMA = 2;
     public static final int CATEGORIES_INDEX_SCHEMA = 2;
     public static final int TAGS_CATALOG_SCHEMA = 1;
-    public static final int LAYOUT_PACK_SCHEMA = 2;
 
     public static final String FLUID_REGISTRY_IDS_KEY = "fluidRegistryIds";
 

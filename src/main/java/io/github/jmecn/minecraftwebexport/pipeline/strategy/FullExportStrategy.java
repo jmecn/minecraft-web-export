@@ -3,7 +3,7 @@ package io.github.jmecn.minecraftwebexport.pipeline.strategy;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
+import io.github.jmecn.minecraftwebexport.emi.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.recipe.WidgetSerializer;
 import io.github.jmecn.minecraftwebexport.emi.recipe.Resolver;
 import io.github.jmecn.minecraftwebexport.emi.tag.TagExpander;

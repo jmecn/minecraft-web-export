@@ -7,7 +7,6 @@ import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.item.NameKeysResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
 import io.github.jmecn.minecraftwebexport.model.item.NameKeys;
 import net.minecraft.client.Minecraft;
@@ -25,18 +24,18 @@ public final class NameKeysExporter {
     private NameKeysExporter() {
     }
 
-    public static NameKeysResult export(Path outputDir, Minecraft client, ExportWriteQueue writes) throws IOException {
+    public static void export(Path outputDir, Minecraft client, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
         if (client == null || client.level == null) {
             MweMod.LOGGER.warn("{} skipped: no client level", Log.ITEM_NAME_KEYS);
-            return NameKeysResult.EMPTY;
+            return;
         }
 
         Path bundleRoot = EmiPaths.resolve(outputDir, "");
         Path indexPath = bundleRoot.resolve(Constants.ITEMS_INDEX_FILE);
         if (!Files.isRegularFile(indexPath)) {
             MweMod.LOGGER.warn("{} skipped: missing {}", Log.ITEM_NAME_KEYS, Constants.ITEMS_INDEX_FILE);
-            return NameKeysResult.EMPTY;
+            return;
         }
 
         ItemIndex index = JsonIO.read(indexPath, ItemIndex.class);
@@ -88,7 +87,7 @@ public final class NameKeysExporter {
         }
 
         if (items.isEmpty()) {
-            return NameKeysResult.EMPTY;
+            return;
         }
 
         Path out = bundleRoot.resolve(Constants.ITEM_NAME_KEYS_FILE);
@@ -100,7 +99,6 @@ public final class NameKeysExporter {
                 items.size(),
                 fluidCount,
                 out);
-        return new NameKeysResult(items.size() - fluidCount, fluidCount);
     }
 
     public static Map<String, String> readNameKeys(Path outputDir) throws IOException {

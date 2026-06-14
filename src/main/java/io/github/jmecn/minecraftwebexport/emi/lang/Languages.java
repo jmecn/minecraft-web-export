@@ -11,8 +11,6 @@ import java.util.stream.Collectors;
 
 public final class Languages {
 
-    public static final String DEFAULT_LANGUAGE = Constants.DEFAULT_LANGUAGE;
-
     private Languages() {}
 
     public static Set<String> resolve(Hints hints) {
@@ -32,7 +30,7 @@ public final class Languages {
             return Set.of();
         }
         LinkedHashSet<String> parsed = new LinkedHashSet<>(hints.exportLanguages());
-        parsed.add(DEFAULT_LANGUAGE);
+        parsed.add(Constants.DEFAULT_LANGUAGE);
         return Set.copyOf(parsed);
     }
 
@@ -43,14 +41,14 @@ public final class Languages {
     static Set<String> parseLanguageList(String raw) {
         String trimmed = raw == null ? "" : raw.trim();
         if (trimmed.isEmpty()) {
-            return Set.of(DEFAULT_LANGUAGE);
+            return Set.of(Constants.DEFAULT_LANGUAGE);
         }
         Set<String> parsed = Arrays.stream(trimmed.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty() && !"*".equals(s))
                 .map(s -> s.toLowerCase(Locale.ROOT))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        parsed.add(DEFAULT_LANGUAGE);
+        parsed.add(Constants.DEFAULT_LANGUAGE);
         return Set.copyOf(parsed);
     }
 }

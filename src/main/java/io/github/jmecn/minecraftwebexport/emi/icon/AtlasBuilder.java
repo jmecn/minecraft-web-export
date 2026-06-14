@@ -8,7 +8,6 @@ import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.category.CategoryIconSprite;
-import io.github.jmecn.minecraftwebexport.model.icon.AtlasBuildResult;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasPagePlan;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasPageBuffer;
 import io.github.jmecn.minecraftwebexport.model.icon.AtlasIndex;
@@ -192,7 +191,7 @@ final class AtlasBuilder implements AutoCloseable {
         extentY = Math.max(extentY, cursorY + cellSize);
     }
 
-    AtlasBuildResult finish() throws IOException {
+    int finish() throws IOException {
         if (currentPage != null && (!items.isEmpty() || cursorX > 0 || cursorY > 0)) {
             flushPageToDisk();
         } else if (currentPage != null) {
@@ -235,7 +234,7 @@ final class AtlasBuilder implements AutoCloseable {
                 pngBytes,
                 css.length());
 
-        return new AtlasBuildResult(items.size(), pages.size(), indexJsonBytes, pngBytes, css.length());
+        return pages.size();
     }
 
     @Override

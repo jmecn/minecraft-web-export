@@ -11,7 +11,6 @@ import io.github.jmecn.minecraftwebexport.emi.lang.RegistryResolver;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
-import io.github.jmecn.minecraftwebexport.model.item.ItemsLangExportResult;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
 import io.github.jmecn.minecraftwebexport.model.item.ItemsLang;
 import io.github.jmecn.minecraftwebexport.model.item.ItemsLangEntry;
@@ -41,7 +40,7 @@ public final class ItemsLangExporter {
     private ItemsLangExporter() {
     }
 
-    public static ItemsLangExportResult export(
+    public static List<String> export(
             Path outputDir,
             List<String> languages,
             Collection<String> itemIds,
@@ -62,7 +61,7 @@ public final class ItemsLangExporter {
                     Log.ITEMS_LANG,
                     sortedItemIds.size(),
                     locales.size());
-            return ItemsLangExportResult.EMPTY;
+            return List.of();
         }
 
         Path searchRoot = bundleRoot.resolve(Constants.ITEMS_LANG_DIR);
@@ -128,7 +127,7 @@ public final class ItemsLangExporter {
                     sortedItemIds.size());
         }
 
-        return new ItemsLangExportResult(writtenLocales.size(), sortedItemIds.size(), List.copyOf(writtenLocales));
+        return List.copyOf(writtenLocales);
     }
 
     static String normalizeLocale(String locale) {

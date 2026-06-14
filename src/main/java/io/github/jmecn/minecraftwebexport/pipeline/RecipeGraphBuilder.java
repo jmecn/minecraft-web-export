@@ -4,7 +4,7 @@ import dev.emi.emi.api.recipe.EmiRecipe;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
+import io.github.jmecn.minecraftwebexport.emi.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.recipe.LayoutBuilder;
 import io.github.jmecn.minecraftwebexport.emi.recipe.Resolver;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
@@ -13,7 +13,6 @@ import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
 import io.github.jmecn.minecraftwebexport.enums.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeLangKeysCollector;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
-import java.util.Set;
 import net.minecraft.client.Minecraft;
 
 public final class RecipeGraphBuilder {
@@ -44,13 +43,7 @@ public final class RecipeGraphBuilder {
                 continue;
             }
 
-            RecipeMeta meta = LayoutBuilder.compileMeta(
-                    recipe,
-                    recipeId,
-                    context.referencedItems(),
-                    context.referencedFluids(),
-                    context.referencedTags(),
-                    context.iconVariants());
+            RecipeMeta meta = LayoutBuilder.compileMeta(recipe, recipeId, context.iconVariants());
             context.putRecipeMeta(recipeId, meta);
             langCollector.collectMeta(meta);
             ItemIndexExporter.accumulateRecipeRefsFromMeta(
@@ -64,12 +57,11 @@ public final class RecipeGraphBuilder {
 
         context.recipeLangKeys().addAll(langCollector.snapshot());
         MweMod.LOGGER.info(
-                "{} relation: {} input items, {} output items, {} fluids, {} tags, {} lang keys",
+                "{} relation: {} input items, {} output items, {} fluids, {} lang keys",
                 Log.EMI,
                 context.inputs().size(),
                 context.outputs().size(),
                 context.fluidRegistryIds().size(),
-                context.referencedTags().size(),
                 context.recipeLangKeys().size());
     }
 
