@@ -40,19 +40,6 @@ public final class CategoryIconWriter {
         return !MweConfig.skipCategoryIconExport();
     }
 
-    public static CategoryIconResult export(Path outputRoot, Minecraft client) throws IOException {
-        return export(outputRoot, client, Set.of());
-    }
-
-    public static CategoryIconResult export(Path outputRoot, Minecraft client, Set<String> categoryIds)
-            throws IOException {
-        try (ExportWriteQueue writes = new ExportWriteQueue()) {
-            CategoryIconResult result = export(outputRoot, client, categoryIds, writes);
-            writes.awaitIdle();
-            return result;
-        }
-    }
-
     public static CategoryIconResult export(
             Path outputRoot, Minecraft client, Set<String> categoryIds, ExportWriteQueue writes)
             throws IOException {

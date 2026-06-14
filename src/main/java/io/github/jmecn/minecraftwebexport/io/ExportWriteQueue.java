@@ -17,7 +17,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.function.LongConsumer;
 
 /**
  * Async disk writes for export. Rendering stays on the Minecraft render thread; JSON, PNG bytes,
@@ -32,18 +31,11 @@ public final class ExportWriteQueue implements AutoCloseable {
     private final List<Future<?>> pending = new ArrayList<>();
 
     public void submitJson(Path path, Object value) {
-        submitJson(path, value, null);
-    }
-
-    public void submitJson(Path path, Object value, LongConsumer onBytesWritten) {
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(value, "value");
         pending.add(executor.submit(() -> {
             try {
-                long bytes = writeJson(path, value);
-                if (onBytesWritten != null) {
-                    onBytesWritten.accept(bytes);
-                }
+                writeJson(path, value);
             } catch (IOException e) {
                 throw new RuntimeException("failed to write " + path + ": " + e.getMessage(), e);
             }
@@ -51,18 +43,11 @@ public final class ExportWriteQueue implements AutoCloseable {
     }
 
     public void submitBytes(Path path, byte[] data) {
-        submitBytes(path, data, null);
-    }
-
-    public void submitBytes(Path path, byte[] data, LongConsumer onBytesWritten) {
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(data, "data");
         pending.add(executor.submit(() -> {
             try {
-                long bytes = writeBytes(path, data);
-                if (onBytesWritten != null) {
-                    onBytesWritten.accept(bytes);
-                }
+                writeBytes(path, data);
             } catch (IOException e) {
                 throw new RuntimeException("failed to write " + path + ": " + e.getMessage(), e);
             }
@@ -70,14 +55,9 @@ public final class ExportWriteQueue implements AutoCloseable {
     }
 
     public void submitString(Path path, String content) {
-        submitString(path, content, null);
-    }
-
-    public void submitString(Path path, String content, LongConsumer onBytesWritten) {
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(content, "content");
-        byte[] data = content.getBytes(StandardCharsets.UTF_8);
-        submitBytes(path, data, onBytesWritten);
+        submitBytes(path, content.getBytes(StandardCharsets.UTF_8));
     }
 
     public void submitJsonLine(Path path, Object value) {

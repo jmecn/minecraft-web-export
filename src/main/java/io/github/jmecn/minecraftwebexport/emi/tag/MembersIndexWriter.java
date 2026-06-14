@@ -111,18 +111,6 @@ public final class MembersIndexWriter {
             Path outputDir,
             Set<String> itemTags,
             Set<String> blockTags,
-            Set<String> fluidTags) throws IOException {
-        try (ExportWriteQueue writes = new ExportWriteQueue()) {
-            long bytes = writeTagsCatalog(outputDir, itemTags, blockTags, fluidTags, writes);
-            writes.awaitIdle();
-            return bytes;
-        }
-    }
-
-    static long writeTagsCatalog(
-            Path outputDir,
-            Set<String> itemTags,
-            Set<String> blockTags,
             Set<String> fluidTags,
             ExportWriteQueue writes) {
         if (itemTags.isEmpty() && blockTags.isEmpty() && fluidTags.isEmpty()) {

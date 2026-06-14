@@ -14,9 +14,6 @@ final class MweJvmCompat {
     static final String EXPORT_WORLD_DELAY_TICKS = "minecraftWebExport.exportWorldDelayTicks";
     static final String EXPORT_TIMEOUT_SECONDS = "minecraftWebExport.exportTimeoutSeconds";
 
-    /** Legacy; ignored since export now starts as soon as EMI is ready. */
-    static final String EXPORT_WARMUP_TICKS = "minecraftWebExport.exportWarmupTicks";
-
     private MweJvmCompat() {}
 
     static boolean has(String key) {

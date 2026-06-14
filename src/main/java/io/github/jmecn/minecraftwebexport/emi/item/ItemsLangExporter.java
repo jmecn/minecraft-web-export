@@ -42,23 +42,6 @@ public final class ItemsLangExporter {
         return !MweConfig.skipItemsSearchExport();
     }
 
-    public static ItemsLangExportResult export(Path outputDir, List<String> languages) throws IOException {
-        Path bundleRoot = EmiPaths.resolve(outputDir, "");
-        return export(outputDir, languages, readItemIds(bundleRoot), readFluidRegistryIds(bundleRoot));
-    }
-
-    public static ItemsLangExportResult export(
-            Path outputDir,
-            List<String> languages,
-            Collection<String> itemIds,
-            Set<String> fluidRegistryIds) throws IOException {
-        try (ExportWriteQueue writes = new ExportWriteQueue()) {
-            ItemsLangExportResult result = export(outputDir, languages, itemIds, fluidRegistryIds, writes);
-            writes.awaitIdle();
-            return result;
-        }
-    }
-
     public static ItemsLangExportResult export(
             Path outputDir,
             List<String> languages,

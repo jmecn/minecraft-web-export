@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
+import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -27,7 +28,11 @@ class MembersIndexWriterTest {
         Set<String> items = new TreeSet<>(Set.of("forge:cloth", "minecraft:planks"));
         Set<String> blocks = new TreeSet<>(Set.of("minecraft:mineable/pickaxe"));
 
-        long bytes = MembersIndexWriter.writeTagsCatalog(tempDir, items, blocks, Set.of());
+        long bytes;
+        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            bytes = MembersIndexWriter.writeTagsCatalog(tempDir, items, blocks, Set.of(), writes);
+            writes.awaitIdle();
+        }
 
         assertTrue(bytes > 0);
         Path indexFile = EmiPaths.resolve(tempDir, Constants.TAGS_INDEX_FILE);
@@ -43,7 +48,11 @@ class MembersIndexWriterTest {
 
     @Test
     void skipsTagsCatalogWhenNoTags() throws Exception {
-        long bytes = MembersIndexWriter.writeTagsCatalog(tempDir, Set.of(), Set.of(), Set.of());
+        long bytes;
+        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            bytes = MembersIndexWriter.writeTagsCatalog(tempDir, Set.of(), Set.of(), Set.of(), writes);
+            writes.awaitIdle();
+        }
         assertEquals(0, bytes);
         assertFalse(Files.exists(EmiPaths.resolve(tempDir, Constants.TAGS_INDEX_FILE)));
     }

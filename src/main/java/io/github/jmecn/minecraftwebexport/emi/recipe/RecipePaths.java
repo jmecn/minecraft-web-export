@@ -27,10 +27,6 @@ public final class RecipePaths {
         return path.replace('/', '_');
     }
 
-    public static String fileStem(String recipeId) {
-        return pathSafe(requireParts(recipeId).path());
-    }
-
     public static void ensureRecipeDirectories(Path exportRoot, Set<String> recipeIds) throws IOException {
         if (recipeIds == null || recipeIds.isEmpty()) {
             return;

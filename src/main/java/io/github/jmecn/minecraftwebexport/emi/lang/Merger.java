@@ -70,42 +70,7 @@ public final class Merger {
         return exportTo(EmiPaths.resolve(outputDir, Constants.LANG_DIR), client, null, onlyKeys, hints, writes);
     }
 
-    public static LangMergeResult exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys, Hints hints)
-            throws IOException {
-        try (ExportWriteQueue writes = new ExportWriteQueue()) {
-            LangMergeResult result = exportEmiLang(outputDir, client, onlyKeys, hints, writes);
-            writes.awaitIdle();
-            return result;
-        }
-    }
-
-    @Deprecated
-    public static LangMergeResult exportEmiLang(Path outputDir, Minecraft client, Set<String> onlyKeys) throws IOException {
-        return exportEmiLang(outputDir, client, onlyKeys, Hints.defaults());
-    }
-
-    public static LangMergeResult exportTo(
-            Path langRoot,
-            Minecraft client,
-            Set<String> onlyNamespaces,
-            Set<String> onlyKeys,
-            Hints hints) throws IOException {
-        try (ExportWriteQueue writes = new ExportWriteQueue()) {
-            LangMergeResult result = exportTo(langRoot, client, onlyNamespaces, onlyKeys, hints, writes);
-            writes.awaitIdle();
-            return result;
-        }
-    }
-
-    public static LangMergeResult exportTo(
-            Path langRoot,
-            Minecraft client,
-            Set<String> onlyNamespaces,
-            Set<String> onlyKeys) throws IOException {
-        return exportTo(langRoot, client, onlyNamespaces, onlyKeys, Hints.defaults());
-    }
-
-    public static LangMergeResult exportTo(
+    private static LangMergeResult exportTo(
             Path langRoot,
             Minecraft client,
             Set<String> onlyNamespaces,

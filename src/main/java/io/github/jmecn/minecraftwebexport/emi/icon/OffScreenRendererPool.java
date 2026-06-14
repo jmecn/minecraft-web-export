@@ -14,10 +14,6 @@ public final class OffScreenRendererPool implements AutoCloseable {
         return renderers.computeIfAbsent(dimKey(width, height), ignored -> new OffScreenRenderer(width, height));
     }
 
-    int pooledCount() {
-        return renderers.size();
-    }
-
     @Override
     public void close() {
         for (OffScreenRenderer renderer : renderers.values()) {

@@ -56,31 +56,6 @@ public final class ItemIconWriter {
         return !MweConfig.skipFluidIconExport();
     }
 
-    public static ItemIconResult export(Path outputDir, Minecraft client) {
-        return export(outputDir, client, null, null, null);
-    }
-
-    public static ItemIconResult export(Path outputDir, Minecraft client, Set<String> onlyItemIds) {
-        return export(outputDir, client, onlyItemIds, null, null);
-    }
-
-    public static ItemIconResult export(
-            Path outputDir,
-            Minecraft client,
-            Set<String> onlyItemIds,
-            Map<String, Integer> usageWeights) {
-        return export(outputDir, client, onlyItemIds, null, usageWeights);
-    }
-
-    public static ItemIconResult export(
-            Path outputDir,
-            Minecraft client,
-            Set<String> onlyItemIds,
-            Set<String> onlyFluidIds,
-            Map<String, Integer> usageWeights) {
-        return export(outputDir, client, onlyItemIds, onlyFluidIds, usageWeights, new HashMap<>());
-    }
-
     public static ItemIconResult export(
             Path outputDir,
             Minecraft client,
