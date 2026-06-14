@@ -86,6 +86,7 @@ public final class Pipeline {
             int tagsIndexed = 0;
             if (server != null && !context.tagIds().isEmpty()) {
                 tagsIndexed = TagIndexWriter.export(outputRoot, server, context.tagIds(), writes);
+                writes.awaitIdle("after tags index");
             } else if (!context.tagIds().isEmpty()) {
                 MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
             }

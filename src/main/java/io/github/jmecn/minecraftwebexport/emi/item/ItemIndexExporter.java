@@ -20,6 +20,7 @@ import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,6 +120,7 @@ public final class ItemIndexExporter {
         int writeStride = ProgressLog.stride(writeTotal, MweConfig.itemsIndexWriteLogStride(), 20, 200);
         int writeProgress = 0;
         int skippedHiddenItems = 0;
+        Set<String> indexedItemIds = new TreeSet<>();
         MweMod.LOGGER.info("{} writing {} item detail files", Log.EMI_ITEMS, writeTotal);
 
         for (String itemId : allItemIds) {
@@ -131,6 +133,7 @@ public final class ItemIndexExporter {
             if (item == null) {
                 continue;
             }
+            indexedItemIds.add(itemId);
             indexBuckets.computeIfAbsent(item.namespace(), ignored -> new TreeSet<>()).add(item.path());
             Path itemFile = item.toItemFile(outputDir);
 
@@ -167,7 +170,15 @@ public final class ItemIndexExporter {
         for (Map.Entry<String, Set<String>> entry : indexBuckets.entrySet()) {
             namespacePaths.put(entry.getKey(), List.copyOf(entry.getValue()));
         }
-        ItemIndex index = new ItemIndex(namespacePaths, List.copyOf(build.fluidRegistryIds()));
+        List<String> indexedFluids = indexedFluidRegistryIds(build.fluidRegistryIds(), indexedItemIds);
+        if (indexedFluids.size() < build.fluidRegistryIds().size()) {
+            MweMod.LOGGER.info(
+                    "{} fluid index: {} indexed, {} omitted (not in item index)",
+                    Log.EMI_ITEMS,
+                    indexedFluids.size(),
+                    build.fluidRegistryIds().size() - indexedFluids.size());
+        }
+        ItemIndex index = new ItemIndex(namespacePaths, indexedFluids);
         writes.submitJson(itemsIndexFile, index);
         if (skippedHiddenItems > 0) {
             MweMod.LOGGER.info(
@@ -185,5 +196,18 @@ public final class ItemIndexExporter {
                 itemsIndexFile);
         int indexedCount = indexBuckets.values().stream().mapToInt(Set::size).sum();
         return indexedCount;
+    }
+
+    static List<String> indexedFluidRegistryIds(Set<String> candidateFluids, Set<String> indexedItemIds) {
+        if (candidateFluids == null || candidateFluids.isEmpty()) {
+            return List.of();
+        }
+        List<String> indexed = new ArrayList<>();
+        for (String fluidId : candidateFluids) {
+            if (fluidId != null && indexedItemIds.contains(fluidId)) {
+                indexed.add(fluidId);
+            }
+        }
+        return List.copyOf(indexed);
     }
 }
