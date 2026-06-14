@@ -196,6 +196,80 @@ class ItemIndexFromMetaTest {
     }
 
     @Test
+    void listFluidTagIsNotIndexedAsPseudoItem() {
+        Map<String, Map<String, Set<String>>> inputs = new TreeMap<>();
+        Map<String, Map<String, Set<String>>> outputs = new TreeMap<>();
+        Set<String> fluids = new TreeSet<>();
+
+        RecipeMeta meta = RecipeMeta.of(
+                "tfg:ae_transform/water_test",
+                150,
+                72,
+                4,
+                "ae2:item_transformation",
+                List.of(RecipeWidget.of(
+                        64,
+                        27,
+                        18,
+                        18,
+                        "input",
+                        WidgetInteraction.list(
+                                List.of(
+                                        WidgetInteraction.fluid("tfg:muddy_water", null),
+                                        WidgetInteraction.tag("tfc:water", "fluid", null)),
+                                0))));
+
+        ItemIndexExporter.accumulateRecipeRefsFromMeta(
+                "tfg:ae_transform/water_test",
+                meta,
+                inputs,
+                outputs,
+                fluids,
+                null,
+                Map.of("tfc:water", Set.of("tfc:river_water", "tfc:salt_water")));
+
+        assertFalse(inputs.containsKey("#fluid:tfc:water"));
+        assertTrue(inputs.containsKey("tfg:muddy_water"));
+        assertTrue(inputs.containsKey("tfc:river_water"));
+        assertTrue(inputs.containsKey("tfc:salt_water"));
+        assertTrue(fluids.contains("tfc:river_water"));
+    }
+
+    @Test
+    void tagDisplayRefIsNotIndexedAsItem() {
+        Map<String, Map<String, Set<String>>> inputs = new TreeMap<>();
+        Map<String, Map<String, Set<String>>> outputs = new TreeMap<>();
+        Set<String> fluids = new TreeSet<>();
+
+        RecipeMeta meta = RecipeMeta.of(
+                "tfc:quern/candles",
+                72,
+                72,
+                4,
+                "tfc:quern",
+                List.of(RecipeWidget.of(
+                        18,
+                        27,
+                        18,
+                        18,
+                        "input",
+                        WidgetInteraction.tag("minecraft:candles", "item", "#item:minecraft:candles"))));
+
+        ItemIndexExporter.accumulateRecipeRefsFromMeta(
+                "tfc:quern/candles",
+                meta,
+                inputs,
+                outputs,
+                fluids,
+                null,
+                Map.of("minecraft:candles", Set.of("minecraft:candle", "tfc:candle/blue")));
+
+        assertFalse(inputs.containsKey("#item:minecraft:candles"));
+        assertTrue(inputs.containsKey("minecraft:candle"));
+        assertTrue(inputs.containsKey("tfc:candle/blue"));
+    }
+
+    @Test
     void mergesSeedItemIdsWithoutRecipeRefs() throws IOException {
         ExportContext context = ExportContext.builder(Mode.FULL)
                 .itemIds(Set.of("minecraft:oak_log"))

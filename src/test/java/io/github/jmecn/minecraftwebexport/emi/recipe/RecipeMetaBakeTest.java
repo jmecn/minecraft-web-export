@@ -18,6 +18,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RecipeMetaBakeTest {
 
     @Test
+    void listMapsFluidTagPrimitiveToTagInteraction() {
+        JsonObject layout = JsonParser.parseString("""
+                {
+                  "id": "tfg:ae_transform/water_test",
+                  "panel": { "width": 150, "height": 72 },
+                  "category": "ae2:item_transformation",
+                  "widgets": [
+                    {
+                      "type": "slot",
+                      "role": "input",
+                      "x": 64,
+                      "y": 27,
+                      "w": 18,
+                      "h": 18,
+                      "ingredient": [
+                        "fluid:tfg:muddy_water",
+                        "#fluid:tfc:water"
+                      ]
+                    }
+                  ]
+                }
+                """).getAsJsonObject();
+
+        RecipeMeta meta = bakeLayout(layout);
+        WidgetInteraction list = meta.widgets().get(0).interaction();
+
+        assertEquals("list", list.kind());
+        assertEquals("fluid", list.entries().get(0).kind());
+        assertEquals("tfg:muddy_water", list.entries().get(0).id());
+        assertEquals("tag", list.entries().get(1).kind());
+        assertEquals("tfc:water", list.entries().get(1).tag());
+        assertEquals("fluid", list.entries().get(1).tagKind());
+    }
+
+    @Test
     void bakesTagAndListInteractions() {
         JsonObject layout = JsonParser.parseString("""
                 {

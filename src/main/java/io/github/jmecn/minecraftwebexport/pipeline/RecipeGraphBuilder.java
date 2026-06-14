@@ -51,7 +51,9 @@ public final class RecipeGraphBuilder {
                     meta,
                     context.inputs(),
                     context.outputs(),
-                    context.fluidRegistryIds());
+                    context.fluidRegistryIds(),
+                    client.getSingleplayerServer(),
+                    null);
             logProgress(progress, total, logStride);
         }
 

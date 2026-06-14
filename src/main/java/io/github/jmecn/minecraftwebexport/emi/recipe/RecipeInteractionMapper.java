@@ -67,23 +67,7 @@ final class RecipeInteractionMapper {
 
     private static WidgetInteraction singleInteraction(JsonElement ingredient, String tagDisplayItem) {
         if (ingredient.isJsonPrimitive()) {
-            String raw = ingredient.getAsString();
-            if (raw.startsWith("#item:")) {
-                return WidgetInteraction.tag(raw.substring(6), "item", tagDisplayItem);
-            }
-            if (raw.startsWith("#block:")) {
-                return WidgetInteraction.tag(raw.substring(7), "block", null);
-            }
-            if (raw.startsWith("#fluid:")) {
-                return WidgetInteraction.tag(raw.substring(7), "fluid", null);
-            }
-            if (raw.startsWith("item:")) {
-                return WidgetInteraction.item(raw.substring(5), null, null);
-            }
-            if (raw.startsWith("fluid:")) {
-                return fluidPrimitive(raw.substring(6));
-            }
-            return WidgetInteraction.item(raw, null, null);
+            return primitiveInteraction(ingredient.getAsString(), tagDisplayItem);
         }
         if (!ingredient.isJsonObject()) {
             return null;
@@ -116,20 +100,19 @@ final class RecipeInteractionMapper {
 
     private static WidgetInteraction entryInteraction(JsonElement element) {
         if (element.isJsonPrimitive()) {
-            String raw = element.getAsString();
-            if (raw.startsWith("item:")) {
-                return WidgetInteraction.item(raw.substring(5), null, null);
-            }
-            if (raw.startsWith("fluid:")) {
-                return fluidPrimitive(raw.substring(6));
-            }
-            return WidgetInteraction.item(raw, null, null);
+            return primitiveInteraction(element.getAsString(), null);
         }
         if (!element.isJsonObject()) {
             return null;
         }
         JsonObject object = element.getAsJsonObject();
         String type = stringProp(object, "type");
+        if ("tag".equals(type) && object.has("id")) {
+            return WidgetInteraction.tag(
+                    object.get("id").getAsString(),
+                    tagKindFromRegistry(stringProp(object, "registry")),
+                    null);
+        }
         if ("fluid".equals(type)) {
             return WidgetInteraction.fluid(
                     stringProp(object, "id"),
@@ -141,6 +124,25 @@ final class RecipeInteractionMapper {
                         ? object.get("amount").getAsInt()
                         : null,
                 null);
+    }
+
+    private static WidgetInteraction primitiveInteraction(String raw, String tagDisplayItem) {
+        if (raw.startsWith("#item:")) {
+            return WidgetInteraction.tag(raw.substring(6), "item", tagDisplayItem);
+        }
+        if (raw.startsWith("#block:")) {
+            return WidgetInteraction.tag(raw.substring(7), "block", null);
+        }
+        if (raw.startsWith("#fluid:")) {
+            return WidgetInteraction.tag(raw.substring(7), "fluid", null);
+        }
+        if (raw.startsWith("item:")) {
+            return WidgetInteraction.item(raw.substring(5), null, null);
+        }
+        if (raw.startsWith("fluid:")) {
+            return fluidPrimitive(raw.substring(6));
+        }
+        return WidgetInteraction.item(raw, null, null);
     }
 
     private static WidgetInteraction fluidPrimitive(String body) {

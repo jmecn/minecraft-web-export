@@ -5,6 +5,7 @@ import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.recipe.EmiRecipeManager;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.network.chat.Component;
@@ -25,6 +26,22 @@ public final class LangDerivation {
         keys.addAll(RegistryLangKeys.langKeysForTags(context.tagIds()));
         keys.addAll(categoryLangKeys(context.categoryIds()));
         return Set.copyOf(keys);
+    }
+
+    public static Set<String> withNameKeys(Set<String> base, Map<String, String> nameKeysByRegistryId) {
+        if (nameKeysByRegistryId == null || nameKeysByRegistryId.isEmpty()) {
+            return base == null ? Set.of() : Set.copyOf(base);
+        }
+        Set<String> merged = new TreeSet<>();
+        if (base != null) {
+            merged.addAll(base);
+        }
+        for (String key : nameKeysByRegistryId.values()) {
+            if (key != null && !key.isBlank()) {
+                merged.add(key);
+            }
+        }
+        return Set.copyOf(merged);
     }
 
     public static String emiCategoryLangKey(String categoryId) {

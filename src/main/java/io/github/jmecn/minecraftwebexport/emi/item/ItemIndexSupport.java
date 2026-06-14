@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.tag.TagExpander;
+import io.github.jmecn.minecraftwebexport.model.tag.TagContents;
 import io.github.jmecn.minecraftwebexport.model.item.ExportedTagCatalog;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIdParts;
 import io.github.jmecn.minecraftwebexport.model.item.RegistryTagSet;
@@ -182,7 +183,7 @@ final class ItemIndexSupport {
 
     static void addFluidRegistryId(String raw, Set<String> out, Set<String> fluidRegistryIds) {
         String id = canonicalRegistryId(raw);
-        if (id == null || id.isBlank()) {
+        if (!isExportableRegistryId(id)) {
             return;
         }
         out.add(id);
@@ -193,9 +194,24 @@ final class ItemIndexSupport {
 
     static void addCanonicalId(String raw, Set<String> out) {
         String id = canonicalRegistryId(raw);
-        if (id != null && !id.isBlank()) {
+        if (isExportableRegistryId(id)) {
             out.add(id);
         }
+    }
+
+    static boolean isExportableRegistryId(String id) {
+        if (id == null || id.isBlank()) {
+            return false;
+        }
+        if (id.startsWith("#")) {
+            return false;
+        }
+        int colon = id.indexOf(':');
+        if (colon <= 0 || colon >= id.length() - 1) {
+            return false;
+        }
+        String namespace = id.substring(0, colon);
+        return !namespace.startsWith("#");
     }
 
     static String canonicalRegistryId(String raw) {
@@ -236,6 +252,15 @@ final class ItemIndexSupport {
             WidgetInteraction interaction,
             Set<String> out,
             Set<String> fluidRegistryIds) {
+        collectInteractionIds(interaction, out, fluidRegistryIds, null, null);
+    }
+
+    static void collectInteractionIds(
+            WidgetInteraction interaction,
+            Set<String> out,
+            Set<String> fluidRegistryIds,
+            MinecraftServer server,
+            Map<String, Set<String>> exportedTagMembers) {
         if (interaction == null) {
             return;
         }
@@ -249,16 +274,64 @@ final class ItemIndexSupport {
             return;
         }
         if ("tag".equals(kind)) {
-            if (interaction.displayId() != null) {
+            if (interaction.displayId() != null && isExportableRegistryId(interaction.displayId())) {
                 addCanonicalId(interaction.displayId(), out);
             }
+            addTagMembers(interaction.tag(), interaction.tagKind(), out, fluidRegistryIds, server, exportedTagMembers);
             return;
         }
         if ("list".equals(kind) && interaction.entries() != null) {
             for (WidgetInteraction entry : interaction.entries()) {
-                collectInteractionIds(entry, out, fluidRegistryIds);
+                collectInteractionIds(entry, out, fluidRegistryIds, server, exportedTagMembers);
             }
         }
+    }
+
+    private static void addTagMembers(
+            String tagId,
+            String tagKind,
+            Set<String> out,
+            Set<String> fluidRegistryIds,
+            MinecraftServer server,
+            Map<String, Set<String>> exportedTagMembers) {
+        if (tagId == null || tagId.isBlank()) {
+            return;
+        }
+        Set<String> members = resolveTagMembers(tagId, tagKind, server, exportedTagMembers);
+        for (String member : members) {
+            if ("fluid".equals(tagKind)) {
+                addFluidRegistryId(member, out, fluidRegistryIds);
+            } else {
+                addCanonicalId(member, out);
+            }
+        }
+    }
+
+    private static Set<String> resolveTagMembers(
+            String tagId,
+            String tagKind,
+            MinecraftServer server,
+            Map<String, Set<String>> exportedTagMembers) {
+        if (exportedTagMembers != null) {
+            Set<String> fromBundle = exportedTagMembers.get(tagId);
+            if (fromBundle != null && !fromBundle.isEmpty()) {
+                return fromBundle;
+            }
+        }
+        if (server == null) {
+            return Set.of();
+        }
+        String prefix = switch (tagKind == null ? "item" : tagKind) {
+            case "fluid" -> "#fluid:";
+            case "block" -> "#block:";
+            default -> "#item:";
+        };
+        TagContents contents = TagExpander.expandTagContents(server, prefix + tagId);
+        return switch (tagKind == null ? "item" : tagKind) {
+            case "fluid" -> contents.fluids();
+            case "block" -> contents.blocks();
+            default -> contents.items();
+        };
     }
 
     static Map<String, Map<String, Set<String>>> bucketForRole(

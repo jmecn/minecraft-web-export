@@ -56,6 +56,17 @@ public final class ItemIndexExporter {
             Map<String, Map<String, Set<String>>> inputs,
             Map<String, Map<String, Set<String>>> outputs,
             Set<String> fluidRegistryIds) {
+        accumulateRecipeRefsFromMeta(recipeId, meta, inputs, outputs, fluidRegistryIds, null, null);
+    }
+
+    public static void accumulateRecipeRefsFromMeta(
+            String recipeId,
+            RecipeMeta meta,
+            Map<String, Map<String, Set<String>>> inputs,
+            Map<String, Map<String, Set<String>>> outputs,
+            Set<String> fluidRegistryIds,
+            MinecraftServer server,
+            Map<String, Set<String>> exportedTagMembers) {
         if (ItemIndexSupport.isEmiTagDisplayRecipe(recipeId) || meta == null) {
             return;
         }
@@ -67,7 +78,8 @@ public final class ItemIndexExporter {
                 continue;
             }
             Set<String> ids = new TreeSet<>();
-            ItemIndexSupport.collectInteractionIds(widget.interaction(), ids, fluidRegistryIds);
+            ItemIndexSupport.collectInteractionIds(
+                    widget.interaction(), ids, fluidRegistryIds, server, exportedTagMembers);
             ItemIndexSupport.addRecipeRefs(bucket, categoryId, ids, recipeId);
         }
     }
@@ -79,6 +91,7 @@ public final class ItemIndexExporter {
         allItemIds.addAll(context.inputs().keySet());
         allItemIds.addAll(context.outputs().keySet());
         ItemIndexSupport.mergeSeedItemIds(allItemIds, context.itemIds());
+        allItemIds.removeIf(id -> !ItemIndexSupport.isExportableRegistryId(id));
         MweMod.LOGGER.info("{} resolving registry tags for {} items", Log.EMI_ITEMS, allItemIds.size());
         Map<String, RegistryTagSet> registryTagsByItem =
                 ItemIndexSupport.resolveRegistryTags(allItemIds, server);

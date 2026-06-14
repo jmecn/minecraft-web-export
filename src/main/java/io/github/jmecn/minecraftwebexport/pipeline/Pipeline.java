@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -105,7 +104,9 @@ public final class Pipeline {
             }
             writes.awaitIdle("after name keys");
 
-            Set<String> langKeys = LangDerivation.derive(context);
+            Set<String> langKeys = LangDerivation.withNameKeys(
+                    LangDerivation.derive(context),
+                    NameKeysExporter.readNameKeys(outputRoot));
             int languagesWritten = Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
             writes.awaitIdle("after emi lang");
 
@@ -117,10 +118,11 @@ public final class Pipeline {
                     languages = Languages.resolve(plan.hints()).stream().sorted().toList();
                 }
                 if (!languages.isEmpty()) {
+                    Path bundleRoot = EmiPaths.resolve(outputRoot, "");
                     itemsLangLocales = ItemsLangExporter.export(
                             outputRoot,
                             languages,
-                            indexedItemIds(context),
+                            ItemsLangExporter.readIndexedItemIds(bundleRoot),
                             context.fluidRegistryIds(),
                             writes);
                 }
@@ -173,13 +175,6 @@ public final class Pipeline {
                     languagesWritten,
                     iconSprites);
         }
-    }
-
-    private static Set<String> indexedItemIds(ExportContext context) {
-        Set<String> ids = new LinkedHashSet<>(context.itemIds());
-        ids.addAll(context.inputs().keySet());
-        ids.addAll(context.outputs().keySet());
-        return Set.copyOf(ids);
     }
 
     private static void logCompletion(

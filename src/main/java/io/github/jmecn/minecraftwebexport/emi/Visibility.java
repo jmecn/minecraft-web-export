@@ -8,7 +8,6 @@ import dev.emi.emi.runtime.EmiHidden;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.enums.pipeline.RecipeExclusion;
 import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.core.Holder;
@@ -35,56 +34,46 @@ public final class Visibility {
     public static Set<String> filterExportableRecipeIds(MinecraftServer server, Iterable<EmiRecipe> recipes) {
         Set<String> ids = new TreeSet<>();
         int skippedDisabled = 0;
-        int skippedHiddenTag = 0;
         for (EmiRecipe recipe : recipes) {
             if (recipe == null || recipe.getId() == null) {
                 continue;
             }
-            RecipeExclusion reason = exclusionReason(recipe, server);
-            if (reason == RecipeExclusion.DISABLED_STACK) {
+            if (isRecipeDisabledByEmi(recipe)) {
                 skippedDisabled++;
-            } else if (reason == RecipeExclusion.HIDDEN_TAG) {
-                skippedHiddenTag++;
             } else {
                 ids.add(recipe.getId().toString());
             }
         }
         MweMod.LOGGER.info(
-                "{} recipe visibility: {} exportable, {} skipped ({} emi-disabled ingredient, {} hidden-tag ingredient)",
+                "{} recipe visibility: {} exportable, {} skipped ({} emi-disabled ingredient)",
                 Log.EMI,
                 ids.size(),
-                skippedDisabled + skippedHiddenTag,
                 skippedDisabled,
-                skippedHiddenTag);
+                skippedDisabled);
         return Set.copyOf(ids);
     }
 
     public static boolean shouldExportRecipe(EmiRecipe recipe, MinecraftServer server) {
-        return exclusionReason(recipe, server) == RecipeExclusion.NONE;
+        return !isRecipeDisabledByEmi(recipe);
+    }
+
+    /**
+     * Aligns with EMI recipe bake ({@code EmiRecipes}): only {@code EmiHidden.isDisabled} drops a recipe.
+     * {@code c:hidden_from_recipe_viewers} hides individual stacks from the item index, not whole recipes
+     * that reference broad tags containing a few hidden members.
+     */
+    private static boolean isRecipeDisabledByEmi(EmiRecipe recipe) {
+        for (EmiIngredient ingredient : Iterables.concat(
+                recipe.getInputs(), recipe.getOutputs(), recipe.getCatalysts())) {
+            if (ingredient != null && !ingredient.isEmpty() && EmiHidden.isDisabled(ingredient)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean shouldExportRegistryId(MinecraftServer server, String registryId) {
         return !isRegistryIdHiddenFromRecipeViewers(server, registryId);
-    }
-
-    private static RecipeExclusion exclusionReason(EmiRecipe recipe, MinecraftServer server) {
-        for (EmiIngredient ingredient : Iterables.concat(
-                recipe.getInputs(), recipe.getOutputs(), recipe.getCatalysts())) {
-            if (ingredient == null || ingredient.isEmpty()) {
-                continue;
-            }
-            if (EmiHidden.isDisabled(ingredient)) {
-                return RecipeExclusion.DISABLED_STACK;
-            }
-            if (server != null) {
-                for (EmiStack stack : ingredient.getEmiStacks()) {
-                    if (isEmiStackHiddenFromRecipeViewers(server, stack)) {
-                        return RecipeExclusion.HIDDEN_TAG;
-                    }
-                }
-            }
-        }
-        return RecipeExclusion.NONE;
     }
 
     static boolean isRegistryIdHiddenFromRecipeViewers(MinecraftServer server, String registryId) {
@@ -130,27 +119,5 @@ public final class Visibility {
             }
         }
         return holder.is(itemHidden);
-    }
-
-    private static boolean isEmiStackHiddenFromRecipeViewers(MinecraftServer server, EmiStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return false;
-        }
-        Object key = stack.getKey();
-        if (key instanceof Item) {
-            ResourceLocation id = stack.getId();
-            if (id == null) {
-                return false;
-            }
-            return isRegistryIdHiddenFromRecipeViewers(server, id.toString());
-        }
-        if (key instanceof Fluid) {
-            ResourceLocation id = stack.getId();
-            if (id == null) {
-                return false;
-            }
-            return isRegistryIdHiddenFromRecipeViewers(server, id.toString());
-        }
-        return false;
     }
 }
