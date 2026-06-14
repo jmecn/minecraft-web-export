@@ -4,7 +4,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
-import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,7 +23,7 @@ class BundleTest {
 
     @Test
     void writesCurrentBundleContract() throws IOException {
-        Bundle bundle = Bundle.of(2, 42, List.of("en_us", "zh_cn"), PlaceholderRenderer.REGISTRY_ID, null);
+        Bundle bundle = Bundle.of(2, 42, List.of("en_us", "zh_cn"), Constants.MISSING_ICON_REGISTRY_ID, null);
         JsonIO.write(EmiPaths.resolve(tempDir, Constants.BUNDLE_FILE), bundle);
 
         Path bundleFile = EmiPaths.resolve(tempDir, Constants.BUNDLE_FILE);
@@ -38,6 +37,6 @@ class BundleTest {
         assertEquals(2, json.getAsJsonArray("languages").size());
         assertEquals(42, json.get("recipeCount").getAsInt());
         assertEquals("png", json.get("recipeImageFormat").getAsString());
-        assertEquals(PlaceholderRenderer.REGISTRY_ID, json.get("missingIconId").getAsString());
+        assertEquals(Constants.MISSING_ICON_REGISTRY_ID, json.get("missingIconId").getAsString());
     }
 }

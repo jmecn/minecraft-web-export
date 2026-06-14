@@ -1,6 +1,7 @@
 package io.github.jmecn.minecraftwebexport.runtime;
 
 import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,7 +21,7 @@ public final class WorldServerEvents {
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
-        if (!CiProperties.exportEnabled()) {
+        if (!MweConfig.exportEnabled()) {
             return;
         }
         ServerLevel overworld = event.getServer().overworld();
@@ -37,7 +38,7 @@ public final class WorldServerEvents {
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!CiProperties.exportEnabled()) {
+        if (!MweConfig.exportEnabled()) {
             return;
         }
         if (!(event.getEntity() instanceof ServerPlayer player)) {

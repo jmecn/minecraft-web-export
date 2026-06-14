@@ -1,9 +1,11 @@
 package io.github.jmecn.minecraftwebexport.runtime;
 
+import dev.emi.emi.api.EmiApi;
+import dev.emi.emi.api.recipe.EmiRecipeManager;
+import dev.emi.emi.runtime.EmiReloadManager;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 import io.github.jmecn.minecraftwebexport.pipeline.Pipeline;
 import java.nio.file.Path;
@@ -23,12 +25,42 @@ public final class CiDriver {
         this.outputRootOverride = outputRootOverride;
     }
 
+    public static boolean isReloadFailed() {
+        return EmiReloadManager.getStatus() == -1;
+    }
+
+    public static boolean isReloadInProgress() {
+        int status = EmiReloadManager.getStatus();
+        return status == 1 || (status == 2 && !EmiReloadManager.isLoaded());
+    }
+
+    public static String reloadStatusLabel() {
+        return switch (EmiReloadManager.getStatus()) {
+            case -1 -> "error";
+            case 0 -> "idle";
+            case 1 -> "reloading";
+            case 2 -> EmiReloadManager.isLoaded() ? "loaded" : "finishing";
+            default -> "unknown(" + EmiReloadManager.getStatus() + ")";
+        };
+    }
+
+    public static boolean isReadyForExport(Minecraft client) {
+        if (client.player == null || client.level == null || client.getSingleplayerServer() == null) {
+            return false;
+        }
+        if (!EmiReloadManager.isLoaded()) {
+            return false;
+        }
+        EmiRecipeManager manager = EmiApi.getRecipeManager();
+        return manager != null && !manager.getRecipes().isEmpty();
+    }
+
     public void register() {
         MweMod.LOGGER.info(
                 "mode=ci-export, world={}, output={}, timeoutSeconds={}",
                 WorldCreator.saveName(),
                 OutputPaths.resolveForRun(gameDirectory, outputRootOverride).rootDir(),
-                CiProperties.exportTimeoutSeconds());
+                MweConfig.timeoutSeconds());
         MinecraftForge.EVENT_BUS.register(new AutoExportHandler(gameDirectory, outputRootOverride));
     }
 
@@ -54,7 +86,7 @@ public final class CiDriver {
     }
 
     static boolean isEmiReady(Minecraft client) {
-        return Readiness.isReadyForExport(client);
+        return isReadyForExport(client);
     }
 
     private static final class StateLogger {
@@ -104,7 +136,7 @@ public final class CiDriver {
                 phase = Phase.WORLD_OPENING;
                 MweMod.LOGGER.info(
                         "CI export: armed (timeout={}s), waiting for idle menu...",
-                        CiProperties.exportTimeoutSeconds());
+                        MweConfig.timeoutSeconds());
             }
 
             if (isFatalMenuScreen(client)) {
@@ -115,13 +147,13 @@ public final class CiDriver {
                 System.exit(1);
                 return;
             }
-            if (CiProperties.timedOut(startNanos)) {
+            if (MweConfig.timedOut(startNanos)) {
                 String phaseAtTimeout = phase.name();
                 phase = Phase.DONE;
                 String screen = client.screen == null ? "null" : client.screen.getClass().getName();
                 MweMod.LOGGER.error(
                         "export timed out after {}s (phase={}, player={}, level={}, screen={})",
-                        CiProperties.exportTimeoutSeconds(),
+                        MweConfig.timeoutSeconds(),
                         phaseAtTimeout,
                         client.player != null,
                         client.level != null,
@@ -161,7 +193,7 @@ public final class CiDriver {
                     return;
                 }
                 boolean reuseSave = WorldCreator.saveExists(client);
-                int delayTarget = reuseSave ? 0 : CiProperties.exportWorldDelayTicks();
+                int delayTarget = reuseSave ? 0 : MweConfig.worldDelayTicks();
                 if (delayTarget > 0 && worldDelayTicks < delayTarget) {
                     worldDelayTicks++;
                     if (worldDelayTicks == 1 || worldDelayTicks % Constants.HEARTBEAT_TICKS == 0
@@ -202,14 +234,14 @@ public final class CiDriver {
                 return;
             }
 
-            if (Readiness.isReloadFailed()) {
+            if (isReloadFailed()) {
                 phase = Phase.DONE;
                 MweMod.LOGGER.error("EMI reload failed (status=-1); aborting export");
                 System.exit(1);
                 return;
             }
             if (!isEmiReady(client)) {
-                stateLog.tick("waiting: EMI not ready (status=" + Readiness.reloadStatusLabel() + ")");
+                stateLog.tick("waiting: EMI not ready (status=" + reloadStatusLabel() + ")");
                 return;
             }
 

@@ -7,7 +7,6 @@ import dev.emi.emi.runtime.EmiDrawContext;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
-import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRendererPool;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.support.ProgressLog;
@@ -19,6 +18,8 @@ import io.github.jmecn.minecraftwebexport.model.pipeline.Mode;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -39,6 +40,10 @@ public final class RecipeWriter {
 
     public static int imageScale() {
         return LayoutBuilder.layoutScale();
+    }
+
+    static long dimKey(int width, int height) {
+        return OffScreenRendererPool.dimKey(width, height);
     }
 
     public static RecipeWriteResult export(
@@ -88,7 +93,7 @@ public final class RecipeWriter {
                             context.referencedTags(),
                             context.iconVariants());
 
-                    RecipeMeta meta = MetaBaker.bake(layout);
+                    RecipeMeta meta = LayoutBuilder.bake(layout);
                     Path metaFile = RecipePaths.metaPath(outputDir, recipeId);
                     Path pngFile = RecipePaths.pngPath(outputDir, recipeId);
                     byte[] metaUtf8 = JsonIO.toUtf8Bytes(meta);
@@ -174,6 +179,30 @@ public final class RecipeWriter {
                     written,
                     missing,
                     failures);
+        }
+    }
+
+    private static final class OffScreenRendererPool implements AutoCloseable {
+
+        private final Map<Long, OffScreenRenderer> renderers = new HashMap<>();
+
+        OffScreenRenderer borrow(int width, int height) {
+            if (width < 1 || height < 1) {
+                throw new IllegalArgumentException("width and height must be positive");
+            }
+            return renderers.computeIfAbsent(dimKey(width, height), ignored -> new OffScreenRenderer(width, height));
+        }
+
+        @Override
+        public void close() {
+            for (OffScreenRenderer renderer : renderers.values()) {
+                renderer.close();
+            }
+            renderers.clear();
+        }
+
+        static long dimKey(int width, int height) {
+            return ((long) width << 32) | (height & 0xFFFFFFFFL);
         }
     }
 }

@@ -2,7 +2,7 @@ package io.github.jmecn.minecraftwebexport.config;
 
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.runtime.CiDriver;
-import io.github.jmecn.minecraftwebexport.runtime.CiProperties;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import java.nio.file.Path;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
@@ -33,7 +33,7 @@ public final class MweClientBootstrap {
         if (armed) {
             return;
         }
-        if (!CiProperties.exportEnabled()) {
+        if (!MweConfig.exportEnabled()) {
             return;
         }
         armed = true;

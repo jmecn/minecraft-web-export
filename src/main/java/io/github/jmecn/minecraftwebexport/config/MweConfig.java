@@ -12,6 +12,15 @@ import org.apache.commons.lang3.tuple.Pair;
 
 public final class MweConfig {
 
+    static final String JVM_EXPORT_ENABLED = "minecraftWebExport.export.enabled";
+    static final String JVM_EXPORT_OUTPUT_DIR = "minecraftWebExport.export.outputDir";
+    static final String JVM_EXPORT_MODE = "minecraftWebExport.exportMode";
+    static final String JVM_EXPORT_LANGUAGES = "minecraftWebExport.exportLanguages";
+    static final String JVM_EXPORT_WORLD_NAME = "minecraftWebExport.exportWorldName";
+    static final String JVM_EXPORT_EXCLUDED_NAMESPACES = "minecraftWebExport.exportExcludedNamespaces";
+    static final String JVM_EXPORT_WORLD_DELAY_TICKS = "minecraftWebExport.exportWorldDelayTicks";
+    static final String JVM_EXPORT_TIMEOUT_SECONDS = "minecraftWebExport.exportTimeoutSeconds";
+
     public static MweClientConfig CLIENT;
     static ForgeConfigSpec CLIENT_SPEC;
     private static volatile String runtimeExportModeOverride;
@@ -92,8 +101,8 @@ public final class MweConfig {
     }
 
     public static String exportOutputDir() {
-        if (MweJvmCompat.has(MweJvmCompat.EXPORT_OUTPUT_DIR)) {
-            return MweJvmCompat.getString(MweJvmCompat.EXPORT_OUTPUT_DIR);
+        if (jvmHas(JVM_EXPORT_OUTPUT_DIR)) {
+            return jvmString(JVM_EXPORT_OUTPUT_DIR);
         }
         if (!configReady()) {
             return "";
@@ -105,8 +114,8 @@ public final class MweConfig {
         if (runtimeExportModeOverride != null) {
             return runtimeExportModeOverride.trim();
         }
-        if (MweJvmCompat.has(MweJvmCompat.EXPORT_MODE)) {
-            return MweJvmCompat.getString(MweJvmCompat.EXPORT_MODE);
+        if (jvmHas(JVM_EXPORT_MODE)) {
+            return jvmString(JVM_EXPORT_MODE);
         }
         if (!configReady()) {
             return "full";
@@ -115,22 +124,22 @@ public final class MweConfig {
     }
 
     public static String exportLanguages() {
-        if (MweJvmCompat.has(MweJvmCompat.EXPORT_LANGUAGES)) {
-            return MweJvmCompat.getString(MweJvmCompat.EXPORT_LANGUAGES);
+        if (jvmHas(JVM_EXPORT_LANGUAGES)) {
+            return jvmString(JVM_EXPORT_LANGUAGES);
         }
         return client().exportLanguages.get().trim();
     }
 
     public static String excludedNamespaces() {
-        if (MweJvmCompat.has(MweJvmCompat.EXPORT_EXCLUDED_NAMESPACES)) {
-            return MweJvmCompat.getString(MweJvmCompat.EXPORT_EXCLUDED_NAMESPACES);
+        if (jvmHas(JVM_EXPORT_EXCLUDED_NAMESPACES)) {
+            return jvmString(JVM_EXPORT_EXCLUDED_NAMESPACES);
         }
         return client().excludedNamespaces.get().trim();
     }
 
     public static boolean exportEnabled() {
-        if (MweJvmCompat.has(MweJvmCompat.EXPORT_ENABLED)) {
-            return MweJvmCompat.getBoolean(MweJvmCompat.EXPORT_ENABLED);
+        if (jvmHas(JVM_EXPORT_ENABLED)) {
+            return jvmBoolean(JVM_EXPORT_ENABLED);
         }
         if (!configReady()) {
             return false;
@@ -147,22 +156,22 @@ public final class MweConfig {
     }
 
     public static int worldDelayTicks() {
-        if (MweJvmCompat.has(MweJvmCompat.EXPORT_WORLD_DELAY_TICKS)) {
-            return Math.max(0, MweJvmCompat.getInt(MweJvmCompat.EXPORT_WORLD_DELAY_TICKS, Constants.CI_DEFAULT_EXPORT_WORLD_DELAY_TICKS));
+        if (jvmHas(JVM_EXPORT_WORLD_DELAY_TICKS)) {
+            return Math.max(0, jvmInt(JVM_EXPORT_WORLD_DELAY_TICKS, Constants.CI_DEFAULT_EXPORT_WORLD_DELAY_TICKS));
         }
         return Math.max(0, client().worldDelayTicks.get());
     }
 
     public static int timeoutSeconds() {
-        if (MweJvmCompat.has(MweJvmCompat.EXPORT_TIMEOUT_SECONDS)) {
-            return MweJvmCompat.getInt(MweJvmCompat.EXPORT_TIMEOUT_SECONDS, Constants.CI_DEFAULT_EXPORT_TIMEOUT_SECONDS);
+        if (jvmHas(JVM_EXPORT_TIMEOUT_SECONDS)) {
+            return jvmInt(JVM_EXPORT_TIMEOUT_SECONDS, Constants.CI_DEFAULT_EXPORT_TIMEOUT_SECONDS);
         }
         return client().timeoutSeconds.get();
     }
 
     public static String exportWorldName() {
-        if (MweJvmCompat.has(MweJvmCompat.EXPORT_WORLD_NAME)) {
-            String raw = MweJvmCompat.getString(MweJvmCompat.EXPORT_WORLD_NAME);
+        if (jvmHas(JVM_EXPORT_WORLD_NAME)) {
+            String raw = jvmString(JVM_EXPORT_WORLD_NAME);
             return raw.isEmpty() ? Constants.CI_DEFAULT_EXPORT_WORLD_NAME : raw;
         }
         String raw = client().worldName.get().trim();
@@ -263,5 +272,30 @@ public final class MweConfig {
             case "scoped", "closure" -> "scoped";
             default -> "full";
         };
+    }
+
+    private static boolean jvmHas(String key) {
+        return System.getProperty(key) != null;
+    }
+
+    private static boolean jvmBoolean(String key) {
+        return Boolean.parseBoolean(System.getProperty(key));
+    }
+
+    private static String jvmString(String key) {
+        String raw = System.getProperty(key);
+        return raw == null ? "" : raw.trim();
+    }
+
+    private static int jvmInt(String key, int fallback) {
+        String raw = System.getProperty(key);
+        if (raw == null) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
     }
 }

@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CiPropertiesTest {
+class MweConfigCiTest {
 
     @AfterEach
     void clearState() {
@@ -24,10 +24,10 @@ class CiPropertiesTest {
     @Test
     void defaultsToCommandOnlyMode() {
         MweConfig.ensureForTests();
-        assertFalse(CiProperties.exportEnabled());
-        assertEquals(600, CiProperties.exportWorldDelayTicks());
-        assertEquals(3600, CiProperties.exportTimeoutSeconds());
-        assertEquals("emi-export", CiProperties.exportWorldName());
+        assertFalse(MweConfig.exportEnabled());
+        assertEquals(600, MweConfig.worldDelayTicks());
+        assertEquals(3600, MweConfig.timeoutSeconds());
+        assertEquals("emi-export", MweConfig.exportWorldName());
     }
 
     @Test
@@ -38,10 +38,10 @@ class CiPropertiesTest {
         System.setProperty("minecraftWebExport.exportWorldDelayTicks", "30");
         System.setProperty("minecraftWebExport.exportTimeoutSeconds", "5400");
 
-        assertTrue(CiProperties.exportEnabled());
-        assertEquals("custom-save", CiProperties.exportWorldName());
-        assertEquals(30, CiProperties.exportWorldDelayTicks());
-        assertEquals(5400, CiProperties.exportTimeoutSeconds());
+        assertTrue(MweConfig.exportEnabled());
+        assertEquals("custom-save", MweConfig.exportWorldName());
+        assertEquals(30, MweConfig.worldDelayTicks());
+        assertEquals(5400, MweConfig.timeoutSeconds());
     }
 
     @Test
@@ -50,14 +50,14 @@ class CiPropertiesTest {
                 "ci.worldDelayTicks", 120,
                 "ci.timeoutSeconds", 1800));
 
-        assertEquals(120, CiProperties.exportWorldDelayTicks());
-        assertEquals(1800, CiProperties.exportTimeoutSeconds());
+        assertEquals(120, MweConfig.worldDelayTicks());
+        assertEquals(1800, MweConfig.timeoutSeconds());
     }
 
     @Test
     void timedOutUsesConfiguredTimeout() {
         MweConfigTestSupport.apply(Map.of("ci.timeoutSeconds", 1));
         long start = System.nanoTime() - 2_000_000_000L;
-        assertTrue(CiProperties.timedOut(start));
+        assertTrue(MweConfig.timedOut(start));
     }
 }

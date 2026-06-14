@@ -18,17 +18,17 @@ class ExportSizesTest {
     @Test
     void defaultsToThirtyTwoPixelIcons() {
         MweConfig.ensureForTests();
-        assertEquals(32, ExportSizes.iconCellSize());
+        assertEquals(32, AtlasBuilder.iconCellSize());
     }
 
     @Test
     void respectsUnifiedOverride() {
         MweConfigTestSupport.apply(Map.of("icons.iconSize", 48));
-        assertEquals(48, ExportSizes.iconCellSize());
+        assertEquals(48, AtlasBuilder.iconCellSize());
     }
 
     @Test
     void resolveIconCellSizePrefersUnifiedSize() {
-        assertEquals(48, ExportSizes.resolveIconCellSize(48, 16, 16, 16));
+        assertEquals(48, AtlasBuilder.resolveIconCellSize(48, 16, 16, 16));
     }
 }

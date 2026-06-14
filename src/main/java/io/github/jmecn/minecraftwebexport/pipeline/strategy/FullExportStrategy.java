@@ -4,7 +4,7 @@ import dev.emi.emi.api.recipe.EmiRecipe;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
 import io.github.jmecn.minecraftwebexport.emi.pipeline.Visibility;
-import io.github.jmecn.minecraftwebexport.emi.recipe.RecipeRefsCollector;
+import io.github.jmecn.minecraftwebexport.emi.recipe.WidgetSerializer;
 import io.github.jmecn.minecraftwebexport.emi.recipe.Resolver;
 import io.github.jmecn.minecraftwebexport.emi.tag.ClosureExpander;
 import io.github.jmecn.minecraftwebexport.model.emi.tag.TagExpansion;
@@ -35,7 +35,7 @@ public final class FullExportStrategy implements ExportStrategy {
             if (recipe == null) {
                 continue;
             }
-            RecipeRefsCollector.collectFromRecipe(recipe, itemIds, fluidIds, tagIds, categoryIds);
+            WidgetSerializer.collectFromRecipe(recipe, itemIds, fluidIds, tagIds, categoryIds);
         }
 
         if (server != null) {

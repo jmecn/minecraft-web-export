@@ -3,6 +3,7 @@ package io.github.jmecn.minecraftwebexport.emi.icon;
 import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.recipe.EmiRecipeManager;
+import dev.emi.emi.api.render.EmiRenderable;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.data.EmiRecipeCategoryProperties;
@@ -10,7 +11,6 @@ import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
-import io.github.jmecn.minecraftwebexport.emi.category.IconRenderer;
 import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
@@ -68,17 +68,17 @@ public final class CategoryIconWriter {
         long atlasIndexBytes = 0;
 
         if (isEnabled() && !categories.isEmpty()) {
-            int cell = ExportSizes.categoryIconCellSize();
-            int atlasMax = ExportSizes.atlasMaxSize();
+            int cell = AtlasBuilder.categoryIconCellSize();
+            int atlasMax = AtlasBuilder.atlasMaxSize();
             Path iconsRoot = EmiPaths.resolve(outputRoot, Constants.CATEGORY_ICONS_DIR);
-            List<AtlasPagePlan> layout = AtlasLayout.plan(categories.size(), cell, atlasMax);
+            List<AtlasPagePlan> layout = AtlasBuilder.planPages(categories.size(), cell, atlasMax);
 
             MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
             try (OffScreenRenderer renderer = new OffScreenRenderer(cell, cell);
                  AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "category", layout, null, writes)) {
                 GuiGraphics guiGraphics = new GuiGraphics(client, bufferSource);
-                PlaceholderRenderer.render(guiGraphics, renderer);
-                atlas.place(PlaceholderRenderer.REGISTRY_ID, renderer);
+                AtlasBuilder.renderPlaceholder(guiGraphics, renderer);
+                atlas.place(Constants.MISSING_ICON_REGISTRY_ID, renderer);
 
                 int index = 0;
                 int total = categories.size();
@@ -88,7 +88,7 @@ public final class CategoryIconWriter {
                     index++;
                     boolean ok;
                     try {
-                        ok = IconRenderer.render(client, guiGraphics, renderer, category);
+                        ok = renderCategoryIcon(client, guiGraphics, renderer, category);
                         if (!ok) {
                             ok = renderWorkstationFallback(client, guiGraphics, renderer, category);
                         }
@@ -119,7 +119,7 @@ public final class CategoryIconWriter {
             }
         }
 
-        int cellSize = ExportSizes.categoryIconCellSize();
+        int cellSize = AtlasBuilder.categoryIconCellSize();
         CategoriesIndex index = CategoriesIndex.of(cellSize, Constants.CATEGORY_ICONS_DIR, categories);
         Path indexFile = EmiPaths.resolve(outputRoot, Constants.CATEGORIES_INDEX_FILE);
         writes.submitJson(indexFile, index);
@@ -158,11 +158,68 @@ public final class CategoryIconWriter {
             }
             for (EmiStack stack : workstation.getEmiStacks()) {
                 ItemStack item = StackKey.toItemStack(stack);
-                if (!item.isEmpty() && IconRenderer.renderItemStack(client, guiGraphics, renderer, item)) {
+                if (!item.isEmpty() && renderCategoryItemStack(client, guiGraphics, renderer, item)) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private static boolean renderCategoryIcon(
+            Minecraft client, GuiGraphics guiGraphics, OffScreenRenderer renderer, EmiRecipeCategory category) {
+        EmiRenderable icon = EmiRecipeCategoryProperties.getIcon(category);
+        if (renderCategoryRenderable(client, guiGraphics, renderer, icon)) {
+            return true;
+        }
+        if (icon instanceof EmiStack stack) {
+            ItemStack item = StackKey.toItemStack(stack);
+            if (!item.isEmpty()) {
+                return renderCategoryItemStack(client, guiGraphics, renderer, item);
+            }
+        }
+        return false;
+    }
+
+    private static boolean renderCategoryRenderable(
+            Minecraft client,
+            GuiGraphics guiGraphics,
+            OffScreenRenderer renderer,
+            EmiRenderable renderable) {
+        if (renderable == null) {
+            return false;
+        }
+        try {
+            renderer.setupFlatGuiRendering();
+            Runnable draw = () -> renderable.render(guiGraphics, 0, 0, 0);
+            renderer.captureAsPng(draw);
+            return true;
+        } catch (RuntimeException first) {
+            if (renderable instanceof EmiStack stack) {
+                ItemStack item = StackKey.toItemStack(stack);
+                if (!item.isEmpty()) {
+                    return renderCategoryItemStack(client, guiGraphics, renderer, item);
+                }
+            }
+            return false;
+        }
+    }
+
+    private static boolean renderCategoryItemStack(
+            Minecraft client,
+            GuiGraphics guiGraphics,
+            OffScreenRenderer renderer,
+            ItemStack stack) {
+        try {
+            renderer.setupItemRendering();
+            Runnable draw = () -> {
+                guiGraphics.renderItem(stack, 0, 0);
+                guiGraphics.renderItemDecorations(client.font, stack, 0, 0, "");
+            };
+            renderer.captureAsPng(draw);
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 }

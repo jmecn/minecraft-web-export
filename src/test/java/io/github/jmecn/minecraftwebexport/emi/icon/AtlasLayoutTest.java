@@ -11,7 +11,7 @@ class AtlasLayoutTest {
 
     @Test
     void plansCompactSquareishPage() {
-        List<AtlasPagePlan> plans = AtlasLayout.plan(797, 16, 2048);
+        List<AtlasPagePlan> plans = AtlasBuilder.planPages(797, 16, 2048);
 
         assertEquals(1, plans.size());
         assertEquals(29, plans.get(0).cols());

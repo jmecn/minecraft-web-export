@@ -3,12 +3,13 @@ package io.github.jmecn.minecraftwebexport.pipeline;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
+import io.github.jmecn.minecraftwebexport.emi.category.LangKeys;
 import io.github.jmecn.minecraftwebexport.emi.icon.CategoryIconWriter;
 import io.github.jmecn.minecraftwebexport.emi.icon.ItemIconWriter;
-import io.github.jmecn.minecraftwebexport.emi.icon.PlaceholderRenderer;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemsLangExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.NameKeysExporter;
+import io.github.jmecn.minecraftwebexport.emi.lang.ClosureKeys;
 import io.github.jmecn.minecraftwebexport.emi.lang.Languages;
 import io.github.jmecn.minecraftwebexport.emi.lang.Merger;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RecipePaths;
@@ -40,7 +41,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
+import dev.emi.emi.api.EmiApi;
+import dev.emi.emi.api.recipe.EmiRecipeCategory;
+import dev.emi.emi.api.recipe.EmiRecipeManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 
@@ -129,7 +134,7 @@ public final class Pipeline {
             }
             writes.awaitIdle("after name keys");
 
-            Set<String> langKeys = LangPlanner.deriveLangKeys(context);
+            Set<String> langKeys = deriveLangKeys(context);
             LangMergeResult langs = Merger.isEnabled()
                     ? Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes)
                     : emptyLangResult();
@@ -175,7 +180,7 @@ public final class Pipeline {
                     recipes.imageScale(),
                     recipes.written(),
                     languages,
-                    PlaceholderRenderer.REGISTRY_ID,
+                    Constants.MISSING_ICON_REGISTRY_ID,
                     itemsLangRef);
             writes.submitJson(EmiPaths.resolve(outputRoot, Constants.BUNDLE_FILE), bundle);
 
@@ -266,5 +271,44 @@ public final class Pipeline {
                     .sorted(Comparator.naturalOrder())
                     .toList();
         }
+    }
+
+    private static Set<String> deriveLangKeys(ExportContext context) {
+        Set<String> keys = new TreeSet<>(context.seedLangKeys());
+        if (!context.recipeLangKeys().isEmpty()) {
+            keys.addAll(context.recipeLangKeys());
+        }
+        keys = new TreeSet<>(ClosureKeys.mergeClosureLangKeys(keys, context.itemIds(), context.fluidIds()));
+        keys = new TreeSet<>(ClosureKeys.mergeTagLangKeys(keys, context.tagIds()));
+        keys.addAll(categoryLangKeys(context.categoryIds()));
+        return Set.copyOf(keys);
+    }
+
+    private static Set<String> categoryLangKeys(Set<String> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Set.of();
+        }
+        EmiRecipeManager manager = EmiApi.getRecipeManager();
+        if (manager == null) {
+            Set<String> keys = new TreeSet<>();
+            for (String categoryId : categoryIds) {
+                keys.add(LangKeys.emiCategoryLangKey(categoryId));
+            }
+            return Set.copyOf(keys);
+        }
+        Set<String> keys = new TreeSet<>();
+        for (EmiRecipeCategory category : manager.getCategories()) {
+            if (category == null || category.getId() == null) {
+                continue;
+            }
+            String categoryId = category.getId().toString();
+            if (categoryIds.contains(categoryId)) {
+                keys.add(LangKeys.resolveNameKey(category));
+            }
+        }
+        for (String categoryId : categoryIds) {
+            keys.add(LangKeys.emiCategoryLangKey(categoryId));
+        }
+        return Set.copyOf(keys);
     }
 }

@@ -1,9 +1,14 @@
 package io.github.jmecn.minecraftwebexport.emi.lang;
 
+import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.support.Log;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -89,9 +94,9 @@ public final class GtceuLabels {
 
     private static String pickFluidTemplateKey(
             String storageKey, String materialPath, String namespace, Map<String, String> langTable) {
-        String normalizedStorage = GtMaterialFacts.normalizeStorageKey(storageKey);
+        String normalizedStorage = normalizeStorageKey(storageKey);
         Optional<String> gtKey =
-                GtMaterialFacts.fluidTranslationKey(namespace, materialPath, normalizedStorage);
+                fluidTranslationKey(namespace, materialPath, normalizedStorage);
         if (gtKey.isPresent()) {
             return gtKey.get();
         }
@@ -295,7 +300,7 @@ public final class GtceuLabels {
         if (matLabel == null) {
             return null;
         }
-        String prefixKey = GtMaterialFacts.tagPrefixLangKey(langSuffix, namespace, materialPath, langTable);
+        String prefixKey = tagPrefixLangKey(langSuffix, namespace, materialPath, langTable);
         String prefixTemplate = resolveKey(translateKey, prefixKey);
         if (prefixTemplate == null) {
             return null;
@@ -425,5 +430,213 @@ public final class GtceuLabels {
             return translateComposedItem(namespace, path, translateKey, langTable);
         }
         return null;
+    }
+
+    private static final String MANAGER_CLASS =
+            "com.gregtechceu.gtceu.common.unification.material.MaterialRegistryManager";
+    private static final String MATERIAL_CLASS = "com.gregtechceu.gtceu.api.data.chemical.material.Material";
+    private static final String PROPERTY_KEY_CLASS =
+            "com.gregtechceu.gtceu.api.data.chemical.material.properties.PropertyKey";
+    private static final String FLUID_STORAGE_KEYS_CLASS =
+            "com.gregtechceu.gtceu.api.fluids.store.FluidStorageKeys";
+
+    private static final boolean GT_AVAILABLE = probeGt();
+    private static final Method GT_GET_INSTANCE;
+    private static final Method GT_GET_MATERIAL_STRING;
+    private static final Method GT_HAS_PROPERTY;
+    private static final Method GT_IS_ELEMENT;
+    private static final Object GT_PROPERTY_KEY_POLYMER;
+    private static final Object GT_PROPERTY_KEY_FLUID;
+    private static final Method GT_GET_PROPERTY;
+    private static final Method GT_FLUID_PROPERTY_GET_PRIMARY_KEY;
+    private static final Method GT_FLUID_STORAGE_KEY_GET_TRANSLATION;
+    private static final Object GT_FLUID_KEY_LIQUID;
+    private static final Object GT_FLUID_KEY_GAS;
+    private static final Object GT_FLUID_KEY_MOLTEN;
+    private static final Object GT_FLUID_KEY_PLASMA;
+    private static final Object GT_NULL_MATERIAL;
+
+    private static final Class<?> GT_MATERIAL_TYPE = GT_AVAILABLE ? requireGtClass(MATERIAL_CLASS) : null;
+    private static final Class<?> GT_PROPERTY_KEY_TYPE = GT_AVAILABLE ? requireGtClass(PROPERTY_KEY_CLASS) : null;
+
+    static {
+        if (!GT_AVAILABLE) {
+            GT_GET_INSTANCE = null;
+            GT_GET_MATERIAL_STRING = null;
+            GT_HAS_PROPERTY = null;
+            GT_IS_ELEMENT = null;
+            GT_PROPERTY_KEY_POLYMER = null;
+            GT_PROPERTY_KEY_FLUID = null;
+            GT_GET_PROPERTY = null;
+            GT_FLUID_PROPERTY_GET_PRIMARY_KEY = null;
+            GT_FLUID_STORAGE_KEY_GET_TRANSLATION = null;
+            GT_FLUID_KEY_LIQUID = null;
+            GT_FLUID_KEY_GAS = null;
+            GT_FLUID_KEY_MOLTEN = null;
+            GT_FLUID_KEY_PLASMA = null;
+            GT_NULL_MATERIAL = null;
+        } else {
+            GT_GET_INSTANCE = requireGtMethod(MANAGER_CLASS, "getInstance");
+            GT_GET_MATERIAL_STRING = requireGtMethod(MANAGER_CLASS, "getMaterial", String.class);
+            GT_HAS_PROPERTY = requireGtMethod(GT_MATERIAL_TYPE, "hasProperty", GT_PROPERTY_KEY_TYPE);
+            GT_IS_ELEMENT = requireGtMethod(GT_MATERIAL_TYPE, "isElement");
+            GT_PROPERTY_KEY_POLYMER = gtStaticField(PROPERTY_KEY_CLASS, "POLYMER");
+            GT_PROPERTY_KEY_FLUID = gtStaticField(PROPERTY_KEY_CLASS, "FLUID");
+            GT_GET_PROPERTY = requireGtMethod(GT_MATERIAL_TYPE, "getProperty", GT_PROPERTY_KEY_TYPE);
+            Class<?> fluidPropertyClass = requireGtClass(
+                    "com.gregtechceu.gtceu.api.data.chemical.material.properties.FluidProperty");
+            GT_FLUID_PROPERTY_GET_PRIMARY_KEY = requireGtMethod(fluidPropertyClass, "getPrimaryKey");
+            Class<?> fluidStorageKeyClass =
+                    requireGtClass("com.gregtechceu.gtceu.api.fluids.store.FluidStorageKey");
+            GT_FLUID_STORAGE_KEY_GET_TRANSLATION =
+                    requireGtMethod(fluidStorageKeyClass, "getTranslationKeyFor", GT_MATERIAL_TYPE);
+            GT_FLUID_KEY_LIQUID = gtStaticField(FLUID_STORAGE_KEYS_CLASS, "LIQUID");
+            GT_FLUID_KEY_GAS = gtStaticField(FLUID_STORAGE_KEYS_CLASS, "GAS");
+            GT_FLUID_KEY_MOLTEN = gtStaticField(FLUID_STORAGE_KEYS_CLASS, "MOLTEN");
+            GT_FLUID_KEY_PLASMA = gtStaticField(FLUID_STORAGE_KEYS_CLASS, "PLASMA");
+            GT_NULL_MATERIAL = gtStaticField(
+                    "com.gregtechceu.gtceu.common.data.GTMaterials", "NULL");
+        }
+    }
+
+    private static Optional<Object> gtMaterial(String namespace, String materialPath) {
+        if (!GT_AVAILABLE || materialPath == null || materialPath.isEmpty()) {
+            return Optional.empty();
+        }
+        String key = namespace + ":" + materialPath;
+        try {
+            Object manager = GT_GET_INSTANCE.invoke(null);
+            Object material = GT_GET_MATERIAL_STRING.invoke(manager, key);
+            if (material == null || material == GT_NULL_MATERIAL) {
+                return Optional.empty();
+            }
+            return Optional.of(material);
+        } catch (ReflectiveOperationException e) {
+            MweMod.LOGGER.debug("{} material lookup failed for {}: {}", Log.ITEMS_LANG, key, e.toString());
+            return Optional.empty();
+        }
+    }
+
+    private static boolean gtHasPolymer(Object material) {
+        return gtHasProperty(material, GT_PROPERTY_KEY_POLYMER);
+    }
+
+    private static Optional<String> fluidTranslationKey(String namespace, String materialPath, String storageKey) {
+        Optional<Object> materialOpt = gtMaterial(namespace, materialPath);
+        if (materialOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        Object material = materialOpt.get();
+        Object fluidKey = switch (storageKey) {
+            case "molten" -> GT_FLUID_KEY_MOLTEN;
+            case "plasma" -> GT_FLUID_KEY_PLASMA;
+            case "liquid" -> GT_FLUID_KEY_LIQUID;
+            case "gas" -> GT_FLUID_KEY_GAS;
+            case "primary" -> primaryFluidStorageKey(material);
+            default -> primaryFluidStorageKey(material);
+        };
+        if (fluidKey == null) {
+            return Optional.empty();
+        }
+        try {
+            String key = (String) GT_FLUID_STORAGE_KEY_GET_TRANSLATION.invoke(fluidKey, material);
+            return key == null || key.isEmpty() ? Optional.empty() : Optional.of(key);
+        } catch (ReflectiveOperationException e) {
+            MweMod.LOGGER.debug(
+                    "{} fluid template for {} {}: {}",
+                    Log.ITEMS_LANG,
+                    namespace,
+                    materialPath,
+                    e.toString());
+            return Optional.empty();
+        }
+    }
+
+    private static Object primaryFluidStorageKey(Object material) {
+        if (!GT_AVAILABLE || material == null) {
+            return null;
+        }
+        try {
+            Object fluidProperty = GT_GET_PROPERTY.invoke(material, GT_PROPERTY_KEY_FLUID);
+            if (fluidProperty == null) {
+                return GT_FLUID_KEY_LIQUID;
+            }
+            return GT_FLUID_PROPERTY_GET_PRIMARY_KEY.invoke(fluidProperty);
+        } catch (ReflectiveOperationException e) {
+            return GT_FLUID_KEY_LIQUID;
+        }
+    }
+
+    private static boolean gtHasProperty(Object material, Object propertyKey) {
+        if (!GT_AVAILABLE || material == null || propertyKey == null) {
+            return false;
+        }
+        try {
+            return (boolean) GT_HAS_PROPERTY.invoke(material, propertyKey);
+        } catch (ReflectiveOperationException e) {
+            return false;
+        }
+    }
+
+    private static boolean probeGt() {
+        try {
+            Class.forName(MANAGER_CLASS, false, GtceuLabels.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException e) {
+            MweMod.LOGGER.info(
+                    "{} GregTech not on classpath — label export uses lang-only fallbacks (expected in unit tests)",
+                    Log.ITEMS_LANG);
+            return false;
+        }
+    }
+
+    private static Class<?> requireGtClass(String name) {
+        try {
+            return Class.forName(name, false, GtceuLabels.class.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("GT class missing: " + name, e);
+        }
+    }
+
+    private static Method requireGtMethod(Class<?> type, String name, Class<?>... params) {
+        try {
+            Method method = type.getMethod(name, params);
+            method.setAccessible(true);
+            return method;
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(type.getName() + "#" + name, e);
+        }
+    }
+
+    private static Method requireGtMethod(String className, String name, Class<?>... params) {
+        return requireGtMethod(requireGtClass(className), name, params);
+    }
+
+    private static Object gtStaticField(String className, String fieldName) {
+        try {
+            Field field = requireGtClass(className).getField(fieldName);
+            return field.get(null);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(className + "." + fieldName, e);
+        }
+    }
+
+    private static String tagPrefixLangKey(
+            String langSuffix, String namespace, String materialPath, Map<String, String> langTable) {
+        String plain = "tagprefix." + langSuffix;
+        String polymer = "tagprefix.polymer." + langSuffix;
+        Optional<Object> materialOpt = gtMaterial(namespace, materialPath);
+        if (materialOpt.isPresent()) {
+            if (gtHasPolymer(materialOpt.get()) && langKeyPresent(langTable, polymer)) {
+                return polymer;
+            }
+            return plain;
+        }
+
+        return plain;
+    }
+
+    private static String normalizeStorageKey(String storageKey) {
+        return storageKey == null ? "primary" : storageKey.toLowerCase(Locale.ROOT);
     }
 }

@@ -1,5 +1,6 @@
 package io.github.jmecn.minecraftwebexport.runtime;
 
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.RegistryAccess;
@@ -23,7 +24,7 @@ public final class WorldCreator {
     private WorldCreator() {}
 
     public static String saveName() {
-        return CiProperties.exportWorldName();
+        return MweConfig.exportWorldName();
     }
 
     public static boolean saveExists(Minecraft mc) {

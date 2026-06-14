@@ -2,6 +2,7 @@ package io.github.jmecn.minecraftwebexport.emi.icon;
 
 import com.google.common.io.MoreFiles;
 import com.google.common.io.RecursiveDeleteOption;
+import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
@@ -17,6 +18,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -25,21 +27,26 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public final class ItemIconWriter {
@@ -94,11 +101,11 @@ public final class ItemIconWriter {
             Map<String, Integer> usageWeights,
             Map<String, ItemStack> iconVariants,
             ExportWriteQueue writes) {
-        int cell = ExportSizes.iconCellSize();
-        int atlasMax = ExportSizes.atlasMaxSize();
+        int cell = AtlasBuilder.iconCellSize();
+        int atlasMax = AtlasBuilder.atlasMaxSize();
         boolean exportFluids = fluidsEnabled() && (onlyFluidIds == null || !onlyFluidIds.isEmpty());
 
-        List<ResourceLocation> itemOrder = ItemOrdering.orderedForPass(onlyItemIds, item -> true, usageWeights);
+        List<ResourceLocation> itemOrder = orderedForPass(onlyItemIds, item -> true, usageWeights);
         List<String> fluidOrder = exportFluids ? orderedFluidIds(onlyFluidIds) : new ArrayList<>();
         Map<String, ItemStack> variants = iconVariants != null ? iconVariants : new HashMap<>();
 
@@ -128,7 +135,7 @@ public final class ItemIconWriter {
         }
 
         int totalSprites = itemOrder.size() + fluidOrder.size() + variants.size() + 1;
-        List<AtlasPagePlan> layout = AtlasLayout.plan(totalSprites, cell, atlasMax);
+        List<AtlasPagePlan> layout = AtlasBuilder.planPages(totalSprites, cell, atlasMax);
         if (!layout.isEmpty()) {
             AtlasPagePlan first = layout.get(0);
             MweMod.LOGGER.info(
@@ -158,8 +165,8 @@ public final class ItemIconWriter {
              AtlasBuilder atlas = new AtlasBuilder(iconsRoot, cell, atlasMax, "icon", layout, usageWeights, writes)) {
             MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
             GuiGraphics guiGraphics = new GuiGraphics(client, bufferSource);
-            PlaceholderRenderer.render(guiGraphics, renderer);
-            atlas.place(PlaceholderRenderer.REGISTRY_ID, renderer);
+            AtlasBuilder.renderPlaceholder(guiGraphics, renderer);
+            atlas.place(Constants.MISSING_ICON_REGISTRY_ID, renderer);
 
             renderer.setupItemRendering();
 
@@ -209,7 +216,7 @@ public final class ItemIconWriter {
                 }
 
                 try {
-                    if (!FluidStillRenderer.render(client, guiGraphics, renderer, fluid)) {
+                    if (!renderFluidStill(client, guiGraphics, renderer, fluid)) {
                         fluidsSkipped++;
                         continue;
                     }
@@ -410,5 +417,81 @@ public final class ItemIconWriter {
             }
         }
         return result;
+    }
+
+    private static List<ResourceLocation> orderedForPass(
+            Set<String> onlyItemIds,
+            Predicate<Item> include,
+            Map<String, Integer> usageWeights) {
+        List<ResourceLocation> ids = new ArrayList<>();
+        for (Item item : ForgeRegistries.ITEMS) {
+            if (item == null || item == Items.AIR || !include.test(item)) {
+                continue;
+            }
+            ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(item);
+            if (itemId == null || !ForgeRegistries.ITEMS.containsKey(itemId)) {
+                continue;
+            }
+            if (onlyItemIds != null && !onlyItemIds.contains(itemId.toString())) {
+                continue;
+            }
+            ids.add(itemId);
+        }
+        Comparator<ResourceLocation> byUsage = Comparator
+                .comparingInt((ResourceLocation id) -> usageWeight(usageWeights, id.toString()))
+                .reversed()
+                .thenComparing(ResourceLocation::toString);
+        ids.sort(byUsage);
+        return ids;
+    }
+
+    private static int usageWeight(Map<String, Integer> usageWeights, String itemId) {
+        if (usageWeights == null || usageWeights.isEmpty()) {
+            return 0;
+        }
+        return usageWeights.getOrDefault(itemId, 0);
+    }
+
+    private static boolean renderFluidStill(
+            Minecraft client,
+            GuiGraphics guiGraphics,
+            OffScreenRenderer renderer,
+            Fluid fluid) {
+        if (fluid == null || fluid.isSame(Fluids.EMPTY)) {
+            return false;
+        }
+
+        IClientFluidTypeExtensions extensions = IClientFluidTypeExtensions.of(fluid);
+        FluidStack stack = new FluidStack(fluid, 1000);
+        ResourceLocation still = extensions.getStillTexture(stack);
+        if (still == null) {
+            return false;
+        }
+
+        TextureAtlas atlas = client.getModelManager().getAtlas(InventoryMenu.BLOCK_ATLAS);
+        TextureAtlasSprite sprite = atlas.getSprite(still);
+
+        int tint = extensions.getTintColor(stack);
+        float a = ((tint >> 24) & 0xFF) / 255.0F;
+        float r = ((tint >> 16) & 0xFF) / 255.0F;
+        float g = ((tint >> 8) & 0xFF) / 255.0F;
+        float b = (tint & 0xFF) / 255.0F;
+        if (a <= 0.0F) {
+            a = 1.0F;
+        }
+
+        float fr = r;
+        float fg = g;
+        float fb = b;
+        float fa = a;
+        Runnable draw = () -> {
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.setShaderColor(fr, fg, fb, fa);
+            guiGraphics.blit(0, 0, 0, Constants.FLUID_GUI_SIZE, Constants.FLUID_GUI_SIZE, sprite);
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        };
+        renderer.captureAsPng(draw);
+        return true;
     }
 }

@@ -8,7 +8,6 @@ import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.emi.support.ResourceFilter;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.emi.lang.LangMergeResult;
@@ -19,9 +18,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -110,7 +112,7 @@ public final class Merger {
             }
 
             if (onlyKeys != null) {
-                VanillaSupplement.supplement(merged, client, langCode, onlyKeys);
+                supplementVanillaKeys(merged, client, langCode, onlyKeys);
             }
 
             if (merged.isEmpty()) {
@@ -224,7 +226,7 @@ public final class Merger {
             String langFile,
             Set<String> onlyNamespaces) {
         Predicate<ResourceLocation> filter = location -> matchesLangPath(location, langFile)
-                && !ResourceFilter.isExcluded(location)
+                && !isExcludedNamespace(location)
                 && (onlyNamespaces == null || onlyNamespaces.contains(location.getNamespace()));
 
         Map<ResourceLocation, List<Resource>> stacks = new LinkedHashMap<>();
@@ -252,6 +254,108 @@ public final class Merger {
                         return combined;
                     });
         }
+    }
+
+    static boolean isMinecraftRegistryLangKey(String key) {
+        return key != null
+                && (key.startsWith("item.minecraft.")
+                        || key.startsWith("block.minecraft.")
+                        || key.startsWith("fluid.minecraft."));
+    }
+
+    static Set<String> excludedNamespaces() {
+        return mergeExcludedNamespaces(MweConfig.excludedNamespaces());
+    }
+
+    static Set<String> mergeExcludedNamespaces(String extra) {
+        String trimmed = extra == null ? "" : extra.trim();
+        if (trimmed.isEmpty()) {
+            return Constants.DEFAULT_EXCLUDED_NAMESPACES;
+        }
+        LinkedHashSet<String> merged = new LinkedHashSet<>(Constants.DEFAULT_EXCLUDED_NAMESPACES);
+        Arrays.stream(trimmed.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> s.toLowerCase(Locale.ROOT))
+                .forEach(merged::add);
+        return Set.copyOf(merged);
+    }
+
+    private static boolean isExcludedNamespace(ResourceLocation id) {
+        return excludedNamespaces().contains(id.getNamespace());
+    }
+
+    private static void supplementVanillaKeys(
+            Map<String, String> merged, Minecraft client, String langCode, Set<String> onlyKeys) {
+        if (onlyKeys == null || onlyKeys.isEmpty()) {
+            return;
+        }
+        Set<String> missing = new TreeSet<>();
+        for (String key : onlyKeys) {
+            if (isMinecraftRegistryLangKey(key) && !merged.containsKey(key)) {
+                missing.add(key);
+            }
+        }
+        if (missing.isEmpty()) {
+            return;
+        }
+
+        List<String> locales = new ArrayList<>();
+        locales.add(langCode);
+        if (!"en_us".equals(langCode)) {
+            locales.add("en_us");
+        }
+
+        int added = 0;
+        for (String locale : locales) {
+            if (missing.isEmpty()) {
+                break;
+            }
+            added += copyMissingFromMinecraftPack(merged, client, locale + ".json", missing);
+        }
+
+        if (!missing.isEmpty()) {
+            String sample = missing.stream().limit(5).reduce((a, b) -> a + ", " + b).orElse("");
+            MweMod.LOGGER.info(
+                    "{} {} - {} minecraft registry lang keys still missing after vanilla supplement (e.g. {})",
+                    Log.LANG,
+                    langCode,
+                    missing.size(),
+                    sample);
+        } else if (added > 0) {
+            MweMod.LOGGER.info(
+                    "{} {} - supplemented {} minecraft registry lang keys from vanilla pack",
+                    Log.LANG,
+                    langCode,
+                    added);
+        }
+    }
+
+    private static int copyMissingFromMinecraftPack(
+            Map<String, String> merged, Minecraft client, String langFile, Set<String> missing) {
+        Map<ResourceLocation, List<Resource>> stacks =
+                collectLangStacksForNamespaces(client, langFile, Set.of("minecraft"));
+        if (stacks.isEmpty()) {
+            return 0;
+        }
+        Map<String, String> minecraftMerged = new TreeMap<>();
+        mergeLangStacksInto(minecraftMerged, stacks, null, new MergeStats());
+        int added = 0;
+        Set<String> found = new TreeSet<>();
+        for (String key : missing) {
+            if (merged.containsKey(key)) {
+                continue;
+            }
+            String value = minecraftMerged.get(key);
+            if (value == null) {
+                continue;
+            }
+            merged.put(key, value);
+            found.add(key);
+            added++;
+        }
+        missing.removeAll(found);
+        return added;
     }
 
     private static void logLangPathProbe(Minecraft client, String langFile) {

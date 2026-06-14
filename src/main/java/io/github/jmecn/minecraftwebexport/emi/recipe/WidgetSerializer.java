@@ -1,6 +1,7 @@
 package io.github.jmecn.minecraftwebexport.emi.recipe;
 
 import com.google.gson.JsonArray;
+import com.google.common.collect.Iterables;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -10,6 +11,7 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.serializer.EmiIngredientSerializer;
 import dev.emi.emi.api.widget.AnimatedTextureWidget;
 import dev.emi.emi.api.widget.Bounds;
+import dev.emi.emi.api.widget.DrawableWidget;
 import dev.emi.emi.api.widget.FillingArrowWidget;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.TankWidget;
@@ -18,22 +20,29 @@ import dev.emi.emi.api.widget.TextureWidget;
 import dev.emi.emi.api.widget.TooltipWidget;
 import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.widget.RecipeButtonWidget;
+import io.github.jmecn.minecraftwebexport.Constants;
+import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
 import io.github.jmecn.minecraftwebexport.emi.icon.StackKey;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.model.emi.recipe.ChromeAsset;
 import java.lang.reflect.Field;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 
-final class WidgetSerializer {
+public final class WidgetSerializer {
 
     record Context(
             Minecraft client,
@@ -48,6 +57,38 @@ final class WidgetSerializer {
     }
 
     private WidgetSerializer() {
+    }
+
+    public static void collectFromRecipe(
+            EmiRecipe recipe,
+            Set<String> itemIds,
+            Set<String> fluidIds,
+            Set<String> tagIds,
+            Set<String> categoryIds) {
+        if (recipe == null) {
+            return;
+        }
+        if (recipe.getCategory() != null && recipe.getCategory().getId() != null) {
+            categoryIds.add(recipe.getCategory().getId().toString());
+        }
+        for (EmiIngredient ingredient : Iterables.concat(
+                recipe.getInputs(), recipe.getOutputs(), recipe.getCatalysts())) {
+            collectFromIngredient(ingredient, itemIds, fluidIds, tagIds, null);
+        }
+    }
+
+    public static void collectFromIngredient(
+            EmiIngredient ingredient,
+            Set<String> itemIds,
+            Set<String> fluidIds,
+            Set<String> tagIds,
+            Map<String, ItemStack> iconVariants) {
+        if (ingredient == null || ingredient.isEmpty()) {
+            return;
+        }
+        JsonElement serialized = EmiIngredientSerializer.getSerialized(ingredient);
+        collectSerializedTagRefs(normalizeIngredientJson(serialized), tagIds);
+        collectReferencedStacks(ingredient, itemIds, fluidIds, iconVariants);
     }
 
     static void serializeWidgets(
@@ -74,8 +115,8 @@ final class WidgetSerializer {
     private static JsonObject serialize(EmiRecipe recipe, Widget widget, Set<String> textureIds, Context ctx) {
         try {
             if (ctx.chromeRoot() == null) {
-                if (ChromeRasterizer.isRootWidget(widget)
-                        || ChromeRasterizer.isDrawableWidget(widget)) {
+                if (isRootWidget(widget)
+                        || isDrawableWidget(widget)) {
                     return null;
                 }
                 if (!(widget instanceof SlotWidget)
@@ -84,10 +125,10 @@ final class WidgetSerializer {
                     return null;
                 }
             }
-            if (ChromeRasterizer.isRootWidget(widget)) {
+            if (isRootWidget(widget)) {
                 return rootChrome(widget, ctx);
             }
-            if (ChromeRasterizer.isDrawableWidget(widget)) {
+            if (isDrawableWidget(widget)) {
                 return drawableChrome(widget, ctx);
             }
             if (widget instanceof TankWidget tank) {
@@ -157,7 +198,7 @@ final class WidgetSerializer {
         if (ctx.chromeRoot() == null) {
             return;
         }
-        ChromeAsset asset = ChromeRasterizer.rasterizeWidget(
+        ChromeAsset asset = rasterizeWidget(
                 ctx.client(), widget, ctx.chromeRoot(), ctx.chromeHashToRelative());
         object.addProperty("chrome", asset.exportPath());
         ctx.chromeWritten()[0]++;
@@ -546,5 +587,65 @@ final class WidgetSerializer {
             }
         }
         return null;
+    }
+
+    private static ChromeAsset rasterizeWidget(
+            Minecraft client,
+            Widget widget,
+            Path chromeRoot,
+            Map<String, String> hashToRelative) throws IOException {
+        Bounds bounds = widget.getBounds();
+        if (bounds == null || bounds.empty()) {
+            throw new IOException("widget bounds empty: " + widget.getClass().getName());
+        }
+        int width = Math.max(1, bounds.width());
+        int height = Math.max(1, bounds.height());
+        int scale = LayoutBuilder.layoutScale();
+        int pixelWidth = width * scale;
+        int pixelHeight = height * scale;
+
+        try (OffScreenRenderer offScreen = new OffScreenRenderer(pixelWidth, pixelHeight)) {
+            GuiGraphics graphics = new GuiGraphics(client, client.renderBuffers().bufferSource());
+            byte[] png = offScreen.captureAsPng(() -> offScreen.runWithEmiRecipeMatrices(width, height, () -> {
+                graphics.pose().pushPose();
+                graphics.pose().translate(-bounds.x(), -bounds.y(), 0);
+                widget.render(graphics, -10_000, -10_000, 0);
+                graphics.flush();
+                graphics.pose().popPose();
+            }));
+
+            String hash = sha256(png);
+            String relative = hashToRelative.get(hash);
+            boolean deduped = relative != null;
+            if (relative == null) {
+                relative = "sh/" + hash.substring(0, 2) + "/" + hash + ".png";
+                Path out = chromeRoot.resolve(relative);
+                Files.createDirectories(out.getParent());
+                Files.write(out, png);
+                hashToRelative.put(hash, relative);
+            }
+            String exportPath = Constants.CHROME_DIR + "/" + relative.replace('\\', '/');
+            return new ChromeAsset(exportPath, deduped);
+        }
+    }
+
+    private static boolean isRootWidget(Widget widget) {
+        return widget.getClass().getName().endsWith("RootWidget");
+    }
+
+    private static boolean isDrawableWidget(Widget widget) {
+        if (widget instanceof DrawableWidget) {
+            return true;
+        }
+        return widget.getClass().getName().endsWith(".DrawableWidget");
+    }
+
+    private static String sha256(byte[] data) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(data);
+            return HexFormat.of().formatHex(digest);
+        } catch (Exception e) {
+            throw new RuntimeException("SHA-256 unavailable", e);
+        }
     }
 }

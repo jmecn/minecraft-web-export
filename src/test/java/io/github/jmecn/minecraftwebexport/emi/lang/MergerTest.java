@@ -12,9 +12,9 @@ class MergerTest {
 
     @Test
     void isMinecraftRegistryLangKeyMatchesRegistryPrefixes() {
-        assertTrue(VanillaSupplement.isMinecraftRegistryLangKey("item.minecraft.stick"));
-        assertTrue(VanillaSupplement.isMinecraftRegistryLangKey("block.minecraft.dirt"));
-        assertFalse(VanillaSupplement.isMinecraftRegistryLangKey("tag.item.minecraft.dirt"));
+        assertTrue(Merger.isMinecraftRegistryLangKey("item.minecraft.stick"));
+        assertTrue(Merger.isMinecraftRegistryLangKey("block.minecraft.dirt"));
+        assertFalse(Merger.isMinecraftRegistryLangKey("tag.item.minecraft.dirt"));
     }
 
     @Test

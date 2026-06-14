@@ -1,4 +1,4 @@
-package io.github.jmecn.minecraftwebexport.emi.lang;
+package io.github.jmecn.minecraftwebexport.pipeline;
 
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class UsedKeysCollectorTest {
+class RelationPlannerLangKeysTest {
 
     @Test
     void collectMetaAddsRegistryKeysNotCategoryFromRecipeMeta() {
@@ -21,7 +21,7 @@ class UsedKeysCollectorTest {
                 "emi:anvil",
                 List.of(RecipeWidget.of(0, 0, 1, 1, null, WidgetInteraction.item("gtceu:aluminium_ingot", null, null))));
 
-        UsedKeysCollector collector = new UsedKeysCollector();
+        RelationPlanner.LangKeysCollector collector = new RelationPlanner.LangKeysCollector();
         collector.collectMeta(meta);
 
         assertFalse(collector.snapshot().contains("emi.category.emi.anvil"));

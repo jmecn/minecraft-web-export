@@ -2,7 +2,7 @@ package io.github.jmecn.minecraftwebexport.cmd;
 
 import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
-import io.github.jmecn.minecraftwebexport.emi.pipeline.Readiness;
+import io.github.jmecn.minecraftwebexport.runtime.CiDriver;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportResult;
 import io.github.jmecn.minecraftwebexport.pipeline.Pipeline;
 import io.github.jmecn.minecraftwebexport.runtime.OutputPaths;
@@ -19,17 +19,17 @@ public final class Export {
     public static int run(CommandSourceStack source) {
         try {
             Minecraft client = Minecraft.getInstance();
-            if (!Readiness.isReadyForExport(client)) {
+            if (!CiDriver.isReadyForExport(client)) {
                 if (client.player == null || client.level == null || client.getSingleplayerServer() == null) {
                     source.sendFailure(Component.literal(
                             Constants.COMMAND_LOG_PREFIX + "must run in a loaded singleplayer world"));
-                } else if (Readiness.isReloadFailed()) {
+                } else if (CiDriver.isReloadFailed()) {
                     source.sendFailure(Component.literal(
                             Constants.COMMAND_LOG_PREFIX + "EMI reload failed; export unavailable"));
                 } else {
                     source.sendFailure(Component.literal(
                             Constants.COMMAND_LOG_PREFIX + "EMI not ready (status="
-                                    + Readiness.reloadStatusLabel() + ")"));
+                                    + CiDriver.reloadStatusLabel() + ")"));
                 }
                 return 0;
             }

@@ -1,7 +1,9 @@
 package io.github.jmecn.minecraftwebexport.emi.icon;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.io.JsonIO;
@@ -18,8 +20,96 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.client.gui.GuiGraphics;
 
 final class AtlasBuilder implements AutoCloseable {
+
+    public static List<AtlasPagePlan> planPages(int spriteCount, int cellSize, int maxAtlasSize) {
+        if (spriteCount <= 0) {
+            return List.of(new AtlasPagePlan(1, 1));
+        }
+        int maxCols = Math.max(1, maxAtlasSize / cellSize);
+        int maxRows = Math.max(1, maxAtlasSize / cellSize);
+        int maxPerPage = maxCols * maxRows;
+
+        List<AtlasPagePlan> pages = new ArrayList<>();
+        int remaining = spriteCount;
+        while (remaining > 0) {
+            int onPage = Math.min(remaining, maxPerPage);
+            int cols = (int) Math.ceil(Math.sqrt(onPage));
+            int rows = (int) Math.ceil((double) onPage / cols);
+            if (cols > maxCols) {
+                cols = maxCols;
+                rows = (int) Math.ceil((double) onPage / cols);
+            }
+            if (rows > maxRows) {
+                rows = maxRows;
+                cols = (int) Math.ceil((double) onPage / rows);
+                cols = Math.min(cols, maxCols);
+            }
+            pages.add(new AtlasPagePlan(cols, rows));
+            remaining -= cols * rows;
+        }
+        return pages;
+    }
+
+    public static int iconCellSize() {
+        return resolveIconCellSize(
+                MweConfig.iconSize(),
+                MweConfig.itemIconSize(),
+                MweConfig.blockItemIconSize(),
+                MweConfig.fluidIconSize());
+    }
+
+    public static int resolveIconCellSize(int unified, int item, int block, int fluid) {
+        if (unified > 0) {
+            return boundedSize(unified, "icons.iconSize");
+        }
+        if (item > 0) {
+            return boundedSize(item, "icons.itemIconSize");
+        }
+        if (block > 0) {
+            return boundedSize(block, "icons.blockItemIconSize");
+        }
+        if (fluid > 0) {
+            return boundedSize(fluid, "icons.fluidIconSize");
+        }
+        return Constants.DEFAULT_ICON_SIZE;
+    }
+
+    public static int categoryIconCellSize() {
+        return boundedSize(MweConfig.categoryIconSize(), "icons.categoryIconSize");
+    }
+
+    public static int atlasMaxSize() {
+        int size = MweConfig.itemIconAtlasMaxSize();
+        if (size < 256 || size > 8192) {
+            throw new IllegalArgumentException("icons.itemIconAtlasMaxSize must be 256..8192, got " + size);
+        }
+        return size;
+    }
+
+    public static void renderPlaceholder(GuiGraphics guiGraphics, OffScreenRenderer renderer) {
+        Runnable draw = () -> {
+            for (int y = 0; y < 16; y++) {
+                for (int x = 0; x < 16; x++) {
+                    int color = ((x / 8) + (y / 8)) % 2 == 0
+                            ? Constants.PLACEHOLDER_MAGENTA
+                            : Constants.PLACEHOLDER_BLACK;
+                    guiGraphics.fill(x, y, x + 1, y + 1, color);
+                }
+            }
+        };
+        renderer.setupFlatGuiRendering();
+        renderer.captureAsPng(draw);
+    }
+
+    private static int boundedSize(int size, String property) {
+        if (size < 8 || size > 256) {
+            throw new IllegalArgumentException(property + " must be 8..256, got " + size);
+        }
+        return size;
+    }
 
     private final int cellSize;
     private final int maxAtlasSize;

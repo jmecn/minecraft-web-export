@@ -12,8 +12,22 @@ public final class RecipePaths {
     private RecipePaths() {
     }
 
-    public static IndexIds.RecipeIdParts requireParts(String recipeId) {
-        IndexIds.RecipeIdParts parts = IndexIds.splitRecipeId(recipeId);
+    public record RecipeIdParts(String namespace, String path) {
+    }
+
+    public static RecipeIdParts splitRecipeId(String recipeId) {
+        if (recipeId == null || recipeId.isBlank()) {
+            return null;
+        }
+        int sep = recipeId.indexOf(':');
+        if (sep <= 0 || sep >= recipeId.length() - 1) {
+            return null;
+        }
+        return new RecipeIdParts(recipeId.substring(0, sep), recipeId.substring(sep + 1));
+    }
+
+    public static RecipeIdParts requireParts(String recipeId) {
+        RecipeIdParts parts = splitRecipeId(recipeId);
         if (parts == null) {
             throw new IllegalArgumentException("invalid recipe id: " + recipeId);
         }
@@ -33,7 +47,7 @@ public final class RecipePaths {
         }
         Set<String> namespaces = new java.util.TreeSet<>();
         for (String recipeId : recipeIds) {
-            IndexIds.RecipeIdParts parts = IndexIds.splitRecipeId(recipeId);
+            RecipeIdParts parts = splitRecipeId(recipeId);
             if (parts != null) {
                 namespaces.add(parts.namespace());
             }
@@ -44,14 +58,14 @@ public final class RecipePaths {
     }
 
     public static Path pngPath(Path exportRoot, String recipeId) {
-        IndexIds.RecipeIdParts parts = requireParts(recipeId);
+        RecipeIdParts parts = requireParts(recipeId);
         return EmiPaths.resolve(
                 exportRoot,
                 Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".png");
     }
 
     public static Path metaPath(Path exportRoot, String recipeId) {
-        IndexIds.RecipeIdParts parts = requireParts(recipeId);
+        RecipeIdParts parts = requireParts(recipeId);
         return EmiPaths.resolve(
                 exportRoot,
                 Constants.RECIPES_DIR + "/" + parts.namespace() + "/" + pathSafe(parts.path()) + ".json");

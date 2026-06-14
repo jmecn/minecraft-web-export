@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class MetaBakerTest {
+class LayoutBuilderBakeTest {
 
     @Test
     void bakesTagAndListInteractions() {
@@ -45,7 +45,7 @@ class MetaBakerTest {
                 }
                 """).getAsJsonObject();
 
-        RecipeMeta meta = MetaBaker.bake(layout);
+        RecipeMeta meta = LayoutBuilder.bake(layout);
         assertEquals(1, meta.schema());
         assertEquals("gtceu:assembler/iron_plate", meta.id());
         assertEquals(126, meta.width());
