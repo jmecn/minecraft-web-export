@@ -1,6 +1,6 @@
 # Minecraft Web Export
 
-Forge mod that exports EMI recipe bundles for web viewers ([emi-recipe-renderer](https://www.npmjs.com/package/emi-recipe-renderer), [emi-bundle-optimize](https://www.npmjs.com/package/emi-bundle-optimize)).
+Forge mod that exports EMI recipes as a web bundle.
 
 ## Build
 
@@ -9,89 +9,76 @@ Forge mod that exports EMI recipe bundles for web viewers ([emi-recipe-renderer]
 # build/libs/minecraft-web-export-<version>.jar
 ```
 
-## GitHub Release and Packages
+| Gradle task         | Purpose                                                      |
+|---------------------|--------------------------------------------------------------|
+| `runClient`         | Normal client                                                |
+| `runExportClient`   | Export in-world (`-DminecraftWebExport.export.enabled=true`) |
+| `runExportCiClient` | Short CI-style export smoke test                             |
 
-Each `v*` tag triggers [.github/workflows/release.yml](.github/workflows/release.yml) to:
+## Config example
 
-1. **Publish** to GitHub Packages Maven: `io.github.jmecn:minecraft-web-export:<version>` (same mod jar as below).
-2. **Upload** `build/libs/minecraft-web-export-<version>.jar` to GitHub Releases (used by modpack CI such as TFG-Recipe-Viewer).
+Save as `config/minecraft_web_export-client.toml`. JVM `-DminecraftWebExport.*` overrides matching keys.
 
-| Channel | Use |
-|---------|-----|
-| **GitHub Releases** (jar) | Runtime: put the jar in `mods/` |
-| **GitHub Packages** (Maven) | Compile-time: depend from Gradle in companion mods (e.g. `field-guide-export`) |
+```toml
+[export]
+# CI: auto open world, export once, exit. false = /mwe export only.
+# JVM: -DminecraftWebExport.export.enabled=true
+enabled = false
 
-Repository URL: `https://maven.pkg.github.com/jmecn/minecraft-web-export`
+# Output root (absolute path). Empty = default under the game directory.
+# JVM: -DminecraftWebExport.export.outputDir=/path/to/out
+outputDir = ""
 
-### Consuming from GitHub Packages (Gradle)
+# full = all EMI-visible recipes; scoped = seed references only.
+# JVM: -DminecraftWebExport.exportMode=full
+mode = "full"
 
-In `~/.gradle/gradle.properties` (local) or CI secrets:
+# Comma-separated locales. Empty = en_us only.
+# JVM: -DminecraftWebExport.exportLanguages=en_us,zh_cn
+languages = ""
 
-```properties
-gpr.user=<GitHub username>
-gpr.key=<PAT with read:packages>
+# Extra namespaces to exclude (comma-separated).
+# JVM: -DminecraftWebExport.exportExcludedNamespaces=foo,bar
+excludedNamespaces = ""
+
+# Recipe card PNG render scale (1–8). TOML only.
+recipeLayoutScale = 2
+
+# true = emi.zip; false = emi/ directory tree.
+# JVM: -DminecraftWebExport.export.compressed=false
+compressed = true
+
+[ci]
+# Ticks on the main menu before auto-creating the export world.
+# JVM: -DminecraftWebExport.exportWorldDelayTicks=600
+worldDelayTicks = 600
+
+# Whole CI export timeout in seconds. <= 0 disables.
+# JVM: -DminecraftWebExport.exportTimeoutSeconds=3600
+timeoutSeconds = 3600
+
+# Singleplayer save name for CI export.
+# JVM: -DminecraftWebExport.exportWorldName=emi-export
+worldName = "emi-export"
+
+[logging]
+# Progress log stride; 0 = automatic.
+iconLogStride = 0
+itemsIndexWriteLogStride = 0
+recipeCardLogStride = 0
+layoutLogStride = 0
+
+# Log per-item icon failures at WARN instead of DEBUG.
+logDetailFailures = false
+
+[icons]
+# Unified icon cell size; 0 = per-type sizes below.
+iconSize = 0
+itemIconSize = 0
+blockItemIconSize = 0
+fluidIconSize = 0
+categoryIconSize = 32
+itemIconAtlasMaxSize = 2048
 ```
 
-Or set `GITHUB_ACTOR` and `GITHUB_TOKEN` in the environment.
-
-```gradle
-repositories {
-    mavenCentral()
-    maven {
-        name = 'GitHubPackagesMinecraftWebExport'
-        url = uri('https://maven.pkg.github.com/jmecn/minecraft-web-export')
-        credentials {
-            username = findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
-            password = findProperty('gpr.key') ?: System.getenv('GITHUB_TOKEN')
-        }
-    }
-}
-
-dependencies {
-    def coreVersion = '0.3.1'
-    modCompileOnly fg.deobf("io.github.jmecn:minecraft-web-export:${coreVersion}")
-    modRuntimeOnly fg.deobf("io.github.jmecn:minecraft-web-export:${coreVersion}")
-}
-```
-
-LegacyForge / MDG: use `fg.deobf(...)` on the dependency. Match `coreVersion` to a tag that has been published (see [Packages](https://github.com/jmecn/minecraft-web-export/packages)).
-
-Local publish (maintainers):
-
-```bash
-export GITHUB_ACTOR=your-user
-export GITHUB_TOKEN=ghp_...   # write:packages
-./gradlew publish
-```
-
-## Gradle runs
-
-| Task | Purpose |
-|------|---------|
-| `runClient` | Normal client |
-| `runExportClient` | Export in-world (`-DminecraftWebExport.export.enabled=true`) |
-| `runExportCiClient` | Short CI-style export smoke |
-
-## Export output
-
-By default (`[export] compressed = true`) writes **`emi.zip`** next to where the `emi/` folder would live. Set `compressed = false` for the legacy directory tree under `<outputDir>/emi/`.
-
-Zip entries use the same v2 layout as the directory bundle (`bundle.json`, `recipes/`, …). Deploy pipelines unzip to `emi/` before optimize or hosting.
-
-- `bundle.json` — metadata
-- `recipes/<namespace>/` — recipe PNG + meta JSON (schema 2)
-- `categories/index.json` — EMI recipe categories (tabs)
-- `items/index.json`, `items/<namespace>/*.json` — item reverse index (`schema: 2`)
-- `icons/`, `textures/`, `lang/`, `tags/` — assets and indexes
-
-## Headless / CI JVM properties
-
-| Property | Example | Description |
-|----------|---------|-------------|
-| `minecraftWebExport.export.enabled` | `true` | CI mode: auto open world, export, exit. `false` = command-only |
-| `minecraftWebExport.export.outputDir` | absolute path | Output root |
-| `minecraftWebExport.export.compressed` | `true` | `true` → `emi.zip`; `false` → `emi/` directory |
-| `minecraftWebExport.exportWorldDelayTicks` | `600` | Menu delay before new world |
-| `minecraftWebExport.exportTimeoutSeconds` | `3600` | Hard timeout (`<=0` off) |
-
-Large modpacks: use **≥12G** heap. Do not pass `--quickPlaySingleplayer` with CI export enabled.
+No `--quickPlaySingleplayer` with CI export.
