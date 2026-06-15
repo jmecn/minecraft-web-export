@@ -22,6 +22,7 @@ import io.github.jmecn.minecraftwebexport.model.recipe.RecipeWidget;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,9 +30,20 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.server.MinecraftServer;
 
 public final class ItemIndexExporter {
+
+    private static final int WRITE_THREADS =
+            Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors()));
+    private static final int WRITE_PARALLEL_MIN_ITEMS = 512;
 
     private ItemIndexExporter() {
     }
@@ -113,53 +125,39 @@ public final class ItemIndexExporter {
     private static ItemIndexExportResult writeIndex(
             Path outputDir, MinecraftServer server, ItemIndexBuild build, ExportWriteQueue writes) {
         Objects.requireNonNull(writes, "writes");
-        Path itemsIndexFile = EmiPaths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
-        Map<String, Map<String, Set<String>>> inputs = build.inputs();
-        Map<String, Map<String, Set<String>>> outputs = build.outputs();
-        Set<String> allItemIds = build.allItemIds();
-
-        int inputRefs = 0;
-        int outputRefs = 0;
-        Map<String, Set<String>> indexBuckets = new TreeMap<>();
-        int writeTotal = allItemIds.size();
-        int writeStride = ProgressLog.stride(writeTotal, MweConfig.itemsIndexWriteLogStride(), 20, 200);
-        int writeProgress = 0;
+        List<String> exportableItemIds = new ArrayList<>();
         int skippedHiddenItems = 0;
-        Set<String> indexedItemIds = new TreeSet<>();
-        MweMod.LOGGER.info("{} writing {} item detail files", Log.EMI_ITEMS, writeTotal);
-
-        for (String itemId : allItemIds) {
-            writeProgress++;
+        for (String itemId : build.allItemIds()) {
             if (!Visibility.shouldExportRegistryId(server, itemId)) {
                 skippedHiddenItems++;
-                continue;
+            } else {
+                exportableItemIds.add(itemId);
             }
-            ItemIdParts item = ItemIdParts.parse(itemId);
-            if (item == null) {
-                continue;
-            }
-            indexedItemIds.add(itemId);
-            indexBuckets.computeIfAbsent(item.namespace(), ignored -> new TreeSet<>()).add(item.path());
-            Path itemFile = item.toItemFile(outputDir);
+        }
+        Set<String> exportableSet = new HashSet<>(exportableItemIds);
+        if (exportableItemIds.size() >= WRITE_PARALLEL_MIN_ITEMS) {
+            return writeIndexParallel(outputDir, build, exportableItemIds, skippedHiddenItems, writes);
+        }
+        return writeIndexSequential(outputDir, build, exportableSet, skippedHiddenItems, writes);
+    }
 
-            if (inputs.containsKey(itemId)) {
-                inputRefs += ItemIndexSupport.countRecipeRefs(inputs.get(itemId));
+    private static ItemIndexExportResult writeIndexSequential(
+            Path outputDir,
+            ItemIndexBuild build,
+            Set<String> exportableItemIds,
+            int skippedHiddenItems,
+            ExportWriteQueue writes) {
+        WriteStats stats = new WriteStats();
+        int writeTotal = build.allItemIds().size();
+        int writeStride = ProgressLog.stride(writeTotal, MweConfig.itemsIndexWriteLogStride(), 20, 200);
+        MweMod.LOGGER.info("{} writing {} item detail files", Log.EMI_ITEMS, writeTotal);
+        int writeProgress = 0;
+        for (String itemId : build.allItemIds()) {
+            writeProgress++;
+            if (!exportableItemIds.contains(itemId)) {
+                continue;
             }
-            if (outputs.containsKey(itemId)) {
-                outputRefs += ItemIndexSupport.countRecipeRefs(outputs.get(itemId));
-            }
-            RegistryTagSet tagSets = build.registryTagsByItem().get(itemId);
-            RegistryTagSet inBundle = tagSets != null ? build.exportedTags().intersect(tagSets) : null;
-            ItemDetail detail = ItemDetail.of(
-                    inputs.containsKey(itemId)
-                            ? ItemIndexSupport.categoryBuckets(inputs.get(itemId))
-                            : null,
-                    outputs.containsKey(itemId)
-                            ? ItemIndexSupport.categoryBuckets(outputs.get(itemId))
-                            : null,
-                    tagSets != null && !tagSets.isEmpty() ? tagSets : null,
-                    inBundle != null && !inBundle.isEmpty() ? inBundle : null);
-            writes.submitJson(itemFile, detail);
+            writeItemDetail(outputDir, build, itemId, writes, stats);
             if (ProgressLog.shouldLog(writeProgress, writeTotal, writeStride)) {
                 int pct = ProgressLog.percent(writeProgress, writeTotal);
                 MweMod.LOGGER.info(
@@ -170,11 +168,121 @@ public final class ItemIndexExporter {
                         writeTotal);
             }
         }
+        return finalizeIndex(outputDir, build, exportableItemIds.size(), skippedHiddenItems, stats, writes);
+    }
 
+    private static ItemIndexExportResult writeIndexParallel(
+            Path outputDir,
+            ItemIndexBuild build,
+            List<String> exportableItemIds,
+            int skippedHiddenItems,
+            ExportWriteQueue writes) {
+        int writeTotal = build.allItemIds().size();
+        int writeStride = ProgressLog.stride(writeTotal, MweConfig.itemsIndexWriteLogStride(), 20, 200);
+        MweMod.LOGGER.info(
+                "{} writing {} item detail files ({} workers)",
+                Log.EMI_ITEMS,
+                writeTotal,
+                Math.min(exportableItemIds.size(), WRITE_THREADS));
+        WriteStats stats = new WriteStats();
+        AtomicInteger writeProgress = new AtomicInteger();
+        ExecutorService pool = Executors.newFixedThreadPool(
+                Math.min(exportableItemIds.size(), WRITE_THREADS),
+                runnable -> {
+                    Thread thread = new Thread(runnable, "mwe-item-index");
+                    thread.setDaemon(true);
+                    return thread;
+                });
+        try {
+            int chunkSize = Math.max(256, (exportableItemIds.size() + WRITE_THREADS - 1) / WRITE_THREADS);
+            List<Future<?>> futures = new ArrayList<>();
+            for (int start = 0; start < exportableItemIds.size(); start += chunkSize) {
+                int from = start;
+                int to = Math.min(exportableItemIds.size(), start + chunkSize);
+                futures.add(pool.submit(() -> {
+                    for (int i = from; i < to; i++) {
+                        writeItemDetail(outputDir, build, exportableItemIds.get(i), writes, stats);
+                        int n = writeProgress.incrementAndGet();
+                        if (n % writeStride == 0) {
+                            int pct = ProgressLog.percent(n, writeTotal);
+                            MweMod.LOGGER.info(
+                                    "{} write {}% {}/{} item files",
+                                    Log.EMI_ITEMS,
+                                    pct,
+                                    n,
+                                    writeTotal);
+                        }
+                    }
+                }));
+            }
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("item index write interrupted", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            throw new RuntimeException("item index write failed: " + cause.getMessage(), cause);
+        } finally {
+            pool.shutdown();
+            try {
+                if (!pool.awaitTermination(1, TimeUnit.HOURS)) {
+                    pool.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                pool.shutdownNow();
+            }
+        }
+        return finalizeIndex(outputDir, build, exportableItemIds.size(), skippedHiddenItems, stats, writes);
+    }
+
+    private static void writeItemDetail(
+            Path outputDir,
+            ItemIndexBuild build,
+            String itemId,
+            ExportWriteQueue writes,
+            WriteStats stats) {
+        ItemIdParts item = ItemIdParts.parse(itemId);
+        if (item == null) {
+            return;
+        }
+        stats.indexedItemIds.add(itemId);
+        synchronized (stats.indexBuckets) {
+            stats.indexBuckets.computeIfAbsent(item.namespace(), ignored -> new TreeSet<>()).add(item.path());
+        }
+        Map<String, Map<String, Set<String>>> inputs = build.inputs();
+        Map<String, Map<String, Set<String>>> outputs = build.outputs();
+        if (inputs.containsKey(itemId)) {
+            stats.inputRefs.addAndGet(ItemIndexSupport.countRecipeRefs(inputs.get(itemId)));
+        }
+        if (outputs.containsKey(itemId)) {
+            stats.outputRefs.addAndGet(ItemIndexSupport.countRecipeRefs(outputs.get(itemId)));
+        }
+        RegistryTagSet tagSets = build.registryTagsByItem().get(itemId);
+        RegistryTagSet inBundle = tagSets != null ? build.exportedTags().intersect(tagSets) : null;
+        ItemDetail detail = ItemDetail.of(
+                inputs.containsKey(itemId) ? ItemIndexSupport.categoryBuckets(inputs.get(itemId)) : null,
+                outputs.containsKey(itemId) ? ItemIndexSupport.categoryBuckets(outputs.get(itemId)) : null,
+                tagSets != null && !tagSets.isEmpty() ? tagSets : null,
+                inBundle != null && !inBundle.isEmpty() ? inBundle : null);
+        writes.submitJson(item.toItemFile(outputDir), detail);
+    }
+
+    private static ItemIndexExportResult finalizeIndex(
+            Path outputDir,
+            ItemIndexBuild build,
+            int indexedItemCount,
+            int skippedHiddenItems,
+            WriteStats stats,
+            ExportWriteQueue writes) {
+        Path itemsIndexFile = EmiPaths.resolve(outputDir, Constants.ITEMS_INDEX_FILE);
         Map<String, List<String>> namespacePaths = new LinkedHashMap<>();
-        for (Map.Entry<String, Set<String>> entry : indexBuckets.entrySet()) {
+        for (Map.Entry<String, Set<String>> entry : stats.indexBuckets.entrySet()) {
             namespacePaths.put(entry.getKey(), List.copyOf(entry.getValue()));
         }
+        Set<String> indexedItemIds = Set.copyOf(stats.indexedItemIds);
         List<String> indexedFluids = indexedFluidRegistryIds(build.fluidRegistryIds(), indexedItemIds);
         if (indexedFluids.size() < build.fluidRegistryIds().size()) {
             MweMod.LOGGER.info(
@@ -189,18 +297,25 @@ public final class ItemIndexExporter {
             MweMod.LOGGER.info(
                     "{} item visibility: {} indexed, {} skipped (hidden_from_recipe_viewers)",
                     Log.EMI_ITEMS,
-                    indexBuckets.values().stream().mapToInt(Set::size).sum(),
+                    stats.indexBuckets.values().stream().mapToInt(Set::size).sum(),
                     skippedHiddenItems);
         }
         MweMod.LOGGER.info(
                 "{} {} items ({} input refs, {} output refs) -> {}",
                 Log.EMI_ITEMS,
-                allItemIds.size() - skippedHiddenItems,
-                inputRefs,
-                outputRefs,
+                indexedItemCount,
+                stats.inputRefs.get(),
+                stats.outputRefs.get(),
                 itemsIndexFile);
-        int indexedCount = indexBuckets.values().stream().mapToInt(Set::size).sum();
-        return new ItemIndexExportResult(indexedCount, index, Set.copyOf(indexedItemIds));
+        int indexedCount = stats.indexBuckets.values().stream().mapToInt(Set::size).sum();
+        return new ItemIndexExportResult(indexedCount, index, indexedItemIds);
+    }
+
+    private static final class WriteStats {
+        private final Set<String> indexedItemIds = new TreeSet<>();
+        private final Map<String, Set<String>> indexBuckets = new TreeMap<>();
+        private final AtomicLong inputRefs = new AtomicLong();
+        private final AtomicLong outputRefs = new AtomicLong();
     }
 
     static List<String> indexedFluidRegistryIds(Set<String> candidateFluids, Set<String> indexedItemIds) {

@@ -253,7 +253,10 @@ public final class ItemsLangExporter {
         if (!parallelEntries || threads <= 1 || size < BUILD_PARALLEL_MIN_ITEMS) {
             for (int i = 0; i < size; i++) {
                 entries[i] = buildEntry(sortedItemIds.get(i), fluids, normalized, currentResolver, enResolver);
-                logBuildProgress(i + 1, size, localeLabel, startedAt);
+                int n = i + 1;
+                if (n % Constants.SEARCH_INDEX_PROGRESS_EVERY == 0) {
+                    logBuildProgress(n, size, localeLabel, startedAt);
+                }
             }
             return Arrays.asList(entries);
         }

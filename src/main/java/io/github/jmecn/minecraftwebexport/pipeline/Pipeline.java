@@ -5,7 +5,6 @@ import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.icon.CategoryIconWriter;
 import io.github.jmecn.minecraftwebexport.emi.icon.ItemIconWriter;
-import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemsLangExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.NameKeysExporter;
 import io.github.jmecn.minecraftwebexport.emi.lang.LangDerivation;
@@ -15,7 +14,6 @@ import io.github.jmecn.minecraftwebexport.emi.recipe.RecipePaths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RecipeWriter;
 import io.github.jmecn.minecraftwebexport.emi.recipe.TextureWriter;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
-import io.github.jmecn.minecraftwebexport.emi.tag.TagIndexWriter;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.model.bundle.Bundle;
 import io.github.jmecn.minecraftwebexport.model.bundle.ItemsLangRef;
@@ -86,21 +84,25 @@ public final class Pipeline {
             MinecraftServer server = client.getSingleplayerServer();
             boolean hasRecipeExport = context.hasRecipes();
 
-            TagExportResult tagExport = TagExportResult.empty();
-            int tagsIndexed = 0;
-            if (hasRecipeExport && server != null && !context.tagIds().isEmpty()) {
-                tagExport = TagIndexWriter.export(outputRoot, server, context.tagIds(), writes);
-                tagsIndexed = tagExport.tagRefCount();
-                writes.awaitIdle("after tags index");
-            } else if (hasRecipeExport && !context.tagIds().isEmpty()) {
+            CompletableFuture<ExportPrepResult> prepFuture = ExportPrep.runServerPhaseAsync(
+                    outputRoot, server, context, writes);
+
+            int recipesWritten = hasRecipeExport
+                    ? RecipeWriter.export(outputRoot, client, context, writes)
+                    : 0;
+            client.renderBuffers().bufferSource().endBatch();
+
+            ExportPrepResult prep = awaitPrep(prepFuture);
+            writes.awaitIdle("after server prep");
+
+            if (hasRecipeExport && server == null && !context.tagIds().isEmpty()) {
                 MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
             }
 
-            ItemIndexExportResult itemExport = hasRecipeExport
-                    ? ItemIndexExporter.export(outputRoot, server, context, tagExport.catalog(), writes)
-                    : ItemIndexExportResult.empty();
+            TagExportResult tagExport = prep.tagExport();
+            ItemIndexExportResult itemExport = prep.itemExport();
+            int tagsIndexed = tagExport.tagRefCount();
             int itemCount = itemExport.indexedCount();
-            writes.awaitIdle("after items index");
 
             Map<String, String> nameKeys = Map.of();
             if (hasRecipeExport) {
@@ -121,7 +123,7 @@ public final class Pipeline {
             CompletableFuture<List<String>> itemsLangFuture = CompletableFuture.completedFuture(List.of());
             if (itemCount > 0 && !languages.isEmpty()) {
                 MweMod.LOGGER.info(
-                        "{} starting async build for {} locales while recipes export",
+                        "{} starting async build for {} locales",
                         Log.ITEMS_LANG,
                         languages.size());
                 itemsLangFuture = ItemsLangExporter.exportAsync(
@@ -133,9 +135,6 @@ public final class Pipeline {
                         Map.copyOf(nameKeys),
                         writes);
             }
-
-            int recipesWritten = RecipeWriter.export(outputRoot, client, context, writes);
-            client.renderBuffers().bufferSource().endBatch();
 
             List<String> itemsLangLocales = awaitItemsLang(itemsLangFuture);
             writes.awaitIdle("after items lang");
@@ -191,6 +190,24 @@ public final class Pipeline {
                     tagsIndexed,
                     languagesWritten,
                     iconSprites);
+        }
+    }
+
+    private static ExportPrepResult awaitPrep(CompletableFuture<ExportPrepResult> future) throws IOException {
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("export prep interrupted", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            if (cause instanceof IOException io) {
+                throw io;
+            }
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new IOException("export prep failed: " + cause.getMessage(), cause);
         }
     }
 
