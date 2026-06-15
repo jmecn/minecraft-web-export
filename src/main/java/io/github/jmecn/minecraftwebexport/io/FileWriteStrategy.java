@@ -37,7 +37,6 @@ public final class FileWriteStrategy implements BundleWriteStrategy {
 
     @Override
     public void finish() {
-        // no-op
     }
 
     @Override

@@ -3,6 +3,7 @@ package io.github.jmecn.minecraftwebexport.emi.recipe;
 import dev.emi.emi.EmiRenderHelper;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.runtime.EmiDrawContext;
+import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.config.MweConfig;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.icon.OffScreenRenderer;
@@ -21,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.server.MinecraftServer;
 
 public final class RecipeWriter {
@@ -50,10 +52,12 @@ public final class RecipeWriter {
         int progress = 0;
         MinecraftServer server = client.getSingleplayerServer();
 
+        MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
+        GuiGraphics graphics = new GuiGraphics(client, bufferSource);
         try (OffScreenRendererPool rendererPool = new OffScreenRendererPool()) {
             for (String recipeId : context.recipeIds()) {
                 progress++;
-                EmiRecipe recipe = Resolver.resolve(recipeId);
+                EmiRecipe recipe = context.resolvedRecipe(recipeId);
                 if (recipe == null) {
                     missing++;
                     logProgress(progress, total, written, missing, failures, logStride);
@@ -78,8 +82,11 @@ public final class RecipeWriter {
                     writes.submitBytes(metaFile, metaUtf8);
                     metaBytes += metaUtf8.length;
 
-                    pngBytes += renderRecipePng(client, recipe, scale, pngFile, rendererPool, writes);
+                    pngBytes += renderRecipePng(recipe, scale, pngFile, rendererPool, graphics, writes);
                     written++;
+                    if (written % Constants.ICON_FLUSH_RENDER_EVERY == 0) {
+                        bufferSource.endBatch();
+                    }
                     logProgress(progress, total, written, missing, failures, logStride);
                     if (progress % RECIPE_WRITE_FLUSH_STRIDE == 0) {
                         writes.awaitIdle("recipes " + progress + "/" + total);
@@ -93,6 +100,7 @@ public final class RecipeWriter {
                             e);
                 }
             }
+            bufferSource.endBatch();
             writes.awaitIdle("recipes final");
         }
 
@@ -111,11 +119,11 @@ public final class RecipeWriter {
     }
 
     private static int renderRecipePng(
-            Minecraft client,
             EmiRecipe recipe,
             int scale,
             Path out,
             OffScreenRendererPool rendererPool,
+            GuiGraphics graphics,
             ExportWriteQueue writes) {
         int w = Math.max(1, recipe.getDisplayWidth());
         int h = Math.max(1, recipe.getDisplayHeight());
@@ -126,7 +134,6 @@ public final class RecipeWriter {
         int pixelH = logicalH * scale;
 
         OffScreenRenderer off = rendererPool.borrow(pixelW, pixelH);
-        GuiGraphics graphics = new GuiGraphics(client, client.renderBuffers().bufferSource());
         byte[] png = off.captureAsPng(() -> off.runWithEmiRecipeMatrices(logicalW, logicalH, () -> {
             EmiRenderHelper.renderRecipe(recipe, EmiDrawContext.wrap(graphics), 0, 0, false, -1);
             graphics.flush();

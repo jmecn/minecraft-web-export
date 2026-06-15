@@ -23,10 +23,11 @@ public final class ExportWriteQueue implements AutoCloseable {
     private final BundleWriteStrategy strategy;
     private final ExecutorService executor;
     private final Semaphore inFlight;
+    private final Object pendingLock = new Object();
     private final List<Future<?>> pending = new ArrayList<>();
     private final AtomicLong batchIoNanos = new AtomicLong();
     private final AtomicLong batchAcquireNanos = new AtomicLong();
-    private long batchSubmitStartedAtNanos;
+    private final AtomicLong batchSubmitStartedAtNanos = new AtomicLong();
     private boolean finished;
 
     private ExportWriteQueue(Path exportRoot, BundleWriteStrategy strategy) {
@@ -82,7 +83,7 @@ public final class ExportWriteQueue implements AutoCloseable {
 
     private void submit(WriteTask task, Path path) {
         acquire(path);
-        pending.add(executor.submit(() -> {
+        Future<?> future = executor.submit(() -> {
             long ioStartedAt = System.nanoTime();
             try {
                 task.run();
@@ -92,7 +93,10 @@ public final class ExportWriteQueue implements AutoCloseable {
                 batchIoNanos.addAndGet(System.nanoTime() - ioStartedAt);
                 inFlight.release();
             }
-        }));
+        });
+        synchronized (pendingLock) {
+            pending.add(future);
+        }
     }
 
     private void acquire(Path path) {
@@ -105,9 +109,7 @@ public final class ExportWriteQueue implements AutoCloseable {
         } finally {
             batchAcquireNanos.addAndGet(System.nanoTime() - acquireStartedAt);
         }
-        if (batchSubmitStartedAtNanos == 0L) {
-            batchSubmitStartedAtNanos = System.nanoTime();
-        }
+        batchSubmitStartedAtNanos.compareAndSet(0L, System.nanoTime());
     }
 
     public void awaitIdle() {
@@ -115,40 +117,52 @@ public final class ExportWriteQueue implements AutoCloseable {
     }
 
     public void awaitIdle(String phase) {
-        int count = pending.size();
-        if (count == 0) {
-            return;
-        }
         String label = phase == null || phase.isBlank() ? "export" : phase;
-        MweMod.LOGGER.info("{} flushing {} pending writes ({}) ...", Log.EMI, count, label);
         long startedAt = System.nanoTime();
         RuntimeException failure = null;
-        for (Future<?> future : pending) {
-            try {
-                future.get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                failure = new RuntimeException("export write queue interrupted", e);
-            } catch (Exception e) {
-                failure = new RuntimeException("export write failed: " + e.getMessage(), e);
+        int total = 0;
+        while (true) {
+            List<Future<?>> batch;
+            synchronized (pendingLock) {
+                if (pending.isEmpty()) {
+                    break;
+                }
+                batch = new ArrayList<>(pending);
+            }
+            if (total == 0) {
+                MweMod.LOGGER.info("{} flushing {} pending writes ({}) ...", Log.EMI, batch.size(), label);
+            }
+            total += batch.size();
+            for (Future<?> future : batch) {
+                try {
+                    future.get();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    failure = new RuntimeException("export write queue interrupted", e);
+                } catch (Exception e) {
+                    failure = new RuntimeException("export write failed: " + e.getMessage(), e);
+                }
+            }
+            synchronized (pendingLock) {
+                pending.removeAll(batch);
             }
         }
-        pending.clear();
+        if (total == 0) {
+            return;
+        }
         long finishedAt = System.nanoTime();
         long mainWaitMs = (finishedAt - startedAt) / 1_000_000L;
         long workerIoMs = batchIoNanos.get() / 1_000_000L;
         long acquireWaitMs = batchAcquireNanos.get() / 1_000_000L;
-        long wallMs =
-                batchSubmitStartedAtNanos == 0L
-                        ? mainWaitMs
-                        : (finishedAt - batchSubmitStartedAtNanos) / 1_000_000L;
+        long batchStartedAt = batchSubmitStartedAtNanos.get();
+        long wallMs = batchStartedAt == 0L ? mainWaitMs : (finishedAt - batchStartedAt) / 1_000_000L;
         batchIoNanos.set(0L);
         batchAcquireNanos.set(0L);
-        batchSubmitStartedAtNanos = 0L;
+        batchSubmitStartedAtNanos.set(0L);
         MweMod.LOGGER.info(
                 "{} writes flushed: {} tasks, mainWait={} ms, workerIo={} ms, wall={} ms, acquireWait={} ms ({})",
                 Log.EMI,
-                count,
+                total,
                 mainWaitMs,
                 workerIoMs,
                 wallMs,

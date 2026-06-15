@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 
@@ -81,61 +83,70 @@ public final class Pipeline {
                 RecipePaths.ensureRecipeDirectories(outputRoot, recipeIds);
             }
 
-            int recipesWritten = RecipeWriter.export(outputRoot, client, context, writes);
-            client.renderBuffers().bufferSource().endBatch();
-
             MinecraftServer server = client.getSingleplayerServer();
+            boolean hasRecipeExport = context.hasRecipes();
 
-            int tagsIndexed = 0;
             TagExportResult tagExport = TagExportResult.empty();
-            if (server != null && !context.tagIds().isEmpty()) {
+            int tagsIndexed = 0;
+            if (hasRecipeExport && server != null && !context.tagIds().isEmpty()) {
                 tagExport = TagIndexWriter.export(outputRoot, server, context.tagIds(), writes);
                 tagsIndexed = tagExport.tagRefCount();
                 writes.awaitIdle("after tags index");
-            } else if (!context.tagIds().isEmpty()) {
+            } else if (hasRecipeExport && !context.tagIds().isEmpty()) {
                 MweMod.LOGGER.warn("{} tag-members skipped: no integrated server", Log.EMI);
             }
 
-            int categoryCount = recipesWritten > 0
-                    ? CategoryIconWriter.export(outputRoot, client, context.categoryIds(), writes)
-                    : 0;
-
-            ItemIndexExportResult itemExport = recipesWritten > 0
+            ItemIndexExportResult itemExport = hasRecipeExport
                     ? ItemIndexExporter.export(outputRoot, server, context, tagExport.catalog(), writes)
                     : ItemIndexExportResult.empty();
             int itemCount = itemExport.indexedCount();
             writes.awaitIdle("after items index");
 
             Map<String, String> nameKeys = Map.of();
-            if (recipesWritten > 0) {
+            if (hasRecipeExport) {
                 nameKeys = NameKeysExporter.export(outputRoot, client, itemExport.index(), writes);
             }
             writes.awaitIdle("after name keys");
 
-            Set<String> langKeys = LangDerivation.withNameKeys(
-                    LangDerivation.derive(context),
-                    nameKeys);
-            LangExportResult langExport =
-                    Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
+            LangExportResult langExport = LangExportResult.empty();
+            if (hasRecipeExport) {
+                Set<String> langKeys = LangDerivation.withNameKeys(
+                        LangDerivation.derive(context),
+                        nameKeys);
+                langExport = Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
+            }
             writes.awaitIdle("after emi lang");
 
             List<String> languages = langExport.locales();
-            List<String> itemsLangLocales = List.of();
+            CompletableFuture<List<String>> itemsLangFuture = CompletableFuture.completedFuture(List.of());
             if (itemCount > 0 && !languages.isEmpty()) {
-                itemsLangLocales = ItemsLangExporter.export(
+                MweMod.LOGGER.info(
+                        "{} starting async build for {} locales while recipes export",
+                        Log.ITEMS_LANG,
+                        languages.size());
+                itemsLangFuture = ItemsLangExporter.exportAsync(
                         outputRoot,
                         languages,
-                        itemExport.indexedItemIds(),
-                        context.fluidRegistryIds(),
+                        List.copyOf(itemExport.indexedItemIds()),
+                        Set.copyOf(context.fluidRegistryIds()),
                         langExport.tablesByLocale(),
-                        nameKeys,
+                        Map.copyOf(nameKeys),
                         writes);
             }
+
+            int recipesWritten = RecipeWriter.export(outputRoot, client, context, writes);
+            client.renderBuffers().bufferSource().endBatch();
+
+            List<String> itemsLangLocales = awaitItemsLang(itemsLangFuture);
             writes.awaitIdle("after items lang");
 
             if (languages.isEmpty()) {
                 languages = Languages.resolve(plan.hints()).stream().sorted().toList();
             }
+
+            int categoryCount = recipesWritten > 0
+                    ? CategoryIconWriter.export(outputRoot, client, context.categoryIds(), writes)
+                    : 0;
 
             int languagesWritten = langExport.languagesWritten();
 
@@ -180,6 +191,24 @@ public final class Pipeline {
                     tagsIndexed,
                     languagesWritten,
                     iconSprites);
+        }
+    }
+
+    private static List<String> awaitItemsLang(CompletableFuture<List<String>> future) throws IOException {
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("items-lang export interrupted", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            if (cause instanceof IOException io) {
+                throw io;
+            }
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new IOException("items-lang export failed: " + cause.getMessage(), cause);
         }
     }
 

@@ -124,8 +124,6 @@ public class OffScreenRenderer implements AutoCloseable {
             RenderSystem.setProjectionMatrix(backupProjection, VertexSorting.ORTHOGRAPHIC_Z);
             view.popPose();
             RenderSystem.applyModelViewMatrix();
-            Window window = Minecraft.getInstance().getWindow();
-            RenderSystem.viewport(0, 0, window.getWidth(), window.getHeight());
         }
     }
 }
