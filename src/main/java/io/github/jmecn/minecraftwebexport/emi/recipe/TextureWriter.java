@@ -32,17 +32,19 @@ public final class TextureWriter {
     public static void export(Path outputDir, Minecraft client, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
         Path texRoot = EmiPaths.resolve(outputDir, Constants.TEXTURES_DIR);
-        if (Files.exists(texRoot)) {
-            Files.walk(texRoot)
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(path -> {
-                        try {
-                            Files.deleteIfExists(path);
-                        } catch (IOException ignored) {
-                        }
-                    });
+        if (writes.usesFileTree()) {
+            if (Files.exists(texRoot)) {
+                Files.walk(texRoot)
+                        .sorted(Comparator.reverseOrder())
+                        .forEach(path -> {
+                            try {
+                                Files.deleteIfExists(path);
+                            } catch (IOException ignored) {
+                            }
+                        });
+            }
+            Files.createDirectories(texRoot);
         }
-        Files.createDirectories(texRoot);
 
         Set<String> all = new TreeSet<>();
         all.add("emi:textures/gui/widgets.png");
@@ -58,7 +60,9 @@ public final class TextureWriter {
             ResourceLocation id = ResourceLocation.parse(idString);
             String relative = textureRelativePath(id.toString());
             Path out = texRoot.resolve(relative);
-            Files.createDirectories(out.getParent());
+            if (writes.usesFileTree()) {
+                Files.createDirectories(out.getParent());
+            }
 
             Optional<Resource> resourceOpt = resourceManager.getResource(id);
             if (resourceOpt.isEmpty()) {

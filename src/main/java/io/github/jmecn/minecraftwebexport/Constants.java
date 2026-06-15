@@ -18,6 +18,7 @@ public final class Constants {
     public static final String FLUID_REGISTRY_IDS_KEY = "fluidRegistryIds";
 
     public static final String EMI_ROOT = "emi";
+    public static final String EMI_ZIP_FILE = "emi.zip";
     public static final String BUNDLE_FILE = "bundle.json";
     public static final String RECIPES_DIR = "recipes";
     public static final String TEXTURES_DIR = "textures";

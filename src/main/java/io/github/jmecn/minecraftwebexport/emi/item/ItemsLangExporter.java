@@ -68,7 +68,9 @@ public final class ItemsLangExporter {
         }
 
         Path searchRoot = bundleRoot.resolve(Constants.ITEMS_LANG_DIR);
-        Files.createDirectories(searchRoot);
+        if (writes.usesFileTree()) {
+            Files.createDirectories(searchRoot);
+        }
 
         Map<String, String> enUs = langTableForLocale(langTables, Constants.DEFAULT_LANGUAGE);
         List<String> writtenLocales = new ArrayList<>();

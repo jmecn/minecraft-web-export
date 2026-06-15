@@ -38,7 +38,9 @@ public final class TagIndexWriter {
             return TagExportResult.empty();
         }
         Path tagsDir = EmiPaths.resolve(outputDir, Constants.TAGS_DIR);
-        Files.createDirectories(tagsDir);
+        if (writes.usesFileTree()) {
+            Files.createDirectories(tagsDir);
+        }
 
         int registryRefs = 0;
         long totalBytes = 0;

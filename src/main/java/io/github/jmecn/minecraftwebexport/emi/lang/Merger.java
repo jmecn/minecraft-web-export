@@ -71,7 +71,9 @@ public final class Merger {
             Hints hints,
             ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
-        Files.createDirectories(langRoot);
+        if (writes.usesFileTree()) {
+            Files.createDirectories(langRoot);
+        }
 
         Set<String> languages = Languages.resolve(hints);
         if (languages.isEmpty()) {

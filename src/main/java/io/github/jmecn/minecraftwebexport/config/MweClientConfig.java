@@ -12,6 +12,7 @@ public final class MweClientConfig {
     public final ForgeConfigSpec.ConfigValue<String> exportLanguages;
     public final ForgeConfigSpec.ConfigValue<String> excludedNamespaces;
     public final ForgeConfigSpec.IntValue recipeLayoutScale;
+    public final ForgeConfigSpec.BooleanValue compressed;
 
     public final ForgeConfigSpec.IntValue worldDelayTicks;
     public final ForgeConfigSpec.IntValue timeoutSeconds;
@@ -50,6 +51,9 @@ public final class MweClientConfig {
         recipeLayoutScale = builder
                 .comment("Recipe layout render scale.")
                 .defineInRange("recipeLayoutScale", Constants.DEFAULT_RECIPE_LAYOUT_SCALE, 1, 8);
+        compressed = builder
+                .comment("When true, write the EMI bundle to emi.zip instead of the emi/ directory tree.")
+                .define("compressed", true);
         builder.pop();
 
         builder.push("ci");

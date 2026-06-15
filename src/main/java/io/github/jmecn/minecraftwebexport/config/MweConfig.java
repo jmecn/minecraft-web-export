@@ -20,6 +20,7 @@ public final class MweConfig {
     static final String JVM_EXPORT_EXCLUDED_NAMESPACES = "minecraftWebExport.exportExcludedNamespaces";
     static final String JVM_EXPORT_WORLD_DELAY_TICKS = "minecraftWebExport.exportWorldDelayTicks";
     static final String JVM_EXPORT_TIMEOUT_SECONDS = "minecraftWebExport.exportTimeoutSeconds";
+    static final String JVM_EXPORT_COMPRESSED = "minecraftWebExport.export.compressed";
 
     public static MweClientConfig CLIENT;
     static ForgeConfigSpec CLIENT_SPEC;
@@ -48,6 +49,7 @@ public final class MweConfig {
                     languages = ""
                     excludedNamespaces = ""
                     recipeLayoutScale = %d
+                    compressed = true
 
                     [ci]
                     worldDelayTicks = %d
@@ -127,6 +129,16 @@ public final class MweConfig {
 
     public static int recipeLayoutScale() {
         return Math.max(1, client().recipeLayoutScale.get());
+    }
+
+    public static boolean exportCompressed() {
+        if (jvmHas(JVM_EXPORT_COMPRESSED)) {
+            return jvmBoolean(JVM_EXPORT_COMPRESSED);
+        }
+        if (!configReady()) {
+            return true;
+        }
+        return client().compressed.get();
     }
 
     public static int worldDelayTicks() {

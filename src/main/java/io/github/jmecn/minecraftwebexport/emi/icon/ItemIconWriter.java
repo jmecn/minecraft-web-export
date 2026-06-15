@@ -52,8 +52,9 @@ public final class ItemIconWriter {
             Set<String> onlyItemIds,
             Set<String> onlyFluidIds,
             Map<String, Integer> usageWeights,
-            Map<String, ItemStack> iconVariants) {
-        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+            Map<String, ItemStack> iconVariants)
+            throws IOException {
+        try (ExportWriteQueue writes = ExportWriteQueue.create(outputDir)) {
             int sprites = export(
                     outputDir, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants, writes);
             writes.awaitIdle();
@@ -71,8 +72,10 @@ public final class ItemIconWriter {
             ExportWriteQueue writes) {
         Objects.requireNonNull(writes, "writes");
         Path iconsRoot = EmiPaths.resolve(outputDir, Constants.ICONS_DIR);
-        clearLegacyDirs(outputDir);
-        clearDir(iconsRoot);
+        if (writes.usesFileTree()) {
+            clearLegacyDirs(outputDir);
+            clearDir(iconsRoot);
+        }
         return exportImpl(iconsRoot, client, onlyItemIds, onlyFluidIds, usageWeights, iconVariants, writes);
     }
 

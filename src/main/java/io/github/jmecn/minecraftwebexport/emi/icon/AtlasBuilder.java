@@ -199,13 +199,14 @@ final class AtlasBuilder implements AutoCloseable {
             currentPage = null;
         }
 
-        Files.createDirectories(outputDir);
-
         long pngBytes = pendingPngBytes;
-        for (AtlasPageBuffer page : pages) {
-            Path out = outputDir.resolve(page.fileName());
-            if (Files.exists(out)) {
-                pngBytes += Files.size(out);
+        if (writes.usesFileTree()) {
+            Files.createDirectories(outputDir);
+            for (AtlasPageBuffer page : pages) {
+                Path out = outputDir.resolve(page.fileName());
+                if (Files.exists(out)) {
+                    pngBytes += Files.size(out);
+                }
             }
         }
 

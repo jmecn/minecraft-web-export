@@ -74,12 +74,14 @@ export GITHUB_TOKEN=ghp_...   # write:packages
 
 ## Export output
 
-Writes an EMI bundle under `<outputDir>/emi/`:
+By default (`[export] compressed = true`) writes **`emi.zip`** next to where the `emi/` folder would live. Set `compressed = false` for the legacy directory tree under `<outputDir>/emi/`.
 
-- `bundle.json` — metadata + per-mod route/pack manifests
-- `recipes/routes/`, `recipes/layout-packs/` — recipe layouts
+Zip entries use the same v2 layout as the directory bundle (`bundle.json`, `recipes/`, …). Deploy pipelines unzip to `emi/` before optimize or hosting.
+
+- `bundle.json` — metadata
+- `recipes/<namespace>/` — recipe PNG + meta JSON (schema 2)
 - `categories/index.json` — EMI recipe categories (tabs)
-- `items/index.json`, `items/<namespace>/*.json` — item reverse index (`schema: 2`, grouped by category)
+- `items/index.json`, `items/<namespace>/*.json` — item reverse index (`schema: 2`)
 - `icons/`, `textures/`, `lang/`, `tags/` — assets and indexes
 
 ## Headless / CI JVM properties
@@ -88,6 +90,7 @@ Writes an EMI bundle under `<outputDir>/emi/`:
 |----------|---------|-------------|
 | `minecraftWebExport.export.enabled` | `true` | CI mode: auto open world, export, exit. `false` = command-only |
 | `minecraftWebExport.export.outputDir` | absolute path | Output root |
+| `minecraftWebExport.export.compressed` | `true` | `true` → `emi.zip`; `false` → `emi/` directory |
 | `minecraftWebExport.exportWorldDelayTicks` | `600` | Menu delay before new world |
 | `minecraftWebExport.exportTimeoutSeconds` | `3600` | Hard timeout (`<=0` off) |
 

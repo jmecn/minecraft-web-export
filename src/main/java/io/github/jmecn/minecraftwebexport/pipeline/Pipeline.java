@@ -75,9 +75,11 @@ public final class Pipeline {
         ExportContext context = plan.context();
         Set<String> recipeIds = context.recipeIds();
 
-        try (ExportWriteQueue writes = new ExportWriteQueue()) {
+        try (ExportWriteQueue writes = ExportWriteQueue.create(outputRoot)) {
             RecipeGraphBuilder.buildGraph(client, context);
-            RecipePaths.ensureRecipeDirectories(outputRoot, recipeIds);
+            if (writes.usesFileTree()) {
+                RecipePaths.ensureRecipeDirectories(outputRoot, recipeIds);
+            }
 
             int recipesWritten = RecipeWriter.export(outputRoot, client, context, writes);
             client.renderBuffers().bufferSource().endBatch();
