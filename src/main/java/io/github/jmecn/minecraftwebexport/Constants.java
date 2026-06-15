@@ -14,6 +14,9 @@ public final class Constants {
     public static final int ITEMS_LANG_SCHEMA = 2;
     public static final int CATEGORIES_INDEX_SCHEMA = 2;
     public static final int TAGS_CATALOG_SCHEMA = 1;
+    public static final int CREATIVE_TABS_INDEX_SCHEMA = 1;
+    public static final int CREATIVE_TAB_MEMBERS_SCHEMA = 1;
+    public static final int CREATIVE_TAB_ICONS_INDEX_SCHEMA = 1;
 
     public static final String FLUID_REGISTRY_IDS_KEY = "fluidRegistryIds";
 
@@ -30,6 +33,9 @@ public final class Constants {
     public static final String CATEGORY_ICONS_DIR = "categories/icons";
     public static final String TAGS_DIR = "tags";
     public static final String TAGS_INDEX_FILE = "tags/index.json";
+    public static final String CREATIVE_TABS_DIR = "creative-tabs";
+    public static final String CREATIVE_TABS_INDEX_FILE = "creative-tabs/index.json";
+    public static final String CREATIVE_TABS_ICONS_DIR = "creative-tabs/icons";
     public static final String LANG_DIR = "lang";
     public static final String ITEMS_LANG_DIR = "items-lang";
 
@@ -74,6 +80,7 @@ public final class Constants {
     public static final String LOG_TAG_RECIPE_TEXTURES = "[recipe-textures]";
     public static final String LOG_TAG_ITEMS_LANG = "[items-lang]";
     public static final String LOG_TAG_ITEM_NAME_KEYS = "[item-name-keys]";
+    public static final String LOG_TAG_CREATIVE_TABS = "[creative-tabs]";
 
     public static final Set<String> DEFAULT_EXCLUDED_NAMESPACES = Set.of("additionalplacements");
 

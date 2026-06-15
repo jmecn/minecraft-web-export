@@ -16,6 +16,7 @@ public final class Log {
     public static final String RECIPE_TEXTURES = Constants.LOG_TAG_RECIPE_TEXTURES;
     public static final String ITEMS_LANG = Constants.LOG_TAG_ITEMS_LANG;
     public static final String ITEM_NAME_KEYS = Constants.LOG_TAG_ITEM_NAME_KEYS;
+    public static final String CREATIVE_TABS = Constants.LOG_TAG_CREATIVE_TABS;
 
     public static final int DETAIL_FAILURE_LIMIT = Constants.DETAIL_FAILURE_LIMIT;
 

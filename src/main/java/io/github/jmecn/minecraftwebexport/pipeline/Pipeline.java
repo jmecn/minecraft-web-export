@@ -4,6 +4,7 @@ import io.github.jmecn.minecraftwebexport.Constants;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.icon.CategoryIconWriter;
+import io.github.jmecn.minecraftwebexport.emi.icon.CreativeTabIconWriter;
 import io.github.jmecn.minecraftwebexport.emi.icon.ItemIconWriter;
 import io.github.jmecn.minecraftwebexport.emi.lang.Languages;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RecipePaths;
@@ -123,6 +124,10 @@ public final class Pipeline {
                     ? CategoryIconWriter.export(outputRoot, client, context.categoryIds(), writes)
                     : 0;
 
+            int creativeTabCount = itemCount > 0 && !prep.creativeTabExport().tabs().isEmpty()
+                    ? CreativeTabIconWriter.export(outputRoot, client, prep.creativeTabExport(), writes)
+                    : 0;
+
             int languagesWritten = langExport.languagesWritten();
 
             int iconSprites = ItemIconWriter.export(
@@ -153,6 +158,7 @@ public final class Pipeline {
                     recipesWritten,
                     recipeIds.size(),
                     categoryCount,
+                    creativeTabCount,
                     itemCount,
                     tagsIndexed,
                     languagesWritten,
@@ -229,28 +235,31 @@ public final class Pipeline {
             int recipesWritten,
             int recipesRequested,
             int categoryCount,
+            int creativeTabCount,
             int itemCount,
             int tagsIndexed,
             int languagesWritten,
             int iconSprites) {
         if (mode == Mode.SCOPED) {
             MweMod.LOGGER.info(
-                    "{} scoped export complete: {}/{} recipes, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    "{} scoped export complete: {}/{} recipes, {} categories, {} creative tabs, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     Log.EMI,
                     recipesWritten,
                     recipesRequested,
                     categoryCount,
+                    creativeTabCount,
                     itemCount,
                     tagsIndexed,
                     languagesWritten,
                     iconSprites);
         } else {
             MweMod.LOGGER.info(
-                    "{} export complete: {}/{} recipes, {} categories, {} indexed items, {} tags, {} lang files, {} icon sprites",
+                    "{} export complete: {}/{} recipes, {} categories, {} creative tabs, {} indexed items, {} tags, {} lang files, {} icon sprites",
                     Log.EMI,
                     recipesWritten,
                     recipesRequested,
                     categoryCount,
+                    creativeTabCount,
                     itemCount,
                     tagsIndexed,
                     languagesWritten,

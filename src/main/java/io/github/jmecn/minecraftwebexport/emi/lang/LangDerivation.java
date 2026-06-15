@@ -94,7 +94,7 @@ public final class LangDerivation {
         return Set.copyOf(keys);
     }
 
-    private static String translationKeyFromComponent(Component component) {
+    public static String translationKeyFromComponent(Component component) {
         if (component == null) {
             return null;
         }

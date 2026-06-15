@@ -192,6 +192,20 @@ final class AtlasBuilder implements AutoCloseable {
     }
 
     int finish() throws IOException {
+        writeAtlasOutputs(true, null);
+        return pages.size();
+    }
+
+    AtlasFinishResult finishCreativeTabIcons() throws IOException {
+        writeAtlasOutputs(false, null);
+        List<AtlasPage> pageList = new ArrayList<>();
+        for (AtlasPageBuffer page : pages) {
+            pageList.add(new AtlasPage(page.fileName(), page.width(), page.height()));
+        }
+        return new AtlasFinishResult(List.copyOf(pageList), Map.copyOf(items));
+    }
+
+    private void writeAtlasOutputs(boolean writeDefaultIndex, Object customIndex) throws IOException {
         if (currentPage != null && (!items.isEmpty() || cursorX > 0 || cursorY > 0)) {
             flushPageToDisk();
         } else if (currentPage != null) {
@@ -219,8 +233,14 @@ final class AtlasBuilder implements AutoCloseable {
         AtlasIndex indexRoot = AtlasIndex.of(cellSize, sort, pageList, spriteEntries);
 
         Path indexPath = outputDir.resolve("index.json");
-        writes.submitJson(indexPath, indexRoot);
-        long indexJsonBytes = JsonIO.toUtf8Bytes(indexRoot).length;
+        if (writeDefaultIndex) {
+            writes.submitJson(indexPath, indexRoot);
+        } else if (customIndex != null) {
+            writes.submitJson(indexPath, customIndex);
+        }
+        long indexJsonBytes = customIndex != null
+                ? JsonIO.toUtf8Bytes(customIndex).length
+                : JsonIO.toUtf8Bytes(indexRoot).length;
 
         Path cssPath = outputDir.resolve(cssFileName);
         String css = buildCss();
@@ -234,9 +254,9 @@ final class AtlasBuilder implements AutoCloseable {
                 indexJsonBytes,
                 pngBytes,
                 css.length());
-
-        return pages.size();
     }
+
+    record AtlasFinishResult(List<AtlasPage> pages, Map<String, AtlasSpriteEntry> sprites) {}
 
     @Override
     public void close() {

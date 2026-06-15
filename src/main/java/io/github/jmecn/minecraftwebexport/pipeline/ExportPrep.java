@@ -1,11 +1,13 @@
 package io.github.jmecn.minecraftwebexport.pipeline;
 
 import io.github.jmecn.minecraftwebexport.MweMod;
+import io.github.jmecn.minecraftwebexport.emi.creativetab.CreativeTabMemberExporter;
 import io.github.jmecn.minecraftwebexport.emi.item.ItemIndexExporter;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.emi.tag.TagIndexWriter;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ExportContext;
+import io.github.jmecn.minecraftwebexport.model.pipeline.CreativeTabExportResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.ItemIndexExportResult;
 import io.github.jmecn.minecraftwebexport.model.pipeline.TagExportResult;
 import java.io.IOException;
@@ -59,7 +61,9 @@ public final class ExportPrep {
             }
             ItemIndexExportResult itemExport = ItemIndexExporter.export(
                     outputRoot, server, context, tagExport.catalog(), writes);
-            return new ExportPrepResult(tagExport, itemExport);
+            CreativeTabExportResult creativeTabExport = CreativeTabMemberExporter.export(
+                    outputRoot, server, itemExport.indexedItemIds(), writes);
+            return new ExportPrepResult(tagExport, itemExport, creativeTabExport);
         } catch (IOException e) {
             throw new CompletionException(e);
         }

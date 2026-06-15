@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -62,6 +63,11 @@ public final class ExportLangPhase {
         Map<String, String> nameKeys = NameKeysExporter.export(outputRoot, client, itemExport.index(), writes);
 
         Set<String> langKeys = LangDerivation.withNameKeys(LangDerivation.derive(context), nameKeys);
+        if (!prep.creativeTabExport().langKeys().isEmpty()) {
+            Set<String> merged = new TreeSet<>(langKeys);
+            merged.addAll(prep.creativeTabExport().langKeys());
+            langKeys = Set.copyOf(merged);
+        }
         LangExportResult langExport =
                 Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
 
