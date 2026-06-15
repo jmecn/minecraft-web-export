@@ -169,7 +169,7 @@ public final class TagIndexWriter {
         TagValues document = new TagValues(new ArrayList<>(exportable));
 
         Path outFile = parsed.toTagFilePath(outputDir, kind);
-        writes.submitJson(outFile, document);
+        writes.submitBulkJson(outFile, document);
         return new TagFileWrite(exportable.size(), JsonIO.toUtf8Bytes(document).length);
     }
 

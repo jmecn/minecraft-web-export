@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class ExportWriteQueue implements AutoCloseable {
 
     static final int WRITE_MAX_PENDING = 512;
+    public static final int BULK_DRAIN_BATCH = 2_000;
 
     private final Path exportRoot;
     private final BundleWriteStrategy strategy;
@@ -28,6 +29,7 @@ public final class ExportWriteQueue implements AutoCloseable {
     private final AtomicLong batchIoNanos = new AtomicLong();
     private final AtomicLong batchAcquireNanos = new AtomicLong();
     private final AtomicLong batchSubmitStartedAtNanos = new AtomicLong();
+    private final PendingWriteBuffer bulkBuffer = new PendingWriteBuffer();
     private boolean finished;
 
     private ExportWriteQueue(Path exportRoot, BundleWriteStrategy strategy) {
@@ -79,6 +81,34 @@ public final class ExportWriteQueue implements AutoCloseable {
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(value, "value");
         submit(() -> strategy.writeJsonDocument(path, value), path);
+    }
+
+    public void submitBulkJson(Path path, Object value) {
+        bulkBuffer.addJson(path, value);
+    }
+
+    public int bufferedWriteCount() {
+        return bulkBuffer.size();
+    }
+
+    public int drainBulk(int max) {
+        int drained = bulkBuffer.drainTo(this, max);
+        if (drained > 0) {
+            MweMod.LOGGER.info(
+                    "{} drained {} buffered writes ({} remaining)",
+                    Log.EMI,
+                    drained,
+                    bulkBuffer.size());
+        }
+        return drained;
+    }
+
+    public int drainAllBulk() {
+        return drainBulk(Integer.MAX_VALUE);
+    }
+
+    void submitBytesDirect(Path path, byte[] data) {
+        submitBytes(path, data);
     }
 
     private void submit(WriteTask task, Path path) {
@@ -195,6 +225,7 @@ public final class ExportWriteQueue implements AutoCloseable {
     public void close() {
         if (!finished) {
             try {
+                drainAllBulk();
                 awaitIdle("close");
                 strategy.finish();
                 finished = true;

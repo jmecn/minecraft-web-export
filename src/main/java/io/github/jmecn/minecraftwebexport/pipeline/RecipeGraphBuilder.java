@@ -39,7 +39,7 @@ public final class RecipeGraphBuilder {
             }
             context.putResolvedRecipe(recipeId, recipe);
             if (context.mode() == Mode.FULL
-                    && !Visibility.shouldExportRecipe(recipe, client.getSingleplayerServer())) {
+                    && !Visibility.shouldExportRecipe(recipe)) {
                 logProgress(progress, total, logStride);
                 continue;
             }

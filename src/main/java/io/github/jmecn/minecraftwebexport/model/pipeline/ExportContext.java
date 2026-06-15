@@ -12,11 +12,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import net.minecraft.world.item.ItemStack;
 
-/**
- * Mutable export state carried through Scope → Relation → Materialize → Lang.
- * Scope fields are filled first and treated as frozen before relation scanning;
- * relation fields are populated in the relation phase on the same instance.
- */
 public final class ExportContext {
 
     private final Mode mode;

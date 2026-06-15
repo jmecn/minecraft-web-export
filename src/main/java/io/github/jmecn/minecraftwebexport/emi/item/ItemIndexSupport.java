@@ -1,33 +1,19 @@
 package io.github.jmecn.minecraftwebexport.emi.item;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import io.github.jmecn.minecraftwebexport.Constants;
-import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.tag.TagExpander;
 import io.github.jmecn.minecraftwebexport.model.tag.TagContents;
-import io.github.jmecn.minecraftwebexport.model.item.ExportedTagCatalog;
-import io.github.jmecn.minecraftwebexport.model.item.ItemIdParts;
 import io.github.jmecn.minecraftwebexport.model.item.RegistryTagSet;
-import io.github.jmecn.minecraftwebexport.model.tag.TagFileRef;
-import io.github.jmecn.minecraftwebexport.enums.tag.TagKind;
 import io.github.jmecn.minecraftwebexport.model.recipe.RecipeMeta;
 import io.github.jmecn.minecraftwebexport.model.recipe.WidgetInteraction;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.stream.Stream;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -54,72 +40,6 @@ final class ItemIndexSupport {
         }
     }
 
-    static Map<String, Set<String>> loadTagItems(Path outputDir) throws IOException {
-        Path tagsRoot = EmiPaths.resolve(outputDir, Constants.TAGS_DIR);
-        if (!Files.isDirectory(tagsRoot)) {
-            return new HashMap<>();
-        }
-
-        Map<String, Set<String>> tagItems = new TreeMap<>();
-        try (Stream<Path> files = Files.walk(tagsRoot)) {
-            for (Path file : files.filter(Files::isRegularFile).toList()) {
-                if (!file.getFileName().toString().endsWith(".json")) {
-                    continue;
-                }
-                TagFileRef ref = TagFileRef.fromPath(tagsRoot, file);
-                if (ref == null || ref.kind() != TagKind.ITEMS) {
-                    continue;
-                }
-                JsonObject root = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
-                if (!root.has("values") || !root.get("values").isJsonArray()) {
-                    continue;
-                }
-                Set<String> members = new TreeSet<>();
-                for (JsonElement element : root.getAsJsonArray("values")) {
-                    if (element.isJsonPrimitive()) {
-                        String id = canonicalRegistryId(element.getAsString());
-                        if (id != null && !id.isBlank()) {
-                            members.add(id);
-                        }
-                    }
-                }
-                tagItems.put(ref.tagId(), members);
-            }
-        }
-        return tagItems;
-    }
-
-    /**
-     * Scan tag files already on disk (tools / re-export only).
-     * Export pipeline passes {@link ExportedTagCatalog} in memory from {@link io.github.jmecn.minecraftwebexport.emi.tag.TagIndexWriter}.
-     */
-    static ExportedTagCatalog loadExportedTagCatalog(Path outputDir) throws IOException {
-        Path tagsRoot = EmiPaths.resolve(outputDir, Constants.TAGS_DIR);
-        if (!Files.isDirectory(tagsRoot)) {
-            return ExportedTagCatalog.empty();
-        }
-        Set<String> items = new TreeSet<>();
-        Set<String> blocks = new TreeSet<>();
-        Set<String> fluids = new TreeSet<>();
-        try (Stream<Path> files = Files.walk(tagsRoot)) {
-            for (Path file : files.filter(Files::isRegularFile).toList()) {
-                if (!file.getFileName().toString().endsWith(".json")) {
-                    continue;
-                }
-                TagFileRef ref = TagFileRef.fromPath(tagsRoot, file);
-                if (ref == null) {
-                    continue;
-                }
-                switch (ref.kind()) {
-                    case ITEMS -> items.add(ref.tagId());
-                    case BLOCKS -> blocks.add(ref.tagId());
-                    case FLUIDS -> fluids.add(ref.tagId());
-                }
-            }
-        }
-        return new ExportedTagCatalog(items, blocks, fluids);
-    }
-
     static Map<String, RegistryTagSet> resolveRegistryTags(Set<String> itemIds, MinecraftServer server) {
         if (server == null || itemIds.isEmpty()) {
             return Collections.emptyMap();
@@ -134,7 +54,7 @@ final class ItemIndexSupport {
             if (resourceLocation == null) {
                 continue;
             }
-            Optional<ResourceKey<Item>> itemKey = itemRegistry.getResourceKey(itemRegistry.get(resourceLocation));
+            Optional<ResourceKey<Item>> itemKey = itemRegistry.getResourceKey(Objects.requireNonNull(itemRegistry.get(resourceLocation)));
             if (itemKey.isEmpty()) {
                 continue;
             }
@@ -250,13 +170,6 @@ final class ItemIndexSupport {
             return recipeId.substring(0, slash);
         }
         return "emi:unknown";
-    }
-
-    static void collectInteractionIds(
-            WidgetInteraction interaction,
-            Set<String> out,
-            Set<String> fluidRegistryIds) {
-        collectInteractionIds(interaction, out, fluidRegistryIds, null, null);
     }
 
     static void collectInteractionIds(

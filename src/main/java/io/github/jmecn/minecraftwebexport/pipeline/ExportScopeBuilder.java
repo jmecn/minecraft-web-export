@@ -42,7 +42,7 @@ public final class ExportScopeBuilder {
         ExportContext context = strategy.planScope(client, merged);
 
         if (mode == Mode.SCOPED) {
-            Set<String> availableRecipes = collectExportableRecipeIds(client);
+            Set<String> availableRecipes = collectExportableRecipeIds();
             if (merged.recipeIds().size() != context.recipeIds().size()) {
                 MweMod.LOGGER.warn(
                         "[export] scoped recipe id count mismatch (unexpected): seeds={}, resolved={}",
@@ -86,9 +86,8 @@ public final class ExportScopeBuilder {
         return hints;
     }
 
-    public static Set<String> collectExportableRecipeIds(Minecraft client) {
+    public static Set<String> collectExportableRecipeIds() {
         return Visibility.filterExportableRecipeIds(
-                client == null ? null : client.getSingleplayerServer(),
                 dev.emi.emi.api.EmiApi.getRecipeManager() == null
                         ? List.of()
                         : dev.emi.emi.api.EmiApi.getRecipeManager().getRecipes());

@@ -21,7 +21,7 @@ public final class FullExportStrategy implements ExportStrategy {
 
     @Override
     public ExportContext planScope(Minecraft client, Seeds seeds) {
-        Set<String> recipeIds = ExportScopeBuilder.collectExportableRecipeIds(client);
+        Set<String> recipeIds = ExportScopeBuilder.collectExportableRecipeIds();
         MinecraftServer server = client.getSingleplayerServer();
 
         Set<String> categoryIds = new TreeSet<>();

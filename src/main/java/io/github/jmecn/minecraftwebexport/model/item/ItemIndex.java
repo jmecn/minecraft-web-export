@@ -12,7 +12,6 @@ public record ItemIndex(Map<String, List<String>> namespacePaths, List<String> f
         fluidRegistryIds = List.copyOf(fluidRegistryIds == null ? List.of() : fluidRegistryIds);
     }
 
-    /** Registry ids listed in {@link #namespacePaths()} (items only, not fluids). */
     public Set<String> registryItemIds() {
         Set<String> ids = new TreeSet<>();
         for (Map.Entry<String, List<String>> entry : namespacePaths.entrySet()) {

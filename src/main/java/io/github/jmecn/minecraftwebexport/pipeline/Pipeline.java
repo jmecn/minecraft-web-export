@@ -5,11 +5,7 @@ import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.icon.CategoryIconWriter;
 import io.github.jmecn.minecraftwebexport.emi.icon.ItemIconWriter;
-import io.github.jmecn.minecraftwebexport.emi.item.ItemsLangExporter;
-import io.github.jmecn.minecraftwebexport.emi.item.NameKeysExporter;
-import io.github.jmecn.minecraftwebexport.emi.lang.LangDerivation;
 import io.github.jmecn.minecraftwebexport.emi.lang.Languages;
-import io.github.jmecn.minecraftwebexport.emi.lang.Merger;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RecipePaths;
 import io.github.jmecn.minecraftwebexport.emi.recipe.RecipeWriter;
 import io.github.jmecn.minecraftwebexport.emi.recipe.TextureWriter;
@@ -28,7 +24,6 @@ import io.github.jmecn.minecraftwebexport.model.pipeline.Scope;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -86,10 +81,17 @@ public final class Pipeline {
 
             CompletableFuture<ExportPrepResult> prepFuture = ExportPrep.runServerPhaseAsync(
                     outputRoot, server, context, writes);
+            CompletableFuture<ExportLangPhaseResult> langPhaseFuture = prepFuture.thenCompose(prep ->
+                    ExportLangPhase.runAsyncAfterPrep(
+                            outputRoot, client, context, plan, prep, writes, hasRecipeExport));
 
             int recipesWritten = hasRecipeExport
                     ? RecipeWriter.export(outputRoot, client, context, writes)
                     : 0;
+            if (!hasRecipeExport && writes.bufferedWriteCount() > 0) {
+                writes.drainAllBulk();
+                writes.awaitIdle("bulk prep writes");
+            }
             client.renderBuffers().bufferSource().endBatch();
 
             ExportPrepResult prep = awaitPrep(prepFuture);
@@ -104,40 +106,14 @@ public final class Pipeline {
             int tagsIndexed = tagExport.tagRefCount();
             int itemCount = itemExport.indexedCount();
 
-            Map<String, String> nameKeys = Map.of();
-            if (hasRecipeExport) {
-                nameKeys = NameKeysExporter.export(outputRoot, client, itemExport.index(), writes);
-            }
-            writes.awaitIdle("after name keys");
+            ExportLangPhaseResult langPhase = awaitLangPhase(langPhaseFuture);
+            writes.awaitIdle("after lang phase bootstrap");
 
-            LangExportResult langExport = LangExportResult.empty();
-            if (hasRecipeExport) {
-                Set<String> langKeys = LangDerivation.withNameKeys(
-                        LangDerivation.derive(context),
-                        nameKeys);
-                langExport = Merger.exportEmiLang(outputRoot, client, langKeys, plan.hints(), writes);
-            }
-            writes.awaitIdle("after emi lang");
+            LangExportResult langExport = langPhase.langExport();
+            List<String> itemsLangLocales = awaitItemsLang(langPhase.itemsLangFuture());
+            writes.awaitIdle("after items lang");
 
             List<String> languages = langExport.locales();
-            CompletableFuture<List<String>> itemsLangFuture = CompletableFuture.completedFuture(List.of());
-            if (itemCount > 0 && !languages.isEmpty()) {
-                MweMod.LOGGER.info(
-                        "{} starting async build for {} locales",
-                        Log.ITEMS_LANG,
-                        languages.size());
-                itemsLangFuture = ItemsLangExporter.exportAsync(
-                        outputRoot,
-                        languages,
-                        List.copyOf(itemExport.indexedItemIds()),
-                        Set.copyOf(context.fluidRegistryIds()),
-                        langExport.tablesByLocale(),
-                        Map.copyOf(nameKeys),
-                        writes);
-            }
-
-            List<String> itemsLangLocales = awaitItemsLang(itemsLangFuture);
-            writes.awaitIdle("after items lang");
 
             if (languages.isEmpty()) {
                 languages = Languages.resolve(plan.hints()).stream().sorted().toList();
@@ -208,6 +184,25 @@ public final class Pipeline {
                 throw runtime;
             }
             throw new IOException("export prep failed: " + cause.getMessage(), cause);
+        }
+    }
+
+    private static ExportLangPhaseResult awaitLangPhase(CompletableFuture<ExportLangPhaseResult> future)
+            throws IOException {
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("lang phase interrupted", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            if (cause instanceof IOException io) {
+                throw io;
+            }
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new IOException("lang phase failed: " + cause.getMessage(), cause);
         }
     }
 

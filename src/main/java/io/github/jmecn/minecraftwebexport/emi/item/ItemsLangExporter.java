@@ -45,9 +45,10 @@ public final class ItemsLangExporter {
     private static final int BUILD_THREADS =
             Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors()));
     private static final int BUILD_PARALLEL_MIN_ITEMS = 512;
+    private static final int MAX_PARALLEL_LOCALES = 2;
 
     private static final ExecutorService LOCALE_EXECUTOR = Executors.newFixedThreadPool(
-            BUILD_THREADS,
+            MAX_PARALLEL_LOCALES,
             namedDaemonFactory("mwe-items-lang"));
 
     private ItemsLangExporter() {
@@ -142,46 +143,49 @@ public final class ItemsLangExporter {
         }
 
         Map<String, String> enUs = langTableForLocale(langTables, Constants.DEFAULT_LANGUAGE);
-        boolean parallelLocales = locales.size() > 1;
-        boolean parallelEntries = !parallelLocales;
+        boolean multiLocale = locales.size() > 1;
+        boolean parallelEntries = !multiLocale;
         long startedAt = System.currentTimeMillis();
         MweMod.LOGGER.info(
                 "{} building {} items for {} locales{} ...",
                 Log.ITEMS_LANG,
                 sortedItemIds.size(),
                 locales.size(),
-                parallelLocales ? " (parallel locales)" : "");
+                multiLocale ? " (up to " + MAX_PARALLEL_LOCALES + " parallel locales)" : "");
 
         List<String> writtenLocales = Collections.synchronizedList(new ArrayList<>(locales.size()));
-        List<Future<?>> localeTasks = new ArrayList<>(locales.size());
-
-        for (String locale : locales) {
-            localeTasks.add(LOCALE_EXECUTOR.submit(() -> {
-                String normalized = normalizeLocale(locale);
-                exportLocale(
-                        searchRoot,
-                        sortedItemIds,
-                        fluids,
-                        normalized,
-                        langTables,
-                        enUs,
-                        nameKeys,
-                        parallelEntries,
-                        writes);
-                writtenLocales.add(normalized);
-            }));
-        }
-
         RuntimeException failure = null;
-        for (Future<?> task : localeTasks) {
-            try {
-                task.get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                failure = new RuntimeException("items-lang locale build interrupted", e);
-            } catch (ExecutionException e) {
-                Throwable cause = e.getCause() == null ? e : e.getCause();
-                failure = new RuntimeException("items-lang locale build failed: " + cause.getMessage(), cause);
+
+        for (int start = 0; start < locales.size() && failure == null; start += MAX_PARALLEL_LOCALES) {
+            int end = Math.min(start + MAX_PARALLEL_LOCALES, locales.size());
+            List<Future<?>> localeTasks = new ArrayList<>(end - start);
+            for (int i = start; i < end; i++) {
+                String locale = locales.get(i);
+                localeTasks.add(LOCALE_EXECUTOR.submit(() -> {
+                    String normalized = normalizeLocale(locale);
+                    exportLocale(
+                            searchRoot,
+                            sortedItemIds,
+                            fluids,
+                            normalized,
+                            langTables,
+                            enUs,
+                            nameKeys,
+                            parallelEntries,
+                            writes);
+                    writtenLocales.add(normalized);
+                }));
+            }
+            for (Future<?> task : localeTasks) {
+                try {
+                    task.get();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    failure = new RuntimeException("items-lang locale build interrupted", e);
+                } catch (ExecutionException e) {
+                    Throwable cause = e.getCause() == null ? e : e.getCause();
+                    failure = new RuntimeException("items-lang locale build failed: " + cause.getMessage(), cause);
+                }
             }
         }
         if (failure != null) {

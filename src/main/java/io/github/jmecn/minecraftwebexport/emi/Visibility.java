@@ -3,7 +3,6 @@ package io.github.jmecn.minecraftwebexport.emi;
 import com.google.common.collect.Iterables;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.api.stack.EmiIngredient;
-import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.runtime.EmiHidden;
 import io.github.jmecn.minecraftwebexport.MweMod;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
@@ -31,7 +30,7 @@ public final class Visibility {
     private Visibility() {
     }
 
-    public static Set<String> filterExportableRecipeIds(MinecraftServer server, Iterable<EmiRecipe> recipes) {
+    public static Set<String> filterExportableRecipeIds(Iterable<EmiRecipe> recipes) {
         Set<String> ids = new TreeSet<>();
         int skippedDisabled = 0;
         for (EmiRecipe recipe : recipes) {
@@ -53,7 +52,7 @@ public final class Visibility {
         return Set.copyOf(ids);
     }
 
-    public static boolean shouldExportRecipe(EmiRecipe recipe, MinecraftServer server) {
+    public static boolean shouldExportRecipe(EmiRecipe recipe) {
         return !isRecipeDisabledByEmi(recipe);
     }
 

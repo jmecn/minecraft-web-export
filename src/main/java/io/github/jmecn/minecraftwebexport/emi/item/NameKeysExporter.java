@@ -6,13 +6,11 @@ import io.github.jmecn.minecraftwebexport.emi.EmiPaths;
 import io.github.jmecn.minecraftwebexport.emi.lang.RegistryKeys;
 import io.github.jmecn.minecraftwebexport.emi.support.Log;
 import io.github.jmecn.minecraftwebexport.io.ExportWriteQueue;
-import io.github.jmecn.minecraftwebexport.io.JsonIO;
 import io.github.jmecn.minecraftwebexport.model.item.ItemIndex;
 import io.github.jmecn.minecraftwebexport.model.item.NameKeys;
 import net.minecraft.client.Minecraft;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -24,11 +22,6 @@ public final class NameKeysExporter {
     private NameKeysExporter() {
     }
 
-    /**
-     * Resolve registry description keys from an in-memory {@link ItemIndex} and queue the name-keys file.
-     *
-     * @return resolved registry id → lang key (empty when skipped)
-     */
     public static Map<String, String> export(
             Path outputDir, Minecraft client, ItemIndex index, ExportWriteQueue writes) throws IOException {
         Objects.requireNonNull(writes, "writes");
@@ -81,11 +74,7 @@ public final class NameKeysExporter {
                 String registryId = path.contains(":") ? path : namespace + ":" + path;
                 items.put(registryId, RegistryKeys.resolveItemDescriptionKey(client, registryId));
                 if (progress % logStride == 0) {
-                    MweMod.LOGGER.info(
-                            "{} {}/{} name keys resolved",
-                            Log.ITEM_NAME_KEYS,
-                            progress,
-                            total);
+                    MweMod.LOGGER.info("{} {}/{} name keys resolved", Log.ITEM_NAME_KEYS, progress, total);
                 }
             }
         }
@@ -97,23 +86,9 @@ public final class NameKeysExporter {
             String registryId = fluidPath.contains(":") ? fluidPath : "minecraft:" + fluidPath;
             items.put(registryId, RegistryKeys.resolveFluidDescriptionKey(client, registryId));
             if (progress % logStride == 0) {
-                MweMod.LOGGER.info(
-                        "{} {}/{} name keys resolved",
-                        Log.ITEM_NAME_KEYS,
-                        progress,
-                        total);
+                MweMod.LOGGER.info("{} {}/{} name keys resolved", Log.ITEM_NAME_KEYS, progress, total);
             }
         }
         return items;
-    }
-
-    /** Read name keys from a bundle already on disk (tools / re-export only). */
-    public static Map<String, String> readNameKeys(Path outputDir) throws IOException {
-        Path file = EmiPaths.resolve(outputDir, Constants.ITEM_NAME_KEYS_FILE);
-        if (!Files.isRegularFile(file)) {
-            return Map.of();
-        }
-        NameKeys document = JsonIO.read(file, NameKeys.class);
-        return document.items();
     }
 }

@@ -267,7 +267,7 @@ public final class ItemIndexExporter {
                 outputs.containsKey(itemId) ? ItemIndexSupport.categoryBuckets(outputs.get(itemId)) : null,
                 tagSets != null && !tagSets.isEmpty() ? tagSets : null,
                 inBundle != null && !inBundle.isEmpty() ? inBundle : null);
-        writes.submitJson(item.toItemFile(outputDir), detail);
+        writes.submitBulkJson(item.toItemFile(outputDir), detail);
     }
 
     private static ItemIndexExportResult finalizeIndex(

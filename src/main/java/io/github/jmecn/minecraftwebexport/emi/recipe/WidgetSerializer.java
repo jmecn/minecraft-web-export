@@ -71,7 +71,7 @@ public final class WidgetSerializer {
             if (shouldSkipWidget(widget)) {
                 continue;
             }
-            RecipeWidget recipeWidget = compileWidget(recipe, widget, iconVariants);
+            RecipeWidget recipeWidget = compileWidget(widget, iconVariants);
             if (recipeWidget != null) {
                 compiled.add(recipeWidget);
             }
@@ -80,15 +80,14 @@ public final class WidgetSerializer {
     }
 
     private static RecipeWidget compileWidget(
-            EmiRecipe recipe,
             Widget widget,
             Map<String, ItemStack> iconVariants) {
         try {
             if (widget instanceof TankWidget tank) {
-                return compileSlot(recipe, tank, iconVariants);
+                return compileSlot(tank, iconVariants);
             }
             if (widget instanceof SlotWidget slot) {
-                return compileSlot(recipe, slot, iconVariants);
+                return compileSlot(slot, iconVariants);
             }
             return null;
         } catch (Exception e) {
@@ -101,10 +100,7 @@ public final class WidgetSerializer {
         }
     }
 
-    private static RecipeWidget compileSlot(
-            EmiRecipe recipe,
-            SlotWidget slot,
-            Map<String, ItemStack> iconVariants) {
+    private static RecipeWidget compileSlot(SlotWidget slot, Map<String, ItemStack> iconVariants) {
         EmiIngredient stack = slot.getStack();
         if (stack == null || stack.isEmpty()) {
             return null;

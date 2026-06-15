@@ -64,7 +64,7 @@ public final class RecipeWriter {
                     continue;
                 }
                 if (context.mode() != Mode.SCOPED
-                        && !Visibility.shouldExportRecipe(recipe, server)) {
+                        && !Visibility.shouldExportRecipe(recipe)) {
                     skippedVisibility++;
                     logProgress(progress, total, written, missing, failures, logStride);
                     continue;
@@ -89,6 +89,7 @@ public final class RecipeWriter {
                     }
                     logProgress(progress, total, written, missing, failures, logStride);
                     if (progress % RECIPE_WRITE_FLUSH_STRIDE == 0) {
+                        writes.drainBulk(ExportWriteQueue.BULK_DRAIN_BATCH);
                         writes.awaitIdle("recipes " + progress + "/" + total);
                     }
                 } catch (Exception e) {
@@ -101,6 +102,7 @@ public final class RecipeWriter {
                 }
             }
             bufferSource.endBatch();
+            writes.drainAllBulk();
             writes.awaitIdle("recipes final");
         }
 
