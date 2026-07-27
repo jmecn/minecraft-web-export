@@ -412,6 +412,10 @@ public final class GtceuLabels {
                 return formatTemplate(bucketTemplate, fluidLabel);
             }
         }
+        String itemOverride = tryItemSpecificLang(namespace, path, translateKey, langTable);
+        if (itemOverride != null) {
+            return itemOverride;
+        }
         for (GtTagPrefixPattern entry : buildGtTagPrefixPatterns(langTable)) {
             String materialPath = GtMaterialPatterns.extractMaterial(path, entry.pattern());
             if (materialPath == null) {
@@ -422,8 +426,7 @@ public final class GtceuLabels {
                 return label;
             }
         }
-        String itemOverride = tryItemSpecificLang(namespace, path, translateKey, langTable);
-        return itemOverride;
+        return null;
     }
 
     static String translateComposedRegistry(
