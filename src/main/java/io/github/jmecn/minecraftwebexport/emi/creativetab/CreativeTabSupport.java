@@ -4,6 +4,7 @@ import io.github.jmecn.minecraftwebexport.emi.lang.LangDerivation;
 import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
@@ -55,7 +56,7 @@ final class CreativeTabSupport {
                 continue;
             }
             Item item = stack.getItem();
-            ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+            ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
             if (id == null) {
                 continue;
             }
