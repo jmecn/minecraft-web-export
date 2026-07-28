@@ -36,10 +36,13 @@ final class RecipeInteractionMapper {
             return null;
         }
         JsonElement ingredient = widget.get("ingredient");
+        Integer amount = widget.has("amount") && widget.get("amount").isJsonPrimitive()
+                ? widget.get("amount").getAsInt()
+                : null;
         if (ingredient.isJsonArray()) {
             return listInteraction(ingredient.getAsJsonArray(), stringProp(widget, "tagDisplayItem"));
         }
-        return singleInteraction(ingredient, stringProp(widget, "tagDisplayItem"));
+        return singleInteraction(ingredient, stringProp(widget, "tagDisplayItem"), amount);
     }
 
     private static WidgetInteraction listInteraction(JsonArray array, String tagDisplayItem) {
@@ -65,9 +68,9 @@ final class RecipeInteractionMapper {
         return WidgetInteraction.list(entries, featured);
     }
 
-    private static WidgetInteraction singleInteraction(JsonElement ingredient, String tagDisplayItem) {
+    private static WidgetInteraction singleInteraction(JsonElement ingredient, String tagDisplayItem, Integer amount) {
         if (ingredient.isJsonPrimitive()) {
-            return primitiveInteraction(ingredient.getAsString(), tagDisplayItem);
+            return primitiveInteraction(ingredient.getAsString(), tagDisplayItem, amount);
         }
         if (!ingredient.isJsonObject()) {
             return null;
@@ -78,7 +81,8 @@ final class RecipeInteractionMapper {
             return WidgetInteraction.tag(
                     object.get("id").getAsString(),
                     tagKindFromRegistry(stringProp(object, "registry")),
-                    tagDisplayItem);
+                    tagDisplayItem,
+                    amount);
         }
         if ("fluid".equals(type)) {
             return WidgetInteraction.fluid(
@@ -126,15 +130,15 @@ final class RecipeInteractionMapper {
                 null);
     }
 
-    private static WidgetInteraction primitiveInteraction(String raw, String tagDisplayItem) {
+    private static WidgetInteraction primitiveInteraction(String raw, String tagDisplayItem, Integer amount) {
         if (raw.startsWith("#item:")) {
-            return WidgetInteraction.tag(raw.substring(6), "item", tagDisplayItem);
+            return WidgetInteraction.tag(raw.substring(6), "item", tagDisplayItem, amount);
         }
         if (raw.startsWith("#block:")) {
-            return WidgetInteraction.tag(raw.substring(7), "block", null);
+            return WidgetInteraction.tag(raw.substring(7), "block", null, amount);
         }
         if (raw.startsWith("#fluid:")) {
-            return WidgetInteraction.tag(raw.substring(7), "fluid", null);
+            return WidgetInteraction.tag(raw.substring(7), "fluid", null, amount);
         }
         if (raw.startsWith("item:")) {
             return WidgetInteraction.item(raw.substring(5), null, null);

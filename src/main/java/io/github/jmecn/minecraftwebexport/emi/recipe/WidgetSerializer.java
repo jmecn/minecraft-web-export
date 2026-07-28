@@ -105,11 +105,13 @@ public final class WidgetSerializer {
         if (stack == null || stack.isEmpty()) {
             return null;
         }
-        JsonElement ingredient = normalizeIngredientJson(EmiIngredientSerializer.getSerialized(stack));
+        JsonElement rawIngredient = EmiIngredientSerializer.getSerialized(stack);
+        Integer amount = extractTagAmount(rawIngredient);
+        JsonElement ingredient = normalizeIngredientJson(rawIngredient);
         collectIconVariants(stack, iconVariants);
         String tagDisplayItem = tagDisplayItemFor(stack);
         WidgetInteraction interaction = RecipeInteractionMapper.interactionFromSlotJson(
-                slotIngredientJson(ingredient, tagDisplayItem));
+                slotIngredientJson(ingredient, tagDisplayItem, amount));
         if (interaction == null) {
             return null;
         }
@@ -123,11 +125,26 @@ public final class WidgetSerializer {
                 interaction);
     }
 
-    private static JsonObject slotIngredientJson(JsonElement ingredient, String tagDisplayItem) {
+    private static Integer extractTagAmount(JsonElement ingredient) {
+        if (ingredient == null || !ingredient.isJsonObject()) {
+            return null;
+        }
+        JsonObject object = ingredient.getAsJsonObject();
+        if ("tag".equals(stringProp(object, "type"))
+                && object.has("amount") && object.get("amount").isJsonPrimitive()) {
+            return object.get("amount").getAsInt();
+        }
+        return null;
+    }
+
+    private static JsonObject slotIngredientJson(JsonElement ingredient, String tagDisplayItem, Integer amount) {
         JsonObject object = new JsonObject();
         object.add("ingredient", ingredient);
         if (tagDisplayItem != null) {
             object.addProperty("tagDisplayItem", tagDisplayItem);
+        }
+        if (amount != null) {
+            object.addProperty("amount", amount);
         }
         return object;
     }

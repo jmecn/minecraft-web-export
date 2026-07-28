@@ -32,6 +32,10 @@ public record WidgetInteraction(
         return new WidgetInteraction("tag", null, null, null, null, tag, tagKind, displayId, null, null);
     }
 
+    public static WidgetInteraction tag(String tag, String tagKind, String displayId, Integer amount) {
+        return new WidgetInteraction("tag", null, amount, null, null, tag, tagKind, displayId, null, null);
+    }
+
     public static WidgetInteraction list(List<WidgetInteraction> entries, int featuredIndex) {
         return new WidgetInteraction("list", null, null, null, null, null, null, null, entries, featuredIndex);
     }
