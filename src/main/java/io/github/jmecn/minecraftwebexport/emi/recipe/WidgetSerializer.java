@@ -130,8 +130,9 @@ public final class WidgetSerializer {
             return null;
         }
         JsonObject object = ingredient.getAsJsonObject();
-        if ("tag".equals(stringProp(object, "type"))
-                && object.has("amount") && object.get("amount").isJsonPrimitive()) {
+        boolean isTag = object.has("type") && object.get("type").isJsonPrimitive()
+                && "tag".equals(object.get("type").getAsString());
+        if (isTag && object.has("amount") && object.get("amount").isJsonPrimitive()) {
             return object.get("amount").getAsInt();
         }
         return null;

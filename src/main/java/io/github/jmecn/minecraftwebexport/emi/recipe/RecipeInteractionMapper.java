@@ -104,7 +104,7 @@ final class RecipeInteractionMapper {
 
     private static WidgetInteraction entryInteraction(JsonElement element) {
         if (element.isJsonPrimitive()) {
-            return primitiveInteraction(element.getAsString(), null);
+            return primitiveInteraction(element.getAsString(), null, null);
         }
         if (!element.isJsonObject()) {
             return null;
