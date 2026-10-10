@@ -63,8 +63,7 @@ public final class RecipeWriter {
                     logProgress(progress, total, written, missing, failures, logStride);
                     continue;
                 }
-                if (context.mode() != Mode.SCOPED
-                        && !Visibility.shouldExportRecipe(recipe)) {
+                if (context.mode() != Mode.SCOPED && !Visibility.shouldExportRecipe(recipe)) {
                     skippedVisibility++;
                     logProgress(progress, total, written, missing, failures, logStride);
                     continue;
@@ -76,13 +75,14 @@ public final class RecipeWriter {
                     continue;
                 }
                 try {
-                    Path metaFile = RecipePaths.metaPath(outputDir, recipeId);
                     Path pngFile = RecipePaths.pngPath(outputDir, recipeId);
+                    pngBytes += renderRecipePng(recipe, scale, pngFile, rendererPool, graphics, writes);
+
+                    Path metaFile = RecipePaths.metaPath(outputDir, recipeId);
                     byte[] metaUtf8 = JsonIO.toUtf8Bytes(meta);
                     writes.submitBytes(metaFile, metaUtf8);
                     metaBytes += metaUtf8.length;
 
-                    pngBytes += renderRecipePng(recipe, scale, pngFile, rendererPool, graphics, writes);
                     written++;
                     if (written % Constants.ICON_FLUSH_RENDER_EVERY == 0) {
                         bufferSource.endBatch();
@@ -94,11 +94,7 @@ public final class RecipeWriter {
                     }
                 } catch (Exception e) {
                     failures++;
-                    Log.detailFailure(failures,
-                            "{} recipe failed for {}: {}",
-                            Log.EMI,
-                            recipeId,
-                            e);
+                    Log.detailFailure(failures, "{} recipe failed for {}: {}", Log.EMI, recipeId, e);
                 }
             }
             bufferSource.endBatch();
@@ -155,13 +151,7 @@ public final class RecipeWriter {
             int pct = ProgressLog.percent(progress, total);
             MweMod.LOGGER.info(
                     "{} recipes {}% {}/{} - {} ok, {} missing, {} fail",
-                    Log.EMI,
-                    pct,
-                    progress,
-                    total,
-                    written,
-                    missing,
-                    failures);
+                    Log.EMI, pct, progress, total, written, missing, failures);
         }
     }
 
